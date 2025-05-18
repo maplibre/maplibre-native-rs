@@ -300,7 +300,7 @@ fn git<I: IntoIterator<Item = S>, S: AsRef<OsStr>>(dir: &Path, args: I) {
 }
 
 const MLN_GIT_REPO: &str = "https://github.com/maplibre/maplibre-native.git";
-const MLN_REVISION: &str = "2544cce75374add864cfd87f13df7a263186f981";
+const MLN_REVISION: &str = "5d7223d51f34714fa187340e2f5afe3bfe56c98b";
 
 /// Clone or download maplibre-native into the `OUT_DIR`
 ///

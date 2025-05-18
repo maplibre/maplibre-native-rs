@@ -10,17 +10,21 @@ Rust bindings to the [MapLibre Native](https://github.com/maplibre/maplibre-nati
 
 ## Usage
 
-In order to compile, you must have the following dependencies (linux). No other system has been tested yet (PRs welcome). See the `.github/workflows/ci.yml` for the full list of dependencies.
+In order to compile, you must have the following dependencies (linux).
+No other system has been tested yet (PRs welcome).
+See the `.github/workflows/ci.yml` for the full list of dependencies.
 
 * `ccache`
 * `CMake` + `Ninja`
 
 ### Apt Packages
+
 * `build-esential`
 * `libcurl4-openssl-dev`
 * `libuv1-dev`
 * `libjpeg-dev`
 * `libpng-dev`
+* `libz-dev`
 * `libglfw3-dev`
 * `libwebp-dev`
 * `libopengl0`
