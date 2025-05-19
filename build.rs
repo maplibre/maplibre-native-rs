@@ -340,9 +340,22 @@ fn clone_or_download(root: &Path) -> (PathBuf, Vec<PathBuf>) {
         // Returning the downloaded file, bypassing CMakeLists.txt check
         let include_dirs = vec![
             root.join("include"),
-            extracted_path.join("vendor").join("maplibre-native-base").join("include"),
-            extracted_path.join("vendor").join("maplibre-native-base").join("deps").join("geometry.hpp").join("include"),
-            extracted_path.join("vendor").join("maplibre-native-base").join("deps").join("variant").join("include"),
+            extracted_path
+                .join("vendor")
+                .join("maplibre-native-base")
+                .join("include"),
+            extracted_path
+                .join("vendor")
+                .join("maplibre-native-base")
+                .join("deps")
+                .join("geometry.hpp")
+                .join("include"),
+            extracted_path
+                .join("vendor")
+                .join("maplibre-native-base")
+                .join("deps")
+                .join("variant")
+                .join("include"),
             extracted_path.join("include"),
         ];
         return (library_file, include_dirs);
@@ -450,7 +463,7 @@ fn build_mln() {
         println!("cargo:rustc-link-lib=webp"); // todo add to docs: libwebp-dev
         println!("cargo:rustc-link-lib=curl");
         println!("cargo:rustc-link-lib=z");
-        match GraphicsRenderingAPI::from_selected_features(){
+        match GraphicsRenderingAPI::from_selected_features() {
             GraphicsRenderingAPI::Vulkan => {
                 // all libraries below are from glslang-dev despite their names
                 println!("cargo:rustc-link-lib=glslang");
@@ -460,15 +473,15 @@ fn build_mln() {
                 println!("cargo:rustc-link-lib=SPIRV-Tools");
                 println!("cargo:rustc-link-lib=MachineIndependent");
                 println!("cargo:rustc-link-lib=GenericCodeGen");
-            },
+            }
             GraphicsRenderingAPI::OpenGL => {
                 println!("cargo:rustc-link-lib=GL");
                 println!("cargo:rustc-link-lib=X11");
-            },
+            }
             GraphicsRenderingAPI::Metal => {
                 // macos does require dynamic linking against some proprietary system libraries
                 // We have not tested this part
-            },
+            }
         }
         cpp_root
             .file_name()
