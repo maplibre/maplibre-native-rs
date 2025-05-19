@@ -12,6 +12,9 @@ mod build_helper;
 use build_helper::parse_deps;
 use walkdir::WalkDir;
 
+const MLN_GIT_REPO: &str = "https://github.com/maplibre/maplibre-native.git";
+const MLN_REVISION: &str = "8e3899df391b21f9cd1786194cb6fbfa318795da";
+
 trait CfgBool {
     fn define_bool(&mut self, key: &str, value: bool);
 }
@@ -299,9 +302,6 @@ fn git<I: IntoIterator<Item = S>, S: AsRef<OsStr>>(dir: &Path, args: I) {
         .unwrap_or_else(|e| panic!("Failed to run git {args:?}: {e}"));
 }
 
-const MLN_GIT_REPO: &str = "https://github.com/maplibre/maplibre-native.git";
-const MLN_REVISION: &str = "5d7223d51f34714fa187340e2f5afe3bfe56c98b";
-
 /// Clone or download maplibre-native into the `OUT_DIR`
 ///
 /// Returns the path to the maplibre-native directory and an optional path to an include directorys.
@@ -340,9 +340,9 @@ fn clone_or_download(root: &Path) -> (PathBuf, Vec<PathBuf>) {
         // Returning the downloaded file, bypassing CMakeLists.txt check
         let include_dirs = vec![
             root.join("include"),
-            root.join("geometry.hpp").join("include"),
-            root.join("mapbox-base").join("include"),
-            root.join("variant").join("include"),
+            extracted_path.join("vendor").join("maplibre-native-base").join("include"),
+            extracted_path.join("vendor").join("maplibre-native-base").join("deps").join("geometry.hpp").join("include"),
+            extracted_path.join("vendor").join("maplibre-native-base").join("deps").join("variant").join("include"),
             extracted_path.join("include"),
         ];
         return (library_file, include_dirs);
@@ -440,24 +440,36 @@ fn build_mln() {
             cpp_root.parent().unwrap().display()
         );
 
-        println!("cargo:rustc-link-lib=sqlite3"); // todo add to docs: libsqlite3-dev
-        println!("cargo:rustc-link-lib=uv"); // todo add to docs: libuv-dev
-        println!("cargo:rustc-link-lib=icuuc");
-        println!("cargo:rustc-link-lib=nu"); // todo add to docs => git clone https://bitbucket.org/alekseyt/nunicode.git && cmake .  && make && sudo make install
-        println!("cargo:rustc-link-lib=icui18n");
+        println!("cargo:rustc-link-lib=sqlite3");
+        println!("cargo:rustc-link-lib=uv");
+        //println!("cargo:rustc-link-lib=icuuc");
+        //println!("cargo:rustc-link-lib=nu"); // todo add to docs => git clone https://bitbucket.org/alekseyt/nunicode.git && cmake .  && make && sudo make install
+        //println!("cargo:rustc-link-lib=icui18n");
         println!("cargo:rustc-link-lib=jpeg");
         println!("cargo:rustc-link-lib=png");
         println!("cargo:rustc-link-lib=webp"); // todo add to docs: libwebp-dev
         println!("cargo:rustc-link-lib=curl");
         println!("cargo:rustc-link-lib=z");
-        // all libraries below are from glslang-dev despite their names
-        println!("cargo:rustc-link-lib=glslang"); // todo add to docs: glslang-dev
-        println!("cargo:rustc-link-lib=glslang-default-resource-limits");
-        println!("cargo:rustc-link-lib=SPIRV");
-        println!("cargo:rustc-link-lib=SPIRV-Tools-opt");
-        println!("cargo:rustc-link-lib=SPIRV-Tools");
-        println!("cargo:rustc-link-lib=MachineIndependent");
-        println!("cargo:rustc-link-lib=GenericCodeGen");
+        match GraphicsRenderingAPI::from_selected_features(){
+            GraphicsRenderingAPI::Vulkan => {
+                // all libraries below are from glslang-dev despite their names
+                println!("cargo:rustc-link-lib=glslang");
+                println!("cargo:rustc-link-lib=glslang-default-resource-limits");
+                println!("cargo:rustc-link-lib=SPIRV");
+                println!("cargo:rustc-link-lib=SPIRV-Tools-opt");
+                println!("cargo:rustc-link-lib=SPIRV-Tools");
+                println!("cargo:rustc-link-lib=MachineIndependent");
+                println!("cargo:rustc-link-lib=GenericCodeGen");
+            },
+            GraphicsRenderingAPI::OpenGL => {
+                println!("cargo:rustc-link-lib=GL");
+                println!("cargo:rustc-link-lib=X11");
+            },
+            GraphicsRenderingAPI::Metal => {
+                // macos does require dynamic linking against some proprietary system libraries
+                // We have not tested this part
+            },
+        }
         cpp_root
             .file_name()
             .expect("static library base has a file name")

@@ -20,6 +20,7 @@ See the `.github/workflows/ci.yml` for the full list of dependencies.
 ### Apt Packages
 
 * `build-esential`
+* `libsqlite3-dev`
 * `libcurl4-openssl-dev`
 * `libuv1-dev`
 * `libjpeg-dev`
@@ -27,8 +28,8 @@ See the `.github/workflows/ci.yml` for the full list of dependencies.
 * `libz-dev`
 * `libglfw3-dev`
 * `libwebp-dev`
-* `libopengl0`
-* `mesa-vulkan-drivers`
+* (opengl only) `libopengl0`, `libX11-dev`
+* (vulkan only) `mesa-vulkan-drivers`, `glslang-dev`
 
 ## Development
 
