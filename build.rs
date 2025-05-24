@@ -127,18 +127,17 @@ fn create_cmake_config(cpp_root: &Path) -> cmake::Config {
 
 /// Check that a given dir contains valid maplibre-native code
 fn validate_mln(dir: &Path, revision: &str) {
+    let dir_disp = dir.display();
     assert!(
         dir.read_dir().expect("Can't read dir").next().is_some(),
         r"
-MapLibre-native source directory is empty: {}
+MapLibre-native source directory is empty: {dir_disp}
 For local development, make sure to use
     git submodule update --init --recursive
 You may also set MLN_FROM_SOURCE to the path of the maplibre-native directory.
-",
-        dir.display()
+"
     );
 
-    let dest_disp = dir.display();
     let rev = Command::new("git")
         .current_dir(dir)
         .arg("rev-parse")
@@ -150,7 +149,7 @@ You may also set MLN_FROM_SOURCE to the path of the maplibre-native directory.
     assert_eq!(
         rev.trim_ascii(),
         revision,
-        "Unexpected git revision in {dest_disp}, please update the build.rs with the new value '{rev}'",
+        "Unexpected git revision in {dir_disp}, please update the build.rs with the new value '{rev}'",
     );
 }
 
@@ -172,7 +171,7 @@ fn download_static(out_dir: &Path, revision: &str) -> (PathBuf, PathBuf) {
     let mut tasks = Vec::new();
     let library_file = out_dir.join(format!("libmaplibre-native-core-{target}-{graphics_api}.a"));
     if !library_file.is_file() {
-        let static_url= format!("https://github.com/maplibre/maplibre-native/releases/download/core-{revision}/libmaplibre-native-core-{target}-{graphics_api}.a");
+        let static_url = format!("https://github.com/maplibre/maplibre-native/releases/download/core-{revision}/libmaplibre-native-core-{target}-{graphics_api}.a");
         println!("cargo:warning=Downloading precompiled maplibre-native core library from {static_url} into {}",out_dir.display());
         tasks.push(Download::new(&static_url));
     }
@@ -481,7 +480,7 @@ fn build_mln() {
                 println!("cargo:rustc-link-lib=X11");
             }
             GraphicsRenderingAPI::Metal => {
-                // macos does require dynamic linking against some proprietary system libraries
+                // macOS does require dynamic linking against some proprietary system libraries
                 // We have not tested this part
             }
         }
