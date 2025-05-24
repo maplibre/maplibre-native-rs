@@ -157,20 +157,22 @@ You may also set MLN_FROM_SOURCE to the path of the maplibre-native directory.
 fn download_static(out_dir: &Path, revision: &str) -> (PathBuf, PathBuf) {
     let graphics_api = GraphicsRenderingAPI::from_selected_features();
 
-    #[cfg(not(any(target_os = "linux", target_os = "macos")))]
-    panic!("unsupported target: only linux and macos are currently supported by maplibre-native");
-
-    #[cfg(all(target_os = "linux", target_arch = "aarch64"))]
-    let target = "linux-arm64";
-    #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
-    let target = "linux-x64";
-    #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
-    let target = "macos-arm64";
+    let target = if cfg!(all(target_os = "linux", target_arch = "aarch64")) {
+        "linux-arm64"
+    } else if cfg!(all(target_os = "linux", target_arch = "x86_64")) {
+        "linux-x64"
+    } else if cfg!(all(target_os = "macos", target_arch = "aarch64")) {
+        "macos-arm64"
+    } else {
+        panic!(
+            "unsupported target: only linux and macos are currently supported by maplibre-native"
+        );
+    };
 
     let mut tasks = Vec::new();
     let library_file = out_dir.join(format!("libmaplibre-native-core-{target}-{graphics_api}.a"));
     if !library_file.is_file() {
-        let static_url=format!("https://github.com/maplibre/maplibre-native/releases/download/core-{revision}/libmaplibre-native-core-{target}-{graphics_api}.a");
+        let static_url= format!("https://github.com/maplibre/maplibre-native/releases/download/core-{revision}/libmaplibre-native-core-{target}-{graphics_api}.a");
         println!("cargo:warning=Downloading precompiled maplibre-native core library from {static_url} into {}",out_dir.display());
         tasks.push(Download::new(&static_url));
     }
