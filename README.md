@@ -26,14 +26,16 @@ sudo apt-get install -y \
   libglfw3-dev \
   libjpeg-dev \
   libpng-dev \
+  libsqlite3-dev \
   libuv1-dev \
-  libwebp-dev
+  libwebp-dev \
+  libz-dev
 
 # OpenGL
-sudo apt-get install -y libopengl0
+sudo apt-get install -y libopengl0 libx11-dev
 
 # Vulkan
-sudo apt-get install -y mesa-vulkan-drivers
+sudo apt-get install -y mesa-vulkan-drivers glslang-dev
 ```
 
 ## Development
