@@ -33,15 +33,21 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
+          # Make sure this list matches README
           sudo apt-get install -y \
+            build-essential \
             libcurl4-openssl-dev \
             libglfw3-dev \
             libjpeg-dev \
-            libopengl0 \
             libpng-dev \
+            libsqlite3-dev \
             libuv1-dev \
             libwebp-dev \
-            mesa-vulkan-drivers
+            libz-dev
+          # OpenGL
+          sudo apt-get install -y libopengl0 libx11-dev
+          # Vulkan
+          sudo apt-get install -y mesa-vulkan-drivers glslang-dev
       - if: github.event_name == 'release'
         name: Ensure this crate has not yet been published (on release)
         run: just check-if-published
