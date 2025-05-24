@@ -461,7 +461,7 @@ fn build_mln() {
         //println!("cargo:rustc-link-lib=icui18n");
         println!("cargo:rustc-link-lib=jpeg");
         println!("cargo:rustc-link-lib=png");
-        println!("cargo:rustc-link-lib=webp"); // todo add to docs: libwebp-dev
+        println!("cargo:rustc-link-lib=webp");
         println!("cargo:rustc-link-lib=curl");
         println!("cargo:rustc-link-lib=z");
         match GraphicsRenderingAPI::from_selected_features() {
