@@ -35,12 +35,12 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y \
             libcurl4-openssl-dev \
-            libuv1-dev \
-            libjpeg-dev \
-            libpng-dev \
             libglfw3-dev \
-            libwebp-dev \
+            libjpeg-dev \
             libopengl0 \
+            libpng-dev \
+            libuv1-dev \
+            libwebp-dev \
             mesa-vulkan-drivers
       - if: github.event_name == 'release'
         name: Ensure this crate has not yet been published (on release)

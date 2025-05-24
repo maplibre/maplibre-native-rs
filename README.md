@@ -20,7 +20,7 @@ See the `.github/workflows/ci.yml` for the full list of dependencies.
 ### Apt Packages
 
 ```shell
-apt install -y \
+sudo apt-get install -y \
   build-essential \
   libcurl4-openssl-dev \
   libglfw3-dev \
@@ -30,18 +30,12 @@ apt install -y \
   libuv1-dev \
   libwebp-dev \
   libz-dev
-```
 
-#### For OpenGL
+# OpenGL
+sudo apt-get install -y libopengl0 libx11-dev
 
-```shell
-apt install -y libopengl0 libx11-dev
-```
-
-#### For Vulkan
-
-```shell
-apt install -y mesa-vulkan-drivers glslang-dev
+# Vulkan
+sudo apt-get install -y mesa-vulkan-drivers glslang-dev
 ```
 
 ## Development
