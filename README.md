@@ -17,6 +17,17 @@ See the `.github/workflows/ci.yml` for the full list of dependencies.
 * `ccache`
 * `CMake` + `Ninja`
 
+### installing `libnu`
+
+The specific version of `nunicode` we need is not avaliable via apt.
+
+```bash
+git clone https://bitbucket.org/alekseyt/nunicode.git
+cmake .
+make
+sudo make install
+```
+
 ### Apt Packages
 
 ```shell
@@ -29,7 +40,8 @@ sudo apt-get install -y \
   libsqlite3-dev \
   libuv1-dev \
   libwebp-dev \
-  libz-dev
+  libz-dev \
+  libicu-dev
 
 # OpenGL
 sudo apt-get install -y libopengl0 libx11-dev
