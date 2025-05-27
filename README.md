@@ -20,6 +20,7 @@ See the `.github/workflows/ci.yml` for the full list of dependencies.
 ### installing `libnu`
 
 The specific version of `nunicode` we need is not avaliable via apt.
+There [is some work ongoing upstream](https://github.com/maplibre/maplibre-native/issues/3483) to build this into the static library we pull.
 
 ```bash
 git clone https://bitbucket.org/alekseyt/nunicode.git
