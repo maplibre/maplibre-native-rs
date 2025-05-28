@@ -10,14 +10,14 @@ Rust bindings to the [MapLibre Native](https://github.com/maplibre/maplibre-nati
 
 ## Usage
 
-To compile, you must have the following dependencies (linux).
-No other system has been tested yet (PRs welcome).
-See the `.github/workflows/ci.yml` for the full list of dependencies.
-
-* `ccache`
-* `CMake` + `Ninja`
+We use `maplibre-native`s' core build, a static, pre-compiled library.
+We also allow you to compile this yourself. Instructions for this are below.
 
 ### Apt Packages
+
+> [!NOTE]
+> The version of `libicu` is quite specific.
+> There [is some work ongoing upstream](https://github.com/maplibre/maplibre-native/issues/3483) to build this into the static library we pull.
 
 ```shell
 sudo apt-get install -y \
@@ -26,14 +26,17 @@ sudo apt-get install -y \
   libglfw3-dev \
   libjpeg-dev \
   libpng-dev \
+  libsqlite3-dev \
   libuv1-dev \
-  libwebp-dev
+  libwebp-dev \
+  libz-dev \
+  libicu-dev
 
 # OpenGL
-sudo apt-get install -y libopengl0
+sudo apt-get install -y libopengl0 libx11-dev
 
 # Vulkan
-sudo apt-get install -y mesa-vulkan-drivers
+sudo apt-get install -y mesa-vulkan-drivers glslang-dev
 ```
 
 ## Development
