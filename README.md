@@ -10,26 +10,14 @@ Rust bindings to the [MapLibre Native](https://github.com/maplibre/maplibre-nati
 
 ## Usage
 
-To compile, you must have the following dependencies (linux).
-No other system has been tested yet (PRs welcome).
-See the `.github/workflows/ci.yml` for the full list of dependencies.
-
-* `ccache`
-* `CMake` + `Ninja`
-
-### installing `libnu`
-
-The specific version of `nunicode` we need is not avaliable via apt.
-There [is some work ongoing upstream](https://github.com/maplibre/maplibre-native/issues/3483) to build this into the static library we pull.
-
-```bash
-git clone https://bitbucket.org/alekseyt/nunicode.git
-cmake .
-make
-sudo make install
-```
+We use `maplibre-native`s' core build, a static, pre-compiled library.
+We also allow you to compile this yourself. Instructions for this are below.
 
 ### Apt Packages
+
+> [!NOTE]
+> The version of `libicu` is quite specific.
+> There [is some work ongoing upstream](https://github.com/maplibre/maplibre-native/issues/3483) to build this into the static library we pull.
 
 ```shell
 sudo apt-get install -y \
