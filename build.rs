@@ -1,3 +1,4 @@
+
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -457,8 +458,8 @@ fn build_mln() {
         println!("cargo:rustc-link-lib=sqlite3");
         println!("cargo:rustc-link-lib=uv");
         println!("cargo:rustc-link-lib=icuuc");
-        println!("cargo:rustc-link-lib=nu");
         println!("cargo:rustc-link-lib=icui18n");
+        //println!("cargo:rustc-link-lib=nu"); // todo add to docs => git clone https://bitbucket.org/alekseyt/nunicode.git && cmake .  && make && sudo make install
         println!("cargo:rustc-link-lib=jpeg");
         println!("cargo:rustc-link-lib=png");
         println!("cargo:rustc-link-lib=webp");
