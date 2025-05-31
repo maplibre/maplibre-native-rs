@@ -179,12 +179,17 @@ fn main() {
     let before_initalisation = Instant::now();
     let data = args.render();
     println!(
-        "Rendering successfull in {elapsed:?}, writing result to {output:?}",
-        elapsed = before_initalisation.elapsed()
+        "Rendering successfull in {:?}, writing result to {}",
+        before_initalisation.elapsed(),
+        output.display()
     );
     println!("Note: Future renders using the same instance would be faster due to amortized initialization");
-    fs::write(&output, data.as_slice())
-        .unwrap_or_else(|e| panic!("Failed to write rendered map to {output:?} because of {e:?}"));
+    fs::write(&output, data.as_slice()).unwrap_or_else(|e| {
+        panic!(
+            "Failed to write rendered map to {} because of {e:?}",
+            output.display()
+        )
+    });
 }
 
 #[cfg(test)]
