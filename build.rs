@@ -312,10 +312,10 @@ fn download_static(out_dir: &Path, release_tag: &str) -> (PathBuf, PathBuf) {
     let assets = fetch_asset_metadata(release_tag, &target_filenames)
         .unwrap_or_else(|e| panic!("Failed to fetch release assets: {e}"));
 
-    // Store release assets in target/mln_downloads
+    // Store release assets in target/mlb_downloads
     let assets_dir =
         PathBuf::from(env::var("CARGO_TARGET_DIR").unwrap_or_else(|_| "target".to_string()));
-    let download_dir = assets_dir.join("mln_downloads").join(release_tag);
+    let download_dir = assets_dir.join("mlb_downloads").join(release_tag);
 
     // Download and verify library file
     let mlb_core_asset = assets
