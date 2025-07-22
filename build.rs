@@ -356,8 +356,6 @@ fn download_static(out_dir: &Path, release_tag: &str) -> (PathBuf, PathBuf) {
     if symlink_result.is_err() {
         fs::copy(&downloaded_library, &library_in_out_dir).expect("Failed to copy library file");
         println!("cargo:warning=Could not create symlink, copied library file instead");
-    } else {
-        println!("cargo:warning=Created symlink to library file in OUT_DIR");
     }
 
     (library_in_out_dir, downloaded_headers)
