@@ -25,14 +25,13 @@ cxx.workspace = true
 [build-dependencies]
 cmake.workspace = true
 cxx-build.workspace = true
-downloader.workspace = true
 flate2.workspace = true
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 sha2.workspace = true
 tar.workspace = true
 tempfile = "3.0"
-ureq.workspace = true
+ureq = { workspace = true, features = ["json"] }
 walkdir.workspace = true
 
 [lints]
@@ -56,13 +55,12 @@ clap = { version = "4.5.27", features = ["derive", "env", "unstable-markdown"] }
 cmake = "0.1"
 cxx = "1.0.138"
 cxx-build = "1.0.138"
-downloader = "0.2.8"
 flate2 = "1.1.1"
 maplibre_native = { path = ".", version = "0.1.0" }
 serde_json = "1.0"
 sha2 = "0.10"
 tar = "0.4.44"
-ureq = "2.9"
+ureq = "3.0.12"
 walkdir = "2.5.0"
 
 [workspace.lints.rust]

@@ -44,9 +44,10 @@ fn fetch_asset_metadata(
         "https://api.github.com/repos/maplibre/maplibre-native/releases/tags/{release_tag}"
     );
 
-    let response = ureq::get(&api_url).call()?;
-    let body = response.into_string()?;
-    let release: Release = serde_json::from_str(&body)?;
+    let release: Release = ureq::get(&api_url)
+        .call()?
+        .body_mut()
+        .read_json()?;
     let assets = release.assets;
 
     let mut found_assets = Vec::new();
@@ -106,14 +107,17 @@ fn fetch_release_asset(
         let temp_dir = TempDir::new()?;
         let temp_path = temp_dir.path().join(&asset.name);
 
-        let response = ureq::get(&asset.browser_download_url)
-            .call()
-            .map_err(|e| format!("HTTP request failed: {e}"))?;
-
         let mut file =
             fs::File::create(&temp_path).map_err(|e| format!("Failed to create temp file: {e}"))?;
 
-        std::io::copy(&mut response.into_reader(), &mut file)
+        std::io::copy(
+            &mut ureq::get(&asset.browser_download_url)
+                .call()
+                .map_err(|e| format!("HTTP request failed: {e}"))?
+                .into_body()
+                .into_reader(),
+            &mut file,
+        )
             .map_err(|e| format!("Failed to write file: {e}"))?;
 
         // verify hash matches release
