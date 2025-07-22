@@ -13,7 +13,7 @@ exclude = ["maplibre-native/", ".gitmodules"]
 
 [features]
 default = [] # automatically picks the platform-specific features
-metal = [] # default on Apple platforms, do not add to default features
+metal = []   # default on Apple platforms, do not add to default features
 opengl = []
 vulkan = []  # default on other platforms
 
@@ -27,7 +27,12 @@ cmake.workspace = true
 cxx-build.workspace = true
 downloader.workspace = true
 flate2.workspace = true
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+sha2.workspace = true
 tar.workspace = true
+tempfile = "3.0"
+ureq.workspace = true
 walkdir.workspace = true
 
 [lints]
@@ -40,11 +45,7 @@ workspace = true
 ##########################################################
 
 [workspace]
-members = [
-    ".",
-    "build_tester",
-    "examples/*",
-]
+members = [".", "build_tester", "examples/*"]
 
 [workspace.package]
 edition = "2021"
@@ -58,7 +59,10 @@ cxx-build = "1.0.138"
 downloader = "0.2.8"
 flate2 = "1.1.1"
 maplibre_native = { path = ".", version = "0.1.0" }
+serde_json = "1.0"
+sha2 = "0.10"
 tar = "0.4.44"
+ureq = "2.9"
 walkdir = "2.5.0"
 
 [workspace.lints.rust]
@@ -66,4 +70,4 @@ unused_qualifications = "warn"
 
 [workspace.lints.clippy]
 pedantic = { level = "warn", priority = -1 }
-missing_panics_doc = "allow" # FIXME: remove
+missing_panics_doc = "allow"                 # FIXME: remove

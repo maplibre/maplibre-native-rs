@@ -3,7 +3,8 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::{env, fs};
 
-use downloader::{Download, Downloader};
+use sha2::{Digest, Sha256};
+use tempfile::TempDir;
 
 // This allows build support to be unit-tested as well as packaged with the crate.
 #[path = "build_helper.rs"]
@@ -14,6 +15,141 @@ use walkdir::WalkDir;
 
 const MLN_GIT_REPO: &str = "https://github.com/maplibre/maplibre-native.git";
 const MLN_REVISION: &str = "12e0922fc4cadcd88808830e697cfb1d5206c8c9";
+const MLN_RELEASE_TAG: &str = "core-12e0922fc4cadcd88808830e697cfb1d5206c8c9";
+
+#[derive(Debug, Clone, serde::Deserialize)]
+struct ReleaseAsset {
+    name: String,
+    browser_download_url: String,
+    digest: Option<String>,
+}
+
+impl ReleaseAsset {
+    fn hash(&self) -> Option<&str> {
+        self.digest.as_ref()?.strip_prefix("sha256:")
+    }
+}
+
+#[derive(serde::Deserialize)]
+struct Release {
+    assets: Vec<ReleaseAsset>,
+}
+
+/// get release metadata and search for wanted files
+fn fetch_asset_metadata(
+    release_tag: &str,
+    target_filenames: &[&str],
+) -> Result<Vec<ReleaseAsset>, Box<dyn std::error::Error>> {
+    let api_url = format!(
+        "https://api.github.com/repos/maplibre/maplibre-native/releases/tags/{release_tag}"
+    );
+
+    let response = ureq::get(&api_url).call()?;
+    let body = response.into_string()?;
+    let release: Release = serde_json::from_str(&body)?;
+    let assets = release.assets;
+
+    let mut found_assets = Vec::new();
+    let mut missing_files = Vec::new();
+
+    for filename in target_filenames {
+        if let Some(asset) = assets.iter().find(|a| a.name == *filename).cloned() {
+            found_assets.push(asset);
+        } else {
+            missing_files.push(*filename);
+        }
+    }
+
+    if !missing_files.is_empty() {
+        return Err(format!(
+            "Files not found in release {}: {}",
+            release_tag,
+            missing_files.join(", ")
+        )
+        .into());
+    }
+
+    Ok(found_assets)
+}
+
+/// determine if asset needed
+fn need_asset(asset: &ReleaseAsset, file_path: &Path) -> Result<bool, Box<dyn std::error::Error>> {
+    if !file_path.exists() {
+        return Ok(true);
+    }
+
+    if let Some(asset_hash) = asset.hash() {
+        if verify_asset_hash(file_path, asset_hash).is_ok() {
+            Ok(false)
+        } else {
+            println!(
+                "cargo:warning=File {} checksum mismatch, re-downloading",
+                asset.name
+            );
+            fs::remove_file(file_path)?;
+            Ok(true)
+        }
+    } else {
+        Ok(false)
+    }
+}
+
+fn fetch_release_asset(
+    asset: &ReleaseAsset,
+    download_dir: &Path,
+) -> Result<PathBuf, Box<dyn std::error::Error>> {
+    let output_path = download_dir.join(&asset.name);
+
+    if need_asset(asset, &output_path)? {
+        fs::create_dir_all(download_dir)?;
+
+        let temp_dir = TempDir::new()?;
+        let temp_path = temp_dir.path().join(&asset.name);
+
+        let response = ureq::get(&asset.browser_download_url)
+            .call()
+            .map_err(|e| format!("HTTP request failed: {e}"))?;
+
+        let mut file =
+            fs::File::create(&temp_path).map_err(|e| format!("Failed to create temp file: {e}"))?;
+
+        std::io::copy(&mut response.into_reader(), &mut file)
+            .map_err(|e| format!("Failed to write file: {e}"))?;
+
+        // verify hash matches release
+        if let Some(asset_hash) = asset.hash() {
+            verify_asset_hash(&temp_path, asset_hash)
+                .map_err(|e| format!("Downloaded file checksum verification failed: {e}"))?;
+        }
+
+        fs::rename(&temp_path, &output_path)?;
+        println!(
+            "cargo:warning=Successfully downloaded and verified {}",
+            asset.name
+        );
+    }
+
+    Ok(output_path)
+}
+
+fn verify_asset_hash(file_path: &Path, want_hash: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let mut file = fs::File::open(file_path)?;
+    let mut hasher = Sha256::new();
+    std::io::copy(&mut file, &mut hasher)?;
+    let got_hash = format!("{:x}", hasher.finalize());
+
+    if got_hash == want_hash {
+        Ok(())
+    } else {
+        Err(format!(
+            "Checksum mismatch for {}: expected {}, got {}",
+            file_path.display(),
+            want_hash,
+            got_hash
+        )
+        .into())
+    }
+}
 
 trait CfgBool {
     fn define_bool(&mut self, key: &str, value: bool);
@@ -153,7 +289,7 @@ You may also set MLN_FROM_SOURCE to the path of the maplibre-native directory.
     );
 }
 
-fn download_static(out_dir: &Path, revision: &str) -> (PathBuf, PathBuf) {
+fn download_static(out_dir: &Path, release_tag: &str) -> (PathBuf, PathBuf) {
     let graphics_api = GraphicsRenderingAPI::from_selected_features();
 
     let target = if cfg!(all(target_os = "linux", target_arch = "aarch64")) {
@@ -168,39 +304,63 @@ fn download_static(out_dir: &Path, revision: &str) -> (PathBuf, PathBuf) {
         );
     };
 
-    let mut tasks = Vec::new();
-    let library_file = out_dir.join(format!("libmaplibre-native-core-{target}-{graphics_api}.a"));
-    if !library_file.is_file() {
-        let static_url = format!("https://github.com/maplibre/maplibre-native/releases/download/core-{revision}/libmaplibre-native-core-{target}-{graphics_api}.a");
-        println!("cargo:warning=Downloading precompiled maplibre-native core library from {static_url} into {}",out_dir.display());
-        tasks.push(Download::new(&static_url));
-    }
+    // Fetch release assets info from GitHub API
+    let mlb_core = format!("libmaplibre-native-core-{target}-{graphics_api}.a");
+    let mlb_headers = "maplibre-native-headers.tar.gz";
+    let target_filenames = [mlb_core.as_str(), mlb_headers];
 
-    let headers_file = out_dir.join("maplibre-native-headers.tar.gz");
-    if !headers_file.is_file() {
-        let headers_url = format!("https://github.com/maplibre/maplibre-native/releases/download/core-{revision}/maplibre-native-headers.tar.gz");
-        println!("cargo:warning=Downloading headers for maplibre-native core library from {headers_url} into {}",out_dir.display());
-        tasks.push(Download::new(&headers_url));
-    }
+    let assets = fetch_asset_metadata(release_tag, &target_filenames)
+        .unwrap_or_else(|e| panic!("Failed to fetch release assets: {e}"));
+
+    // Store release assets in target/mln_downloads
+    let assets_dir =
+        PathBuf::from(env::var("CARGO_TARGET_DIR").unwrap_or_else(|_| "target".to_string()));
+    let download_dir = assets_dir.join("mln_downloads").join(release_tag);
+
+    // Download and verify library file
+    let mlb_core_asset = assets
+        .iter()
+        .find(|a| a.name == mlb_core)
+        .expect("Library asset not found");
+    let downloaded_library = fetch_release_asset(mlb_core_asset, &download_dir)
+        .unwrap_or_else(|e| panic!("Failed to download mlb_core: {e}"));
+
+    // Download and verify headers file
+    let mlb_headers_asset = assets
+        .iter()
+        .find(|a| a.name == mlb_headers)
+        .expect("Headers asset not found");
+    let downloaded_headers = fetch_release_asset(mlb_headers_asset, &download_dir)
+        .unwrap_or_else(|e| panic!("Failed to download mlb_headers: {e}"));
+
+    // Create symlink or copy of library to OUT_DIR for linking
     fs::create_dir_all(out_dir).expect("Failed to create output directory");
-    let mut downloader = Downloader::builder()
-        .download_folder(out_dir)
-        .parallel_requests(
-            u16::try_from(tasks.len()).expect("with the number of tasks, this cannot be exceeded"),
-        )
-        .build()
-        .expect("Failed to create downloader");
-    let downloads = downloader
-        .download(&tasks)
-        .expect("Failed to download maplibre-native static lib")
-        .into_iter();
-    for download in downloads {
-        if let Err(err) = download {
-            panic!("Unexpected error from downloader: {err}");
-        }
+    let library_in_out_dir = out_dir.join(&mlb_core);
+
+    // Try to create a symlink first, fallback to copy if symlinks aren't supported
+    if library_in_out_dir.exists() {
+        fs::remove_file(&library_in_out_dir).expect("Failed to remove existing library file");
     }
 
-    (library_file, headers_file)
+    // Use absolute paths for symlinks to avoid broken relative paths
+    let downloaded_library_abs = downloaded_library
+        .canonicalize()
+        .expect("Failed to get absolute path for downloaded library");
+
+    #[cfg(unix)]
+    let symlink_result = std::os::unix::fs::symlink(&downloaded_library_abs, &library_in_out_dir);
+    #[cfg(windows)]
+    let symlink_result =
+        std::os::windows::fs::symlink_file(&downloaded_library_abs, &library_in_out_dir);
+
+    if symlink_result.is_err() {
+        fs::copy(&downloaded_library, &library_in_out_dir).expect("Failed to copy library file");
+        println!("cargo:warning=Could not create symlink, copied library file instead");
+    } else {
+        println!("cargo:warning=Created symlink to library file in OUT_DIR");
+    }
+
+    (library_in_out_dir, downloaded_headers)
 }
 
 /// Extracts the headers from the downloaded tarball
@@ -309,6 +469,7 @@ fn git<I: IntoIterator<Item = S>, S: AsRef<OsStr>>(dir: &Path, args: I) {
 fn clone_or_download(root: &Path) -> (PathBuf, Vec<PathBuf>) {
     println!("cargo:rerun-if-env-changed=MLN_CLONE_REPO");
     println!("cargo:rerun-if-env-changed=MLN_FROM_SOURCE");
+    println!("cargo:rerun-if-env-changed=MLN_RELEASE_TAG");
     let cpp_root = env::var_os("MLN_FROM_SOURCE").map(PathBuf::from);
     let sub_module = root.join("maplibre-native");
     let mut out_dir: PathBuf = env::var_os("OUT_DIR").expect("OUT_DIR is not set").into();
@@ -335,7 +496,9 @@ fn clone_or_download(root: &Path) -> (PathBuf, Vec<PathBuf>) {
         sub_module
     } else {
         // Defaults to downloading the static library
-        let (library_file, headers) = download_static(&out_dir, MLN_REVISION);
+        let release_tag =
+            env::var("MLN_RELEASE_TAG").unwrap_or_else(|_| MLN_RELEASE_TAG.to_string());
+        let (library_file, headers) = download_static(&out_dir, &release_tag);
         let extracted_path = out_dir.join("headers");
         extract_headers(&headers, &extracted_path);
         // Returning the downloaded file, bypassing CMakeLists.txt check
@@ -454,6 +617,34 @@ fn build_mln() {
             cpp_root.parent().unwrap().display()
         );
 
+        // Add system library search paths for macOS
+        if cfg!(target_os = "macos") {
+            // Check for Homebrew installation paths
+            if let Ok(homebrew_prefix) = env::var("HOMEBREW_PREFIX") {
+                println!("cargo:rustc-link-search=native={homebrew_prefix}/lib");
+            } else if Path::new("/opt/homebrew").exists() {
+                println!("cargo:rustc-link-search=native=/opt/homebrew/lib");
+            } else if Path::new("/usr/local").exists() {
+                println!("cargo:rustc-link-search=native=/usr/local/lib");
+            }
+
+            // macOS system library paths
+            println!("cargo:rustc-link-search=native=/usr/lib");
+            println!("cargo:rustc-link-search=native=/System/Library/Frameworks");
+
+            // Add pkg-config paths if available
+            if let Ok(pkgconfig_path) = env::var("PKG_CONFIG_PATH") {
+                for path in pkgconfig_path.split(':') {
+                    let lib_path = Path::new(path).parent().map(|p| p.join("lib"));
+                    if let Some(lib_path) = lib_path {
+                        if lib_path.exists() {
+                            println!("cargo:rustc-link-search=native={}", lib_path.display());
+                        }
+                    }
+                }
+            }
+        }
+
         println!("cargo:rustc-link-lib=sqlite3");
         println!("cargo:rustc-link-lib=uv");
         println!("cargo:rustc-link-lib=icuuc");
@@ -480,17 +671,28 @@ fn build_mln() {
                 println!("cargo:rustc-link-lib=X11");
             }
             GraphicsRenderingAPI::Metal => {
-                // macOS does require dynamic linking against some proprietary system libraries
-                // We have not tested this part
+                // macOS Metal framework dependencies
+                if cfg!(target_os = "macos") {
+                    println!("cargo:rustc-link-lib=framework=Metal");
+                    println!("cargo:rustc-link-lib=framework=MetalKit");
+                    println!("cargo:rustc-link-lib=framework=QuartzCore");
+                    println!("cargo:rustc-link-lib=framework=Foundation");
+                    println!("cargo:rustc-link-lib=framework=CoreGraphics");
+                    println!("cargo:rustc-link-lib=framework=AppKit");
+                    println!("cargo:rustc-link-lib=framework=CoreLocation");
+                }
             }
         }
-        cpp_root
+        // For prebuilt static library, extract the correct library name
+        let lib_filename = cpp_root
             .file_name()
             .expect("static library base has a file name")
-            .to_string_lossy()
-            .to_string()
-            .replacen("lib", "", 1)
-            .replace(".a", "")
+            .to_string_lossy();
+        if lib_filename.starts_with("lib") && lib_filename.ends_with(".a") {
+            lib_filename[3..lib_filename.len() - 2].to_string()
+        } else {
+            lib_filename.to_string()
+        }
     };
     build_bridge(&lib_name, &include_dirs);
 }
