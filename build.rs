@@ -44,10 +44,7 @@ fn fetch_asset_metadata(
         "https://api.github.com/repos/maplibre/maplibre-native/releases/tags/{release_tag}"
     );
 
-    let release: Release = ureq::get(&api_url)
-        .call()?
-        .body_mut()
-        .read_json()?;
+    let release: Release = ureq::get(&api_url).call()?.body_mut().read_json()?;
     let assets = release.assets;
 
     let mut found_assets = Vec::new();
@@ -118,7 +115,7 @@ fn fetch_release_asset(
                 .into_reader(),
             &mut file,
         )
-            .map_err(|e| format!("Failed to write file: {e}"))?;
+        .map_err(|e| format!("Failed to write file: {e}"))?;
 
         // verify hash matches release
         if let Some(asset_hash) = asset.hash() {
