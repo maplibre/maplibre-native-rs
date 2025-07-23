@@ -3,154 +3,20 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::{env, fs};
 
-use sha2::{Digest, Sha256};
-use tempfile::TempDir;
+use walkdir::WalkDir;
 
 // This allows build support to be unit-tested as well as packaged with the crate.
 #[path = "build_helper.rs"]
 mod build_helper;
-
 use build_helper::parse_deps;
-use walkdir::WalkDir;
+
+#[path = "build_github.rs"]
+mod build_github;
+use build_github::GithubRelease;
 
 const MLN_GIT_REPO: &str = "https://github.com/maplibre/maplibre-native.git";
 const MLN_REVISION: &str = "12e0922fc4cadcd88808830e697cfb1d5206c8c9";
 const MLN_RELEASE_TAG: &str = "core-12e0922fc4cadcd88808830e697cfb1d5206c8c9";
-
-#[derive(Debug, Clone, serde::Deserialize)]
-struct ReleaseAsset {
-    name: String,
-    browser_download_url: String,
-    digest: Option<String>,
-}
-
-impl ReleaseAsset {
-    fn hash(&self) -> Option<&str> {
-        self.digest.as_ref()?.strip_prefix("sha256:")
-    }
-}
-
-#[derive(serde::Deserialize)]
-struct Release {
-    assets: Vec<ReleaseAsset>,
-}
-
-/// get release metadata and search for wanted files
-fn fetch_asset_metadata(
-    release_tag: &str,
-    target_filenames: &[&str],
-) -> Result<Vec<ReleaseAsset>, Box<dyn std::error::Error>> {
-    let api_url = format!(
-        "https://api.github.com/repos/maplibre/maplibre-native/releases/tags/{release_tag}"
-    );
-
-    let release: Release = ureq::get(&api_url).call()?.body_mut().read_json()?;
-    let assets = release.assets;
-
-    let mut found_assets = Vec::new();
-    let mut missing_files = Vec::new();
-
-    for filename in target_filenames {
-        if let Some(asset) = assets.iter().find(|a| a.name == *filename).cloned() {
-            found_assets.push(asset);
-        } else {
-            missing_files.push(*filename);
-        }
-    }
-
-    if !missing_files.is_empty() {
-        return Err(format!(
-            "Files not found in release {}: {}",
-            release_tag,
-            missing_files.join(", ")
-        )
-        .into());
-    }
-
-    Ok(found_assets)
-}
-
-/// determine if asset needed
-fn need_asset(asset: &ReleaseAsset, file_path: &Path) -> Result<bool, Box<dyn std::error::Error>> {
-    if !file_path.exists() {
-        return Ok(true);
-    }
-
-    if let Some(asset_hash) = asset.hash() {
-        if verify_asset_hash(file_path, asset_hash).is_ok() {
-            Ok(false)
-        } else {
-            println!(
-                "cargo:warning=File {} checksum mismatch, re-downloading",
-                asset.name
-            );
-            fs::remove_file(file_path)?;
-            Ok(true)
-        }
-    } else {
-        Ok(false)
-    }
-}
-
-fn fetch_release_asset(
-    asset: &ReleaseAsset,
-    download_dir: &Path,
-) -> Result<PathBuf, Box<dyn std::error::Error>> {
-    let output_path = download_dir.join(&asset.name);
-
-    if need_asset(asset, &output_path)? {
-        fs::create_dir_all(download_dir)?;
-
-        let temp_dir = TempDir::new()?;
-        let temp_path = temp_dir.path().join(&asset.name);
-
-        let mut file =
-            fs::File::create(&temp_path).map_err(|e| format!("Failed to create temp file: {e}"))?;
-
-        std::io::copy(
-            &mut ureq::get(&asset.browser_download_url)
-                .call()
-                .map_err(|e| format!("HTTP request failed: {e}"))?
-                .into_body()
-                .into_reader(),
-            &mut file,
-        )
-        .map_err(|e| format!("Failed to write file: {e}"))?;
-
-        // verify hash matches release
-        if let Some(asset_hash) = asset.hash() {
-            verify_asset_hash(&temp_path, asset_hash)
-                .map_err(|e| format!("Downloaded file checksum verification failed: {e}"))?;
-        }
-
-        fs::rename(&temp_path, &output_path)?;
-        println!(
-            "cargo:warning=Successfully downloaded and verified {}",
-            asset.name
-        );
-    }
-
-    Ok(output_path)
-}
-
-fn verify_asset_hash(file_path: &Path, want_hash: &str) -> Result<(), Box<dyn std::error::Error>> {
-    let mut file = fs::File::open(file_path)?;
-    let mut hasher = Sha256::new();
-    std::io::copy(&mut file, &mut hasher)?;
-    let got_hash = format!("{:x}", hasher.finalize());
-
-    if got_hash == want_hash {
-        Ok(())
-    } else {
-        Err(format!(
-            "Checksum mismatch for {}: expected {}, got {}",
-            file_path.display(),
-            want_hash,
-            got_hash
-        )
-        .into())
-    }
-}
 
 trait CfgBool {
     fn define_bool(&mut self, key: &str, value: bool);
@@ -290,6 +156,7 @@ You may also set MLN_FROM_SOURCE to the path of the maplibre-native directory.
     );
 }
 
+/// Download static libraries from mln for linking into the vinding.
 fn download_static(out_dir: &Path, release_tag: &str) -> (PathBuf, PathBuf) {
     let graphics_api = GraphicsRenderingAPI::from_selected_features();
 
@@ -305,61 +172,27 @@ fn download_static(out_dir: &Path, release_tag: &str) -> (PathBuf, PathBuf) {
         );
     };
 
-    // Fetch release assets info from GitHub API
-    let mlb_core = format!("libmaplibre-native-core-{target}-{graphics_api}.a");
-    let mlb_headers = "maplibre-native-headers.tar.gz";
-    let target_filenames = [mlb_core.as_str(), mlb_headers];
-
-    let assets = fetch_asset_metadata(release_tag, &target_filenames)
-        .unwrap_or_else(|e| panic!("Failed to fetch release assets: {e}"));
-
     // Store release assets in target/mlb_downloads
     let assets_dir =
-        PathBuf::from(env::var("CARGO_TARGET_DIR").unwrap_or_else(|_| "target".to_string()));
-    let download_dir = assets_dir.join("mlb_downloads").join(release_tag);
+        PathBuf::from(env::var("CARGO_TARGET_DIR").unwrap_or_else(|_| "target".to_string()))
+            .join("mlb_downloads")
+            .join(release_tag);
 
-    // Download and verify library file
-    let mlb_core_asset = assets
-        .iter()
-        .find(|a| a.name == mlb_core)
-        .expect("Library asset not found");
-    let downloaded_library = fetch_release_asset(mlb_core_asset, &download_dir)
-        .unwrap_or_else(|e| panic!("Failed to download mlb_core: {e}"));
+    // Fetch release assets from GitHub and symlink or copy into out_dir
+    let mln_release = GithubRelease::from_repo("maplibre/maplibre-native", release_tag);
 
-    // Download and verify headers file
-    let mlb_headers_asset = assets
-        .iter()
-        .find(|a| a.name == mlb_headers)
-        .expect("Headers asset not found");
-    let downloaded_headers = fetch_release_asset(mlb_headers_asset, &download_dir)
-        .unwrap_or_else(|e| panic!("Failed to download mlb_headers: {e}"));
+    // TODO: values From Cargo.yaml
+    let lib_mln_core = mln_release
+        .fetch_asset(
+            &format!("libmaplibre-native-core-{target}-{graphics_api}.a"),
+            &assets_dir,
+        )
+        .symlink_or_copy_to(out_dir);
+    let mln_headers = mln_release
+        .fetch_asset("maplibre-native-headers.tar.gz", &assets_dir)
+        .symlink_or_copy_to(out_dir);
 
-    // Create symlink or copy of library to OUT_DIR for linking
-    fs::create_dir_all(out_dir).expect("Failed to create output directory");
-    let library_in_out_dir = out_dir.join(&mlb_core);
-
-    // Try to create a symlink first, fallback to copy if symlinks aren't supported
-    if library_in_out_dir.exists() {
-        fs::remove_file(&library_in_out_dir).expect("Failed to remove existing library file");
-    }
-
-    // Use absolute paths for symlinks to avoid broken relative paths
-    let downloaded_library_abs = downloaded_library
-        .canonicalize()
-        .expect("Failed to get absolute path for downloaded library");
-
-    #[cfg(unix)]
-    let symlink_result = std::os::unix::fs::symlink(&downloaded_library_abs, &library_in_out_dir);
-    #[cfg(windows)]
-    let symlink_result =
-        std::os::windows::fs::symlink_file(&downloaded_library_abs, &library_in_out_dir);
-
-    if symlink_result.is_err() {
-        fs::copy(&downloaded_library, &library_in_out_dir).expect("Failed to copy library file");
-        println!("cargo:warning=Could not create symlink, copied library file instead");
-    }
-
-    (library_in_out_dir, downloaded_headers)
+    (lib_mln_core, mln_headers)
 }
 
 /// Extracts the headers from the downloaded tarball
@@ -697,6 +530,7 @@ fn build_mln() {
 }
 
 fn main() {
+    println!("cargo:rerun-if-changed=Cargo.toml");
     println!("cargo:rerun-if-env-changed=DOCS_RS");
     if env::var("DOCS_RS").is_ok() {
         println!("cargo:warning=Skipping build.rs when building for docs.rs");
