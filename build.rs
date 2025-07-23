@@ -184,7 +184,7 @@ fn download_static(out_dir: &Path, release_tag: &str) -> (PathBuf, PathBuf) {
 
     let assets_dir =
         PathBuf::from(env::var("CARGO_TARGET_DIR").unwrap_or_else(|_| "target".to_string()))
-            .join("mlb_downloads")
+            .join("mln_downloads")
             .join(release_tag);
 
     // Fetch release assets from GitHub and symlink or copy into out_dir
