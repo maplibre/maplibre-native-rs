@@ -31,11 +31,11 @@ impl GithubRelease {
         Self { assets }
     }
 
-    /// Downloads an asset from a GitHub release by name and places it into
-    /// output_dir.
+    /// Downloads an asset from a GitHub release if it hasn't been downloaded yet,
+    /// and places it into a cache directory.
     ///
-    /// Will panic if the asset fails to download or does not match
-    /// its release-provided checksum.
+    /// Will panic if the asset fails to download or or if the cached asset
+    /// does not match the checksum provided in the release metadata.
     pub fn fetch_asset(&self, asset_name: &str, output_dir: &Path) -> AssetPath {
         let asset = self
             .assets
@@ -56,11 +56,14 @@ impl GithubRelease {
                 return output_path.into();
             };
             println!(
-                "cargo:warning=Asset {}: local copy fails checksum, redownloading",
+                "cargo:warning=Asset {}: cached file fails checksum, redownloading",
                 asset_name
             );
         };
-        println!("cargo:warning=Asset URL {}", &asset.browser_download_url);
+        println!(
+                "cargo:warning=Asset {}: downloading asset from github for the first time, this may take a moment...",
+                asset_name
+            );
         let mut output_file = fs::File::create(&output_path).unwrap();
         std::io::copy(
             &mut ureq::get(&asset.browser_download_url)
