@@ -8,7 +8,7 @@ use walkdir::WalkDir;
 // This allows build support to be unit-tested as well as packaged with the crate.
 #[path = "build_helper.rs"]
 mod build_helper;
-use build_helper::parse_deps;
+use build_helper::{parse_deps, CargoMetadata};
 
 #[path = "build_github.rs"]
 mod build_github;
@@ -172,24 +172,31 @@ fn download_static(out_dir: &Path, release_tag: &str) -> (PathBuf, PathBuf) {
         );
     };
 
-    // Store release assets in target/mlb_downloads
+    let package_metadata = CargoMetadata::from_root_package();
+
+    let mln_release =
+        GithubRelease::from_repo(&package_metadata.string_val("/mln/repo"), release_tag);
+
+    let target_lib = package_metadata
+        .string_val("/mln/static-lib")
+        .replace("{target}", target)
+        .replace("{graphics_api}", &graphics_api.to_string());
+
     let assets_dir =
         PathBuf::from(env::var("CARGO_TARGET_DIR").unwrap_or_else(|_| "target".to_string()))
             .join("mlb_downloads")
             .join(release_tag);
 
     // Fetch release assets from GitHub and symlink or copy into out_dir
-    let mln_release = GithubRelease::from_repo("maplibre/maplibre-native", release_tag);
-
-    // TODO: values From Cargo.yaml
     let lib_mln_core = mln_release
+        .fetch_asset(&target_lib, &assets_dir)
+        .symlink_or_copy_to(out_dir);
+
+    let mln_headers = mln_release
         .fetch_asset(
-            &format!("libmaplibre-native-core-{target}-{graphics_api}.a"),
+            &package_metadata.string_val("/mln/static-headers"),
             &assets_dir,
         )
-        .symlink_or_copy_to(out_dir);
-    let mln_headers = mln_release
-        .fetch_asset("maplibre-native-headers.tar.gz", &assets_dir)
         .symlink_or_copy_to(out_dir);
 
     (lib_mln_core, mln_headers)

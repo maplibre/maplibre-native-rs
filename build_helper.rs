@@ -1,6 +1,34 @@
 use std::collections::HashSet;
 use std::path::Path;
 
+use cargo_metadata::MetadataCommand;
+use serde_json::Value;
+
+pub struct CargoMetadata(Value);
+
+impl CargoMetadata {
+    pub fn from_root_package() -> CargoMetadata {
+        Self(
+            MetadataCommand::new()
+                .exec()
+                .unwrap()
+                .root_package()
+                .unwrap()
+                .metadata
+                .clone(),
+        )
+    }
+    pub fn string_val(&self, path: &str) -> String {
+        self.0.pointer(path).unwrap().as_str().unwrap().to_owned()
+    }
+}
+
+impl From<Value> for CargoMetadata {
+    fn from(value: Value) -> Self {
+        Self(value)
+    }
+}
+
 /// Parses the contents of mbgl-core-deps.txt and returns Cargo linker instructions.
 ///
 /// # Arguments
