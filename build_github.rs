@@ -123,7 +123,7 @@ impl AssetPath {
 
         // Get absolute path for symlinks to avoid broken relative paths
         let abs_source = self.0.canonicalize().expect(
-            "Failed to get 
+            "Failed to get
   absolute path",
         );
 
