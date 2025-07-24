@@ -95,7 +95,7 @@ test-all:
 
 # Run testcases against a specific backend
 test backend:
-    cargo test --all-targets --features {{ backend }} --workspace
+    cargo test --all-targets --features '{{ backend }}' --workspace
 
 # Run all tests and accept the changes. Requires cargo-insta to be installed.
 test-accept:
