@@ -75,6 +75,20 @@ run *ARGS:
     cargo --version
     echo "PWD $(pwd)"
 
+# Show current maplibre-native dependency information
+maplibre-native-info: (assert "curl") (assert "jq")
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    CURRENT_SHA=$(grep -o 'const MLN_REVISION: &str = "[^"]*"' build.rs | grep -o '"[^"]*"' | tr -d '"')
+    echo "Current SHA: $CURRENT_SHA"
+
+    COMMIT_INFO=$(curl -s "https://api.github.com/repos/maplibre/maplibre-native/commits/$CURRENT_SHA" 2>/dev/null)
+    if [[ "$COMMIT_INFO" != "null" ]]; then
+        echo "Message: $(echo "$COMMIT_INFO" | jq -r '.commit.message' | head -n1)"
+        echo "Date: $(echo "$COMMIT_INFO" | jq -r '.commit.author.date')"
+    fi
+
 # Run all tests
 test:
     cargo test --all-targets --workspace
@@ -99,6 +113,48 @@ test-publishing:
 update:
     cargo +nightly -Z unstable-options update --breaking
     cargo update
+
+# Update maplibre-native dependency to latest core release
+update-maplibre-native: (assert "curl") (assert "jq")
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    # Get all core tags and find the one with latest commit date
+    TAGS_RESPONSE=$(curl -s "https://api.github.com/repos/maplibre/maplibre-native/tags?per_page=200")
+    if echo "$TAGS_RESPONSE" | jq -e '.message' >/dev/null 2>&1; then
+        echo "GitHub API error: $(echo "$TAGS_RESPONSE" | jq -r '.message')"
+        exit 1
+    fi
+
+    # GitHubs ordering is publish based, not commit date
+    CORE_TAGS=$(echo "$TAGS_RESPONSE" | jq -r '.[] | select(.name | startswith("core-")) | .name')
+    if [[ -z "$CORE_TAGS" ]]; then
+        echo "No core releases found"
+        exit 1
+    fi
+
+    LATEST_COMMIT_DATE=""
+    TARGET_SHA=""
+
+    for tag in $CORE_TAGS; do
+        sha=$(echo "$tag" | sed 's/^core-//')
+        commit_date=$(curl -s "https://api.github.com/repos/maplibre/maplibre-native/commits/$sha" | jq -r '.commit.author.date')
+
+        if [[ -z "$LATEST_COMMIT_DATE" ]] || [[ "$commit_date" > "$LATEST_COMMIT_DATE" ]]; then
+            LATEST_COMMIT_DATE="$commit_date"
+            TARGET_SHA="$sha"
+        fi
+    done
+
+    CURRENT_SHA=$(grep -o 'const MLN_REVISION: &str = "[^"]*"' build.rs | grep -o '"[^"]*"' | tr -d '"')
+
+    if [[ "$CURRENT_SHA" == "$TARGET_SHA" ]]; then
+        echo "Already up to date: $TARGET_SHA"
+    else
+        echo "Updating from $CURRENT_SHA to $TARGET_SHA"
+        sed -i.tmp "s/const MLN_REVISION: &str = \"[^\"]*\"/const MLN_REVISION: \&str = \"$TARGET_SHA\"/" build.rs
+        rm -f build.rs.tmp
+    fi
 
 # Ensure that a certain command is available
 [private]
