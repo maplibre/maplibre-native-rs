@@ -28,10 +28,9 @@ jobs:
             backend: opengl
 
           # Linux ARM
-          - runs-on: 	ubuntu-24.04-arm
+          - runs-on: ubuntu-24.04-arm
             backend: vulkan
-            features: vulkan
-          - runs-on: 	ubuntu-24.04-arm
+          - runs-on: ubuntu-24.04-arm
             backend: opengl
 
           # macOS ARM
@@ -47,7 +46,7 @@ jobs:
       ##
       - uses: actions/checkout@v4
       - uses: taiki-e/install-action@v2
-        with: { tool: 'just,cargo-llvm-cov' }
+        with: { tool: 'just' }
       - uses: Swatinem/rust-cache@v2
       - name: Install linux dependencies
         if: startsWith(matrix.runs-on, 'ubuntu')
