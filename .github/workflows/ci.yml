@@ -15,31 +15,31 @@ defaults:
 
 jobs:
   test:
-    name: Test ${{ matrix.os }} - ${{ matrix.backend }}
-    runs-on: ${{ matrix.os }}
+    name: Test ${{ matrix.runs-on }} - ${{ matrix.backend }}
+    runs-on: ${{ matrix.runs-on }}
     strategy:
       fail-fast: false
       matrix:
         include:
           # Linux x86
-          - os: ubuntu-latest
+          - runs-on: ubuntu-latest
             backend: vulkan
-          - os: ubuntu-latest
+          - runs-on: ubuntu-latest
             backend: opengl
 
           # Linux ARM
-          - os: 	ubuntu-24.04-arm
+          - runs-on: 	ubuntu-24.04-arm
             backend: vulkan
             features: vulkan
-          - os: 	ubuntu-24.04-arm
+          - runs-on: 	ubuntu-24.04-arm
             backend: opengl
 
           # macOS ARM
-          - os: macos-latest
+          - runs-on: macos-latest
             backend: metal
-          - os: macos-latest
+          - runs-on: macos-latest
             backend: vulkan
-          - os: macos-latest
+          - runs-on: macos-latest
             backend: opengl
     steps:
       #######################################################################################################
@@ -50,7 +50,7 @@ jobs:
         with: { tool: 'just,cargo-llvm-cov' }
       - uses: Swatinem/rust-cache@v2
       - name: Install linux dependencies
-        if: startsWith(matrix.platform, 'ubuntu')
+        if: startsWith(matrix.runs-on, 'ubuntu')
         run: |
           sudo apt-get update
           # Make sure this list matches README
@@ -71,7 +71,7 @@ jobs:
             sudo apt-get install -y mesa-vulkan-drivers glslang-dev
           fi
       - name: Install macOS dependencies
-        if: startsWith(matrix.platform, 'macos')
+        if: startsWith(matrix.runs-on, 'macos')
         run: |
           # Install dependencies via Homebrew
           brew install \
