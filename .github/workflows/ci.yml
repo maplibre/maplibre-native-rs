@@ -14,7 +14,7 @@ defaults:
     shell: bash
 
 jobs:
-  ci:
+  test:
     name: CI
     runs-on: ubuntu-latest
     steps:
@@ -22,7 +22,6 @@ jobs:
       ## Full test
       ##
       - uses: actions/checkout@v4
-        with: { submodules: 'recursive' }
       - uses: taiki-e/install-action@v2
         with: { tool: 'just,cargo-llvm-cov' }
       - uses: hendrikmuhs/ccache-action@v1.2
@@ -45,7 +44,7 @@ jobs:
             libwebp-dev \
             libz-dev
           # OpenGL
-          sudo apt-get install -y libopengl0 libx11-dev
+          sudo apt-get install -y libopengl0
           # Vulkan
           sudo apt-get install -y mesa-vulkan-drivers glslang-dev
       - if: github.event_name == 'release'
@@ -53,6 +52,9 @@ jobs:
         run: just check-if-published
       - run: just ci-test
         env: { RUST_BACKTRACE: full }
+  release:
+    needs: [test]
+    steps:
       # - name: Check semver
       #   uses: obi1kenobi/cargo-semver-checks-action@v2
       #######################################################################################################
