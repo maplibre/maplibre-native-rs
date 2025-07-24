@@ -478,7 +478,6 @@ fn build_mln() {
             }
             GraphicsRenderingAPI::OpenGL => {
                 println!("cargo:rustc-link-lib=GL");
-                println!("cargo:rustc-link-lib=X11");
                 println!("cargo:rustc-link-lib=EGL");
             }
             GraphicsRenderingAPI::Metal => {
