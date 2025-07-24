@@ -15,8 +15,32 @@ defaults:
 
 jobs:
   test:
-    name: CI
-    runs-on: ubuntu-latest
+    name: Test ${{ matrix.os }} - ${{ matrix.backend }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Linux x86
+          - os: ubuntu-latest
+            backend: vulkan
+          - os: ubuntu-latest
+            backend: opengl
+
+          # Linux ARM
+          - os: ubuntu-latest
+            backend: vulkan
+            features: vulkan
+          - os: ubuntu-latest
+            backend: opengl
+
+          # macOS ARM
+          - os: macos-latest
+            backend: metal
+          - os: macos-latest
+            backend: vulkan
+          - os: macos-latest
+            backend: opengl
     steps:
       #######################################################################################################
       ## Full test
@@ -24,12 +48,9 @@ jobs:
       - uses: actions/checkout@v4
       - uses: taiki-e/install-action@v2
         with: { tool: 'just,cargo-llvm-cov' }
-      - uses: hendrikmuhs/ccache-action@v1.2
-      - if: github.event_name != 'release' && github.event_name != 'workflow_dispatch'
-        uses: Swatinem/rust-cache@v2
-      - name: Get latest CMake and Ninja
-        uses: lukka/get-cmake@latest
-      - name: Install dependencies
+      - uses: Swatinem/rust-cache@v2
+      - name: Install linux dependencies
+        if: startsWith(matrix.platform, 'linux')
         run: |
           sudo apt-get update
           # Make sure this list matches README
@@ -47,14 +68,34 @@ jobs:
           sudo apt-get install -y libopengl0
           # Vulkan
           sudo apt-get install -y mesa-vulkan-drivers glslang-dev
-      - if: github.event_name == 'release'
-        name: Ensure this crate has not yet been published (on release)
-        run: just check-if-published
-      - run: just ci-test
+      - name: Install macOS dependencies
+        if: startsWith(matrix.platform, 'macos')
+        run: |
+          # Install dependencies via Homebrew
+          brew install \
+            curl \
+            glfw \
+            jpeg \
+            libpng \
+            sqlite \
+            libuv \
+            webp \
+            zlib
+          # For Vulkan on macOS, install MoltenVK
+          if [ "${{ matrix.backend }}" = "vulkan" ]; then
+            brew install molten-vk vulkan-headers
+          fi
+      - run: just ci-test --features=${{ matrix.backend }}
         env: { RUST_BACKTRACE: full }
   release:
     needs: [test]
     steps:
+      - uses: actions/checkout@v4
+      - uses: taiki-e/install-action@v2
+        with: { tool: 'just' }
+      - if: github.event_name == 'release'
+        name: Ensure this crate has not yet been published (on release)
+        run: just check-if-published
       # - name: Check semver
       #   uses: obi1kenobi/cargo-semver-checks-action@v2
       #######################################################################################################
