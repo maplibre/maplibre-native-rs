@@ -13,6 +13,30 @@ Rust bindings to the [MapLibre Native](https://github.com/maplibre/maplibre-nati
 We use `maplibre-native`s' core build, a static, pre-compiled library.
 We also allow you to compile this yourself. Instructions for this are below.
 
+### Backend Features
+
+This crate supports multiple rendering backends:
+
+- `vulkan` (default on Linux/Windows): `cargo build --features vulkan`
+- `opengl` (cross-platform): `cargo build --features opengl`
+- `metal` (default on macOS/iOS): `cargo build --features metal`
+
+If no feature is specified, the crate will automatically select the platform-appropriate default backend.
+
+### Platform Support
+
+We offer the following platform and backend combinations:
+
+| Platform  | Vulkan | OpenGL | Metal |
+|-----------|--------|--------|-------|
+| Linux x86 | ✅     | 🟨     | ❌     |
+| Linux ARM | 🟨     | 🟨     | ❌     |
+| macOS ARM | 🟨     | 🟨     | 🟨    |
+
+✅ = IS supported and tested in CI
+🟨 = SHOULD be supported, but CI does not currently test for this
+❌ = Not possible
+
 ### Apt Packages
 
 > [!NOTE]
@@ -52,6 +76,12 @@ This crate relies on the MapLibre Native library, which is compiled as part of t
 * if the `MLN_FROM_SOURCE` environment variable is set, the build script will compile the native library from that dir.
 * if this repo has been cloned, it will contain the `/maplibre-native` submodule, which will be used to compile the library. Make sure to run `git submodule update --init --recursive` to fetch the submodule.
 * if there is no `/maplibre-native` submodule, the build script assumes it is being run as a dependency, and will try to download the source into the `OUT_DIR`.  Note that the first might take significant time to download and compile.
+
+### MapLibre Native Dependency Management
+
+The specific version of [MapLibre Native](https://github.com/maplibre/maplibre-native) used is controlled by the `MLN_REVISION` constant in `build.rs`.
+This dependency is automatically updated via a GitHub workflow on the 1st of each month repository.
+A pull request is created if an update is available.
 
 ## Getting Involved
 
