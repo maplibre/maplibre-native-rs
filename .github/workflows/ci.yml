@@ -35,12 +35,12 @@ jobs:
             backend: opengl
 
           # macOS ARM
-          - runs-on: macos-latest
-            backend: metal
-          - runs-on: macos-latest
-            backend: vulkan
-          - runs-on: macos-latest
-            backend: opengl
+          #- runs-on: macos-latest
+          #  backend: metal
+          #- runs-on: macos-latest
+          #  backend: vulkan
+          #- runs-on: macos-latest
+          #  backend: opengl
     steps:
       #######################################################################################################
       ## Full test

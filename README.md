@@ -31,7 +31,7 @@ The following platform and backend combinations are supported and tested in CI:
 |-----------|--------|--------|-------|
 | Linux x86 | ✅     | ✅     | ❌     |
 | Linux ARM | ✅     | ✅     | ❌     |
-| macOS ARM | ✅     | ✅     | ✅    |
+| macOS ARM | 🟨     | 🟨     | 🟨    |
 
 ✅ = IS supported and tested in CI
 🟨 = SHOULD be supported, but currently is not
