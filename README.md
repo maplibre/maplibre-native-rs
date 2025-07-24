@@ -13,6 +13,26 @@ Rust bindings to the [MapLibre Native](https://github.com/maplibre/maplibre-nati
 We use `maplibre-native`s' core build, a static, pre-compiled library.
 We also allow you to compile this yourself. Instructions for this are below.
 
+### Backend Features
+
+This crate supports multiple rendering backends:
+
+- `vulkan` (default on Linux/Windows): `cargo build --features vulkan`
+- `opengl` (cross-platform): `cargo build --features opengl`  
+- `metal` (default on macOS/iOS): `cargo build --features metal`
+
+If no feature is specified, the crate will automatically select the platform-appropriate default backend.
+
+### Platform Support
+
+The following platform and backend combinations are supported and tested in CI:
+
+| Platform  | Vulkan | OpenGL | Metal |
+|-----------|--------|--------|-------|
+| Linux x86 | ✅     | ✅     | ❌     |
+| Linux ARM | ✅     | ✅     | ❌     |
+| macOS ARM | ✅     | ✅     | ✅    |
+
 ### Apt Packages
 
 > [!NOTE]
