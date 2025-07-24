@@ -1,0 +1,48 @@
+name: Update maplibre-native dependency
+
+on:
+  schedule:
+    # The first day of every month at 12:00 AM UTC
+    - cron: "0 12 1 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-dependency:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Install just
+        uses: taiki-e/install-action@v2
+        with:
+          tool: just
+
+      - name: Update maplibre-native
+        run: just update-maplibre-native
+
+      - name: Get maplibre-native details
+        id: maplibre-details
+        run: |
+          echo "details<<EOF" >> $GITHUB_OUTPUT
+          just show-maplibre-native
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore: update `maplibre-native`"
+          title: "chore(deps): update `maplibre-native`"
+          body: |
+            ## Automated `maplibre-native` dependency update
+
+            This PR updates `MLN_REVISION` to the latest core release.
+
+            ${{ steps.maplibre-details.outputs.details }}
+          branch: update-maplibre-native-dependency
+          delete-branch: true
+          labels: dependencies
