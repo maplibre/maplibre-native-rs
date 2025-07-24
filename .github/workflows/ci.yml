@@ -65,7 +65,7 @@ jobs:
             libwebp-dev \
             libz-dev
           # OpenGL
-          sudo apt-get install -y libopengl0
+          sudo apt-get install -y libopengl0 libx11-dev
           # Vulkan
           sudo apt-get install -y mesa-vulkan-drivers glslang-dev
       - name: Install macOS dependencies
