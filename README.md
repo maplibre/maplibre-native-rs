@@ -18,7 +18,7 @@ We also allow you to compile this yourself. Instructions for this are below.
 This crate supports multiple rendering backends:
 
 - `vulkan` (default on Linux/Windows): `cargo build --features vulkan`
-- `opengl` (cross-platform): `cargo build --features opengl`  
+- `opengl` (cross-platform): `cargo build --features opengl`
 - `metal` (default on macOS/iOS): `cargo build --features metal`
 
 If no feature is specified, the crate will automatically select the platform-appropriate default backend.
