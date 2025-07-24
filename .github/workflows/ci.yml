@@ -28,10 +28,10 @@ jobs:
             backend: opengl
 
           # Linux ARM
-          - os: ubuntu-latest
+          - os: 	ubuntu-24.04-arm
             backend: vulkan
             features: vulkan
-          - os: ubuntu-latest
+          - os: 	ubuntu-24.04-arm
             backend: opengl
 
           # macOS ARM
@@ -64,10 +64,12 @@ jobs:
             libuv1-dev \
             libwebp-dev \
             libz-dev
-          # OpenGL
-          sudo apt-get install -y libopengl0 libx11-dev
-          # Vulkan
-          sudo apt-get install -y mesa-vulkan-drivers glslang-dev
+          if [ "${{ matrix.backend }}" = "opengl" ]; then
+            sudo apt-get install -y libopengl0 libx11-dev
+          fi
+          if [ "${{ matrix.backend }}" = "vulkan" ]; then
+            sudo apt-get install -y mesa-vulkan-drivers glslang-dev
+          fi
       - name: Install macOS dependencies
         if: startsWith(matrix.platform, 'macos')
         run: |
