@@ -80,14 +80,20 @@ maplibre-native-info: (assert "curl") (assert "jq")
     #!/usr/bin/env bash
     set -euo pipefail
 
-    CURRENT_SHA=$(grep -o 'const MLN_REVISION: &str = "[^"]*"' build.rs | grep -o '"[^"]*"' | tr -d '"')
-    echo "Current SHA: $CURRENT_SHA"
+    MLN_REPO=$(cargo metadata --format-version 1 --no-deps | jq -e -r '
+        .packages[] |
+        select(.name == "maplibre_native") |
+        .metadata.mln.repo // error("MLN repo missing from Cargo metadata")
+    ')
 
-    COMMIT_INFO=$(curl -s "https://api.github.com/repos/maplibre/maplibre-native/commits/$CURRENT_SHA" 2>/dev/null)
-    if [[ "$COMMIT_INFO" != "null" ]]; then
-        echo "Message: $(echo "$COMMIT_INFO" | jq -r '.commit.message' | head -n1)"
-        echo "Date: $(echo "$COMMIT_INFO" | jq -r '.commit.author.date')"
-    fi
+    MLN_CORE_RELEASE=$(cargo metadata --format-version 1 --no-deps | jq -e -r '
+        .packages[] |
+        select(.name == "maplibre_native") |
+        .metadata.mln.release // error("MLN release missing from Cargo metadata")
+    ')
+
+    echo "Github Repo: ${MLN_REPO}"
+    echo "Release: ${MLN_CORE_RELEASE}"
 
 # Run all tests
 test:
@@ -119,41 +125,57 @@ update-maplibre-native: (assert "curl") (assert "jq")
     #!/usr/bin/env bash
     set -euo pipefail
 
-    # Get all core tags and find the one with latest commit date
-    TAGS_RESPONSE=$(curl -s "https://api.github.com/repos/maplibre/maplibre-native/tags?per_page=200")
-    if echo "$TAGS_RESPONSE" | jq -e '.message' >/dev/null 2>&1; then
-        echo "GitHub API error: $(echo "$TAGS_RESPONSE" | jq -r '.message')"
+    CORE_RELEASE_PFX="core-"
+
+    # Get maplibre-native <owner>/<repo> from Cargo metadata
+    MLN_REPO=$(cargo metadata --format-version 1 --no-deps | jq -e -r '
+        .packages[] |
+        select(.name == "maplibre_native") |
+        .metadata.mln.repo // error("MLN repo missing from Cargo metadata")
+    ')
+
+    # Get currently-tracked maplibre-native lib-core releasefrom Cargo metadata
+    CURRENT_MLN_CORE_RELEASE=$(cargo metadata --format-version 1 --no-deps | jq -e -r '
+        .packages[] |
+        select(.name == "maplibre_native") |
+        .metadata.mln.release // error("MLN release missing from Cargo metadata")
+    ')
+
+    # Hit the GitHub releases API for maplibre-native and pull the latest
+    # releases, avoiding drafts and prereleases.
+    RELEASES_URL="https://api.github.com/repos/$MLN_REPO/releases?per_page=200"
+
+    MLN_RELEASES=$(mktemp)
+    trap 'rm -f "$MLN_RELEASES"' EXIT
+
+    curl -s "$RELEASES_URL" | jq '
+        map(select((.draft | not) and (.prerelease | not))) |
+        sort_by(.published_at) | reverse
+    ' > "$MLN_RELEASES"
+
+    if [[ $(jq 'length' "$MLN_RELEASES") -eq 0 ]]; then
+        echo "ERROR: No releases found for GitHub repo $MLN_REPO"
         exit 1
     fi
 
-    # GitHubs ordering is publish based, not commit date
-    CORE_TAGS=$(echo "$TAGS_RESPONSE" | jq -r '.[] | select(.name | startswith("core-")) | .name')
-    if [[ -z "$CORE_TAGS" ]]; then
-        echo "No core releases found"
+    LATEST_MLN_CORE_RELEASE=$(jq -r --arg prefix "$CORE_RELEASE_PFX" '
+        map(select(.tag_name | startswith($prefix))) |
+        .[0].tag_name
+    ' "$MLN_RELEASES")
+
+    if [[ -z "$LATEST_MLN_CORE_RELEASE" || "$LATEST_MLN_CORE_RELEASE" == "null" ]]; then
+        echo "ERROR: no Maplibre Native Core release found"
+        echo "Release tags found:"
+        jq -r '.[].tag_name' "$MLN_RELEASES"
         exit 1
     fi
 
-    LATEST_COMMIT_DATE=""
-    TARGET_SHA=""
-
-    for tag in $CORE_TAGS; do
-        sha=$(echo "$tag" | sed 's/^core-//')
-        commit_date=$(curl -s "https://api.github.com/repos/maplibre/maplibre-native/commits/$sha" | jq -r '.commit.author.date')
-
-        if [[ -z "$LATEST_COMMIT_DATE" ]] || [[ "$commit_date" > "$LATEST_COMMIT_DATE" ]]; then
-            LATEST_COMMIT_DATE="$commit_date"
-            TARGET_SHA="$sha"
-        fi
-    done
-
-    CURRENT_SHA=$(grep -o 'const MLN_REVISION: &str = "[^"]*"' build.rs | grep -o '"[^"]*"' | tr -d '"')
-
-    if [[ "$CURRENT_SHA" == "$TARGET_SHA" ]]; then
-        echo "Already up to date: $TARGET_SHA"
+    if [[ "$LATEST_MLN_CORE_RELEASE" != "$CURRENT_MLN_CORE_RELEASE" ]]; then
+        echo "Updating Maplibre Native Core from $CURRENT_MLN_CORE_RELEASE to $LATEST_MLN_CORE_RELEASE"
+        sed -i.tmp -E "/\[package\.metadata\.mln\]/,/^\[/{s/release\s*=\s*\"[^\"]+\"/release = \"$LATEST_MLN_CORE_RELEASE\"/}" Cargo.toml && \
+        rm -f Cargo.toml.tmp
     else
-        echo "Updating from $CURRENT_SHA to $TARGET_SHA"
-        sed -i.tmp "s/const MLN_REVISION: &str = \"[^\"]*\"/const MLN_REVISION: \&str = \"$TARGET_SHA\"/" build.rs
-        rm -f build.rs.tmp
+    echo "Maplibre Native Core is current: $CURRENT_MLN_CORE_RELEASE"
     fi
 
 # Ensure that a certain command is available

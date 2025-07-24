@@ -3,17 +3,20 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::{env, fs};
 
-use downloader::{Download, Downloader};
+use walkdir::WalkDir;
 
 // This allows build support to be unit-tested as well as packaged with the crate.
 #[path = "build_helper.rs"]
 mod build_helper;
+use build_helper::{parse_deps, CargoMetadata};
 
-use build_helper::parse_deps;
-use walkdir::WalkDir;
+#[path = "build_github.rs"]
+mod build_github;
+use build_github::GithubRelease;
 
 const MLN_GIT_REPO: &str = "https://github.com/maplibre/maplibre-native.git";
 const MLN_REVISION: &str = "12e0922fc4cadcd88808830e697cfb1d5206c8c9";
+const MLN_RELEASE_TAG: &str = "core-12e0922fc4cadcd88808830e697cfb1d5206c8c9";
 
 trait CfgBool {
     fn define_bool(&mut self, key: &str, value: bool);
@@ -153,7 +156,8 @@ You may also set MLN_FROM_SOURCE to the path of the maplibre-native directory.
     );
 }
 
-fn download_static(out_dir: &Path, revision: &str) -> (PathBuf, PathBuf) {
+/// Download static libraries from mln for linking into the vinding.
+fn download_static(out_dir: &Path, release_tag: &str) -> (PathBuf, PathBuf) {
     let graphics_api = GraphicsRenderingAPI::from_selected_features();
 
     let target = if cfg!(all(target_os = "linux", target_arch = "aarch64")) {
@@ -168,39 +172,34 @@ fn download_static(out_dir: &Path, revision: &str) -> (PathBuf, PathBuf) {
         );
     };
 
-    let mut tasks = Vec::new();
-    let library_file = out_dir.join(format!("libmaplibre-native-core-{target}-{graphics_api}.a"));
-    if !library_file.is_file() {
-        let static_url = format!("https://github.com/maplibre/maplibre-native/releases/download/core-{revision}/libmaplibre-native-core-{target}-{graphics_api}.a");
-        println!("cargo:warning=Downloading precompiled maplibre-native core library from {static_url} into {}",out_dir.display());
-        tasks.push(Download::new(&static_url));
-    }
+    let package_metadata = CargoMetadata::from_root_package();
 
-    let headers_file = out_dir.join("maplibre-native-headers.tar.gz");
-    if !headers_file.is_file() {
-        let headers_url = format!("https://github.com/maplibre/maplibre-native/releases/download/core-{revision}/maplibre-native-headers.tar.gz");
-        println!("cargo:warning=Downloading headers for maplibre-native core library from {headers_url} into {}",out_dir.display());
-        tasks.push(Download::new(&headers_url));
-    }
-    fs::create_dir_all(out_dir).expect("Failed to create output directory");
-    let mut downloader = Downloader::builder()
-        .download_folder(out_dir)
-        .parallel_requests(
-            u16::try_from(tasks.len()).expect("with the number of tasks, this cannot be exceeded"),
+    let mln_release =
+        GithubRelease::from_repo(&package_metadata.string_val("/mln/repo"), release_tag);
+
+    let target_lib = package_metadata
+        .string_val("/mln/static-lib")
+        .replace("{target}", target)
+        .replace("{graphics_api}", &graphics_api.to_string());
+
+    let assets_dir =
+        PathBuf::from(env::var("CARGO_TARGET_DIR").unwrap_or_else(|_| "target".to_string()))
+            .join("mln_downloads")
+            .join(release_tag);
+
+    // Fetch release assets from GitHub and symlink or copy into out_dir
+    let lib_mln_core = mln_release
+        .fetch_asset(&target_lib, &assets_dir)
+        .symlink_or_copy_to(out_dir);
+
+    let mln_headers = mln_release
+        .fetch_asset(
+            &package_metadata.string_val("/mln/static-headers"),
+            &assets_dir,
         )
-        .build()
-        .expect("Failed to create downloader");
-    let downloads = downloader
-        .download(&tasks)
-        .expect("Failed to download maplibre-native static lib")
-        .into_iter();
-    for download in downloads {
-        if let Err(err) = download {
-            panic!("Unexpected error from downloader: {err}");
-        }
-    }
+        .symlink_or_copy_to(out_dir);
 
-    (library_file, headers_file)
+    (lib_mln_core, mln_headers)
 }
 
 /// Extracts the headers from the downloaded tarball
@@ -309,6 +308,7 @@ fn git<I: IntoIterator<Item = S>, S: AsRef<OsStr>>(dir: &Path, args: I) {
 fn clone_or_download(root: &Path) -> (PathBuf, Vec<PathBuf>) {
     println!("cargo:rerun-if-env-changed=MLN_CLONE_REPO");
     println!("cargo:rerun-if-env-changed=MLN_FROM_SOURCE");
+    println!("cargo:rerun-if-env-changed=MLN_RELEASE_TAG");
     let cpp_root = env::var_os("MLN_FROM_SOURCE").map(PathBuf::from);
     let sub_module = root.join("maplibre-native");
     let mut out_dir: PathBuf = env::var_os("OUT_DIR").expect("OUT_DIR is not set").into();
@@ -335,7 +335,9 @@ fn clone_or_download(root: &Path) -> (PathBuf, Vec<PathBuf>) {
         sub_module
     } else {
         // Defaults to downloading the static library
-        let (library_file, headers) = download_static(&out_dir, MLN_REVISION);
+        let release_tag =
+            env::var("MLN_RELEASE_TAG").unwrap_or_else(|_| MLN_RELEASE_TAG.to_string());
+        let (library_file, headers) = download_static(&out_dir, &release_tag);
         let extracted_path = out_dir.join("headers");
         extract_headers(&headers, &extracted_path);
         // Returning the downloaded file, bypassing CMakeLists.txt check
@@ -454,6 +456,34 @@ fn build_mln() {
             cpp_root.parent().unwrap().display()
         );
 
+        // Add system library search paths for macOS
+        if cfg!(target_os = "macos") {
+            // Check for Homebrew installation paths
+            if let Ok(homebrew_prefix) = env::var("HOMEBREW_PREFIX") {
+                println!("cargo:rustc-link-search=native={homebrew_prefix}/lib");
+            } else if Path::new("/opt/homebrew").exists() {
+                println!("cargo:rustc-link-search=native=/opt/homebrew/lib");
+            } else if Path::new("/usr/local").exists() {
+                println!("cargo:rustc-link-search=native=/usr/local/lib");
+            }
+
+            // macOS system library paths
+            println!("cargo:rustc-link-search=native=/usr/lib");
+            println!("cargo:rustc-link-search=native=/System/Library/Frameworks");
+
+            // Add pkg-config paths if available
+            if let Ok(pkgconfig_path) = env::var("PKG_CONFIG_PATH") {
+                for path in pkgconfig_path.split(':') {
+                    let lib_path = Path::new(path).parent().map(|p| p.join("lib"));
+                    if let Some(lib_path) = lib_path {
+                        if lib_path.exists() {
+                            println!("cargo:rustc-link-search=native={}", lib_path.display());
+                        }
+                    }
+                }
+            }
+        }
+
         println!("cargo:rustc-link-lib=sqlite3");
         println!("cargo:rustc-link-lib=uv");
         println!("cargo:rustc-link-lib=icuuc");
@@ -480,22 +510,34 @@ fn build_mln() {
                 println!("cargo:rustc-link-lib=X11");
             }
             GraphicsRenderingAPI::Metal => {
-                // macOS does require dynamic linking against some proprietary system libraries
-                // We have not tested this part
+                // macOS Metal framework dependencies
+                if cfg!(target_os = "macos") {
+                    println!("cargo:rustc-link-lib=framework=Metal");
+                    println!("cargo:rustc-link-lib=framework=MetalKit");
+                    println!("cargo:rustc-link-lib=framework=QuartzCore");
+                    println!("cargo:rustc-link-lib=framework=Foundation");
+                    println!("cargo:rustc-link-lib=framework=CoreGraphics");
+                    println!("cargo:rustc-link-lib=framework=AppKit");
+                    println!("cargo:rustc-link-lib=framework=CoreLocation");
+                }
             }
         }
-        cpp_root
+        // For prebuilt static library, extract the correct library name
+        let lib_filename = cpp_root
             .file_name()
             .expect("static library base has a file name")
-            .to_string_lossy()
-            .to_string()
-            .replacen("lib", "", 1)
-            .replace(".a", "")
+            .to_string_lossy();
+        if lib_filename.starts_with("lib") && lib_filename.ends_with(".a") {
+            lib_filename[3..lib_filename.len() - 2].to_string()
+        } else {
+            lib_filename.to_string()
+        }
     };
     build_bridge(&lib_name, &include_dirs);
 }
 
 fn main() {
+    println!("cargo:rerun-if-changed=Cargo.toml");
     println!("cargo:rerun-if-env-changed=DOCS_RS");
     if env::var("DOCS_RS").is_ok() {
         println!("cargo:warning=Skipping build.rs when building for docs.rs");
