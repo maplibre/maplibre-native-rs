@@ -28,7 +28,7 @@ check-if-published: (assert "jq")
     fi
 
 # Run all tests as expected by CI
-ci-test backend: rust-info test-fmt clippy build (test '{{ backend }}') test-doc
+ci-test backend: rust-info test-fmt clippy build (test "{{backend}}") test-doc
 
 # Run minimal subset of tests to ensure compatibility with MSRV (Minimum Supported Rust Version). This assumes the default toolchain is already set to MSRV.
 ci-test-msrv: rust-info build test-all
@@ -95,7 +95,7 @@ test-all:
 
 # Run testcases against a specific backend
 test backend:
-    cargo test --all-targets --features '{{ backend }}' --workspace
+    cargo test --all-targets --features {{backend}} --workspace
 
 # Run all tests and accept the changes. Requires cargo-insta to be installed.
 test-accept:
