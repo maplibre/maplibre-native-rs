@@ -4,8 +4,8 @@
     just --list
 
 # Build the library
-build:
-    RUSTFLAGS='-D warnings' cargo build --workspace --all-targets
+build backend="vulkan":
+    RUSTFLAGS='-D warnings' cargo build --workspace --features {{backend}} --all-targets
 
 # Quick compile without building a binary
 check:
@@ -28,7 +28,7 @@ check-if-published: (assert "jq")
     fi
 
 # Run all tests as expected by CI
-ci-test backend: rust-info test-fmt clippy build (test "{{backend}}") test-doc
+ci-test backend: rust-info test-fmt clippy (build "{{backend}}") (test "{{backend}}") test-doc
 
 # Run minimal subset of tests to ensure compatibility with MSRV (Minimum Supported Rust Version). This assumes the default toolchain is already set to MSRV.
 ci-test-msrv: rust-info build test-all
@@ -94,7 +94,7 @@ test-all:
     cargo test --all-targets --workspace
 
 # Run testcases against a specific backend
-test backend:
+test backend="vulkan":
     cargo test --all-targets --features {{backend}} --workspace
 
 # Run all tests and accept the changes. Requires cargo-insta to be installed.
