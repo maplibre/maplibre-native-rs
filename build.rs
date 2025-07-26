@@ -5,14 +5,8 @@ use std::{env, fs};
 
 use walkdir::WalkDir;
 
-// This allows build support to be unit-tested as well as packaged with the crate.
-#[path = "build_helper.rs"]
-mod build_helper;
-use build_helper::{parse_deps, CargoMetadata};
-
-#[path = "build_github.rs"]
-mod build_github;
-use build_github::GithubRelease;
+use build_support::{parse_deps, CargoMetadata};
+use build_support::github::GithubRelease;
 
 const MLN_GIT_REPO: &str = "https://github.com/maplibre/maplibre-native.git";
 const MLN_REVISION: &str = "12e0922fc4cadcd88808830e697cfb1d5206c8c9";

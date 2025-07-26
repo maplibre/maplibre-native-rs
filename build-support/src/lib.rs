@@ -4,6 +4,8 @@ use std::path::Path;
 use cargo_metadata::MetadataCommand;
 use serde_json::Value;
 
+pub mod github;
+
 pub struct CargoMetadata(Value);
 
 impl CargoMetadata {

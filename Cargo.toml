@@ -23,15 +23,13 @@ cxx.workspace = true
 [dev-dependencies]
 
 [build-dependencies]
-cargo_metadata.workspace = true
+build-support = { path = "build-support" }
 cmake.workspace = true
 cxx-build.workspace = true
 flate2.workspace = true
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
-sha2.workspace = true
 tar.workspace = true
-ureq = { workspace = true, features = ["json"] }
 walkdir.workspace = true
 
 [lints]
@@ -50,7 +48,7 @@ static-headers = "maplibre-native-headers.tar.gz"
 ##########################################################
 
 [workspace]
-members = [".", "build_tester", "examples/*"]
+members = [".", "build-support", "examples/*"]
 
 [workspace.package]
 edition = "2021"
