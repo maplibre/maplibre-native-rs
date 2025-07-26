@@ -27,11 +27,11 @@ check-if-published: (assert "jq")
         echo "The current crate version has not yet been published."
     fi
 
-# Run all tests as expected by CI
-ci-test backend: rust-info test-fmt clippy (build backend) (test backend) test-doc
+# Lint the project
+ci-lint: rust-info test-fmt clippy
 
-# Run minimal subset of tests to ensure compatibility with MSRV (Minimum Supported Rust Version). This assumes the default toolchain is already set to MSRV.
-ci-test-msrv: rust-info build test-all
+# Run all tests as expected by CI
+ci-test backend: rust-info test-fmt clippy (build backend) (test backend) (test-doc backend)
 
 # Clean all build artifacts
 clean:
@@ -102,9 +102,9 @@ test-accept:
     cargo insta test --accept
 
 # Test documentation
-test-doc:
-    RUSTDOCFLAGS="-D warnings" cargo test --doc
-    RUSTDOCFLAGS="-D warnings" cargo doc --no-deps
+test-doc backed="vulcan":
+    RUSTDOCFLAGS="-D warnings" cargo test --doc --features {{backend}}
+    RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --features {{backend}}
 
 # Test code formatting
 test-fmt:

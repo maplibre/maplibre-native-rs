@@ -14,6 +14,16 @@ defaults:
     shell: bash
 
 jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - run: rustup update stable && rustup default stable
+      - uses: actions/checkout@v4
+      - uses: taiki-e/install-action@v2
+        with: { tool: 'just' }
+      - uses: Swatinem/rust-cache@v2
+      - just ci-lint
   test:
     name: Test ${{ matrix.runs-on }} - ${{ matrix.backend }}
     runs-on: ${{ matrix.runs-on }}
@@ -85,8 +95,18 @@ jobs:
             brew install molten-vk vulkan-headers
           fi
       - run: just ci-test ${{ matrix.backend }}
+      - run: just test-doc ${{ matrix.backend }}
+      ## Test MSRV
+      - name: Read MSRV
+        id: msrv
+        run: echo "value=$(sed -ne 's/rust-version *= *\"\(.*\)\"/\1/p' Cargo.toml)" >> $GITHUB_OUTPUT
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ steps.msrv.outputs.value }}
+      - run: just ci-test ${{ matrix.backend }}
   release:
-    needs: [test]
+    needs: [test, lint]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -98,16 +118,7 @@ jobs:
       # - name: Check semver
       #   uses: obi1kenobi/cargo-semver-checks-action@v2
       #######################################################################################################
-      ## Test MSRV
-      ##
-      # - name: Read MSRV
-      #   id: msrv
-      #   run: echo "value=$(sed -ne 's/rust-version *= *\"\(.*\)\"/\1/p' Cargo.toml)" >> $GITHUB_OUTPUT
-      # - name: Install Rust
-      #   uses: dtolnay/rust-toolchain@stable
-      #   with:
-      #     toolchain: ${{ steps.msrv.outputs.value }}
-      # - run: just ci-test-msrv
+      
       #######################################################################################################
       ## Publish to crates.io
       ##
