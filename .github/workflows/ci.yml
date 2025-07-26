@@ -73,8 +73,7 @@ jobs:
             libz-dev
           if [ "${{ matrix.backend }}" = "opengl" ]; then
             sudo apt-get install -y libopengl0 libx11-dev
-          fi
-          if [ "${{ matrix.backend }}" = "vulkan" ]; then
+          elif [ "${{ matrix.backend }}" = "vulkan" ]; then
             sudo apt-get install -y mesa-vulkan-drivers glslang-dev
           fi
       - name: Install macOS dependencies
