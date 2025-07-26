@@ -112,7 +112,7 @@ test-fmt:
 
 # Run testcases against a specific backend
 test-miri backend="vulkan":
-    MIRIFLAGS="" cargo miri test --all-targets --features {{backend}} --workspace
+    MIRIFLAGS="-Zmiri-native-lib-enable-tracing" cargo miri test --all-targets --features {{backend}} --workspace
 
 test-publishing:
     cargo publish --dry-run
