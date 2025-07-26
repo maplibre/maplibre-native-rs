@@ -24,14 +24,14 @@ jobs:
           # Linux x86
           - runs-on: ubuntu-latest
             backend: vulkan
-          #- runs-on: ubuntu-latest
-          #  backend: opengl
+          - runs-on: ubuntu-latest
+            backend: opengl
 
           # Linux ARM
           - runs-on: ubuntu-24.04-arm
             backend: vulkan
-          #- runs-on: ubuntu-24.04-arm
-          #  backend: opengl
+          - runs-on: ubuntu-24.04-arm
+            backend: opengl
 
           # macOS ARM
           #- runs-on: macos-latest

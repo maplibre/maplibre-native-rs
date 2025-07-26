@@ -29,8 +29,8 @@ The following platform and backend combinations are supported and tested in CI:
 
 | Platform  | Vulkan | OpenGL | Metal |
 |-----------|--------|--------|-------|
-| Linux x86 | ✅     | 🟨     | ❌    |
-| Linux ARM | ✅     | 🟨     | ❌    |
+| Linux x86 | ✅     | ✅     | ❌    |
+| Linux ARM | ✅     | ✅     | ❌    |
 | macOS ARM | 🟨     | 🟨     | 🟨    |
 
 <sub>
