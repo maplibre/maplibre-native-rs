@@ -13,7 +13,7 @@ use build_helper::parse_deps;
 use walkdir::WalkDir;
 
 const MLN_GIT_REPO: &str = "https://github.com/maplibre/maplibre-native.git";
-const MLN_REVISION: &str = "12e0922fc4cadcd88808830e697cfb1d5206c8c9";
+const MLN_REVISION: &str = "aeaadc06b4e0614f4f243db4dce210c22dde9f9c";
 
 trait CfgBool {
     fn define_bool(&mut self, key: &str, value: bool);
