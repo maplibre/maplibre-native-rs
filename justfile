@@ -102,7 +102,7 @@ test-accept:
     cargo insta test --accept
 
 # Test documentation
-test-doc backed="vulcan":
+test-doc backend="vulcan":
     RUSTDOCFLAGS="-D warnings" cargo test --doc --features {{backend}}
     RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --features {{backend}}
 
