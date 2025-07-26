@@ -13,7 +13,7 @@ use build_helper::parse_deps;
 use walkdir::WalkDir;
 
 const MLN_GIT_REPO: &str = "https://github.com/maplibre/maplibre-native.git";
-const MLN_REVISION: &str = "12e0922fc4cadcd88808830e697cfb1d5206c8c9";
+const MLN_REVISION: &str = "aeaadc06b4e0614f4f243db4dce210c22dde9f9c";
 
 trait CfgBool {
     fn define_bool(&mut self, key: &str, value: bool);
@@ -169,17 +169,18 @@ fn download_static(out_dir: &Path, revision: &str) -> (PathBuf, PathBuf) {
     };
 
     let mut tasks = Vec::new();
-    let library_file = out_dir.join(format!("libmaplibre-native-core-{target}-{graphics_api}.a"));
+    let lib_filename = format!("libmaplibre-native-core-amalgam-{target}-{graphics_api}.a");
+    let library_file = out_dir.join(&lib_filename);
     if !library_file.is_file() {
-        let static_url = format!("https://github.com/maplibre/maplibre-native/releases/download/core-{revision}/libmaplibre-native-core-{target}-{graphics_api}.a");
-        println!("cargo:warning=Downloading precompiled maplibre-native core library from {static_url} into {}",out_dir.display());
+        let static_url = format!("https://github.com/maplibre/maplibre-native/releases/download/core-{revision}/{lib_filename}");
+        println!("cargo:warning=Downloading precompiled maplibre-native core library from {static_url} into {}", out_dir.display());
         tasks.push(Download::new(&static_url));
     }
 
     let headers_file = out_dir.join("maplibre-native-headers.tar.gz");
     if !headers_file.is_file() {
         let headers_url = format!("https://github.com/maplibre/maplibre-native/releases/download/core-{revision}/maplibre-native-headers.tar.gz");
-        println!("cargo:warning=Downloading headers for maplibre-native core library from {headers_url} into {}",out_dir.display());
+        println!("cargo:warning=Downloading headers for maplibre-native core library from {headers_url} into {}", out_dir.display());
         tasks.push(Download::new(&headers_url));
     }
     fs::create_dir_all(out_dir).expect("Failed to create output directory");
@@ -477,7 +478,7 @@ fn build_mln() {
             }
             GraphicsRenderingAPI::OpenGL => {
                 println!("cargo:rustc-link-lib=GL");
-                println!("cargo:rustc-link-lib=X11");
+                println!("cargo:rustc-link-lib=EGL");
             }
             GraphicsRenderingAPI::Metal => {
                 // macOS does require dynamic linking against some proprietary system libraries
