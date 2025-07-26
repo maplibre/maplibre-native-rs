@@ -25,17 +25,19 @@ If no feature is specified, the crate will automatically select the platform-app
 
 ### Platform Support
 
-We offer the following platform and backend combinations:
+The following platform and backend combinations are supported and tested in CI:
 
 | Platform  | Vulkan | OpenGL | Metal |
 |-----------|--------|--------|-------|
-| Linux x86 | ✅     | 🟨     | ❌     |
-| Linux ARM | 🟨     | 🟨     | ❌     |
+| Linux x86 | ✅     | 🟨     | ❌    |
+| Linux ARM | ✅     | 🟨     | ❌    |
 | macOS ARM | 🟨     | 🟨     | 🟨    |
 
+<sub>
 ✅ = IS supported and tested in CI
-🟨 = SHOULD be supported, but CI does not currently test for this
+🟨 = SHOULD be supported, but currently is not
 ❌ = Not possible
+</sub>
 
 ### Apt Packages
 

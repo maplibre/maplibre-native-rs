@@ -4,8 +4,8 @@
     just --list
 
 # Build the library
-build:
-    RUSTFLAGS='-D warnings' cargo build --workspace --all-targets
+build backend="vulkan":
+    RUSTFLAGS='-D warnings' cargo build --workspace --features {{backend}} --all-targets
 
 # Quick compile without building a binary
 check:
@@ -27,11 +27,11 @@ check-if-published: (assert "jq")
         echo "The current crate version has not yet been published."
     fi
 
-# Run all tests as expected by CI
-ci-test: rust-info test-fmt clippy build test test-doc
+# Lint the project
+ci-lint: rust-info test-fmt clippy
 
-# Run minimal subset of tests to ensure compatibility with MSRV (Minimum Supported Rust Version). This assumes the default toolchain is already set to MSRV.
-ci-test-msrv: rust-info build test
+# Run all tests as expected by CI
+ci-test backend: rust-info (build backend) (test backend) (test-doc backend)
 
 # Clean all build artifacts
 clean:
@@ -90,21 +90,29 @@ maplibre-native-info: (assert "curl") (assert "jq")
     fi
 
 # Run all tests
-test:
+test-all:
     cargo test --all-targets --workspace
+
+# Run testcases against a specific backend
+test backend="vulkan":
+    cargo test --all-targets --features {{backend}} --workspace
 
 # Run all tests and accept the changes. Requires cargo-insta to be installed.
 test-accept:
     cargo insta test --accept
 
 # Test documentation
-test-doc:
-    RUSTDOCFLAGS="-D warnings" cargo test --doc
-    RUSTDOCFLAGS="-D warnings" cargo doc --no-deps
+test-doc backend="vulcan":
+    RUSTDOCFLAGS="-D warnings" cargo test --doc --features {{backend}}
+    RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --features {{backend}}
 
 # Test code formatting
 test-fmt:
     cargo fmt --all -- --check
+
+# Run testcases against a specific backend
+test-miri backend="vulkan":
+    MIRIFLAGS="" cargo miri test --all-targets --features {{backend}} --workspace
 
 test-publishing:
     cargo publish --dry-run
