@@ -100,7 +100,7 @@ jobs:
       # Test MSRV
       - name: Read MSRV
         id: msrv
-        run: echo "value=$(sed -ne 's/rust-version *= *\"\(.*\)\"/\1/p' Cargo.toml)" >> $GITHUB_OUTPUT
+        run: echo "value=$(sed -nE 's/^rust-version[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' Cargo.toml)" >> $GITHUB_OUTPUT
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
