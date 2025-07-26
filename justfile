@@ -31,7 +31,7 @@ check-if-published: (assert "jq")
 ci-lint: rust-info test-fmt clippy
 
 # Run all tests as expected by CI
-ci-test backend: rust-info test-fmt clippy (build backend) (test backend) (test-doc backend)
+ci-test backend: rust-info (build backend) (test backend) (test-doc backend)
 
 # Clean all build artifacts
 clean:
