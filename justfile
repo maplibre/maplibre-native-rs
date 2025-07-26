@@ -112,7 +112,7 @@ test-fmt:
 
 # Run testcases against a specific backend
 test-miri backend="vulkan":
-    MIRIFLAGS="-Zmiri-native-lib=mbgl-core" cargo miri test --all-targets --features {{backend}} --workspace
+    MIRIFLAGS="" cargo miri test --all-targets --features {{backend}} --workspace
 
 test-publishing:
     cargo publish --dry-run

@@ -107,14 +107,16 @@ jobs:
           toolchain: ${{ steps.msrv.outputs.value }}
       - run: just ci-test ${{ matrix.backend }}
       # Test MIRI
-      - run: |
-          echo "NIGHTLY=nightly-$(curl -s https://rust-lang.github.io/rustup-components-history/x86_64-unknown-linux-gnu/miri)" >> "$GITHUB_ENV"
-      - name: Install ${{ env.NIGHTLY }}
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: ${{ env.NIGHTLY }}
-          components: miri
-      - run: just test-miri ${{ matrix.backend }}
+      # Currently disabled due to "unsupported operation: can't call foreign function `mln$bridge$cxxbridge1$MapRenderer_new` on OS `linux`"
+      # Needs reinvestigation if this can be fixed via "-Zmiri-native-lib" or maybe "-Zmiri-native-lib-enable-tracing"
+      # - run: |
+      #     echo "NIGHTLY=nightly-$(curl -s https://rust-lang.github.io/rustup-components-history/x86_64-unknown-linux-gnu/miri)" >> "$GITHUB_ENV"
+      # - name: Install ${{ env.NIGHTLY }}
+      #   uses: dtolnay/rust-toolchain@master
+      #   with:
+      #     toolchain: ${{ env.NIGHTLY }}
+      #     components: miri
+      # - run: just test-miri ${{ matrix.backend }}
   release:
     needs: [test, lint]
     runs-on: ubuntu-latest
