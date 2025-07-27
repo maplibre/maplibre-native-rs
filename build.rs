@@ -5,8 +5,8 @@ use std::{env, fs};
 
 use walkdir::WalkDir;
 
-use build_support::{parse_deps, CargoMetadata};
 use build_support::github::GithubRelease;
+use build_support::{parse_deps, CargoMetadata};
 
 const MLN_GIT_REPO: &str = "https://github.com/maplibre/maplibre-native.git";
 const MLN_REVISION: &str = "12e0922fc4cadcd88808830e697cfb1d5206c8c9";
@@ -155,9 +155,9 @@ fn download_static(out_dir: &Path, release_tag: &str) -> (PathBuf, PathBuf) {
     let graphics_api = GraphicsRenderingAPI::from_selected_features();
 
     let target = if cfg!(all(target_os = "linux", target_arch = "aarch64")) {
-        "linux-arm64"
+        "amalgam-linux-arm64"
     } else if cfg!(all(target_os = "linux", target_arch = "x86_64")) {
-        "linux-x64"
+        "amalgam-linux-x64"
     } else if cfg!(all(target_os = "macos", target_arch = "aarch64")) {
         "macos-arm64"
     } else {
