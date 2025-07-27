@@ -13,8 +13,13 @@ pub struct GithubRelease {
 /// Used to fetch release artifacts into a directory for later integration into
 /// a build.
 impl GithubRelease {
-    pub fn from_repo(repo: &str, release_tag: &str) -> Self {
-        let api_url = format!("https://api.github.com/repos/{repo}/releases/tags/{release_tag}");
+    pub fn from_repo(repo_url: &str, release_tag: &str) -> Self {
+        // Extract owner/repo from GitHub URL
+        let repo_path = repo_url
+            .strip_prefix("https://github.com/")
+            .and_then(|s| s.strip_suffix(".git").or(Some(s)))
+            .expect("Invalid GitHub URL format");
+        let api_url = format!("https://api.github.com/repos/{repo_path}/releases/tags/{release_tag}");
         let json: serde_json::Value = ureq::get(&api_url)
             .call()
             .unwrap()

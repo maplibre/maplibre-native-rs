@@ -36,7 +36,7 @@ walkdir.workspace = true
 workspace = true
 
 [package.metadata.mln]
-repo = "maplibre/maplibre-native"
+repo = "https://github.com/maplibre/maplibre-native.git"
 release = "core-aeaadc06b4e0614f4f243db4dce210c22dde9f9c"
 static-lib = "libmaplibre-native-core-{target}-{graphics_api}.a"
 static-headers = "maplibre-native-headers.tar.gz"
