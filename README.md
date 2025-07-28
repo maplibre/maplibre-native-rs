@@ -29,8 +29,8 @@ The following platform and backend combinations are supported and tested in CI:
 
 | Platform  | Vulkan | OpenGL | Metal |
 |-----------|--------|--------|-------|
-| Linux x86 | ✅     | 🟨     | ❌    |
-| Linux ARM | ✅     | 🟨     | ❌    |
+| Linux x86 | ✅     | ✅     | ❌    |
+| Linux ARM | ✅     | ✅     | ❌    |
 | macOS ARM | 🟨     | 🟨     | 🟨    |
 
 <sub>
@@ -59,7 +59,7 @@ sudo apt-get install -y \
   libicu-dev
 
 # OpenGL
-sudo apt-get install -y libopengl0 libx11-dev
+sudo apt-get install -y libopengl0
 
 # Vulkan
 sudo apt-get install -y mesa-vulkan-drivers glslang-dev
