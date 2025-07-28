@@ -13,6 +13,10 @@ defaults:
   run:
     shell: bash
 
+env:
+  # Otherwise egl initialisation fails
+  # In CI we don't have a display-surface to render to
+  EGL_PLATFORM: surfaceless
 jobs:
   lint:
     name: Lint
@@ -21,7 +25,7 @@ jobs:
       - run: rustup update stable && rustup default stable
       - uses: actions/checkout@v4
       - uses: taiki-e/install-action@v2
-        with: { tool: 'just' }
+        with: { tool: "just" }
       - uses: Swatinem/rust-cache@v2
       - run: just ci-lint
   test:
@@ -72,7 +76,7 @@ jobs:
             libwebp-dev \
             libz-dev
           if [ "${{ matrix.backend }}" = "opengl" ]; then
-            sudo apt-get install -y libopengl0 mesa-vulkan-drivers
+            sudo apt-get install -y libopengl0
           elif [ "${{ matrix.backend }}" = "vulkan" ]; then
             sudo apt-get install -y mesa-vulkan-drivers glslang-dev
           fi
@@ -95,8 +99,6 @@ jobs:
           fi
       # Regular tests
       - run: just ci-test ${{ matrix.backend }}
-        env:
-          EGL_PLATFORM: surfaceless
       - run: just test-doc ${{ matrix.backend }}
       # Test MSRV
       - name: Read MSRV
