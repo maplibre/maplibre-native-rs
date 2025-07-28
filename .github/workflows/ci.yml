@@ -72,7 +72,7 @@ jobs:
             libwebp-dev \
             libz-dev
           if [ "${{ matrix.backend }}" = "opengl" ]; then
-            sudo apt-get install -y libopengl-dev libegl1-mesa-dev
+            sudo apt-get install -y libopengl0 mesa-vulkan-drivers
           elif [ "${{ matrix.backend }}" = "vulkan" ]; then
             sudo apt-get install -y mesa-vulkan-drivers glslang-dev
           fi
