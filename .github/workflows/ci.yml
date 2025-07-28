@@ -38,24 +38,45 @@ jobs:
           # Linux x86
           - runs-on: ubuntu-latest
             backend: vulkan
+            rust-version: stable
+          - runs-on: ubuntu-latest
+            backend: vulkan
+            rust-version: msrv
           - runs-on: ubuntu-latest
             backend: opengl
+            rust-version: stable
+          - runs-on: ubuntu-latest
+            backend: opengl
+            rust-version: msrv
 
           # Linux ARM
           - runs-on: ubuntu-24.04-arm
             backend: vulkan
+            rust-version: stable
           - runs-on: ubuntu-24.04-arm
             backend: opengl
+            rust-version: msrv
 
           # macOS ARM
           #- runs-on: macos-latest
           #  backend: metal
+          #  rust-version: stable
+          #- runs-on: macos-latest
+          #  backend: metal
+          #  rust-version: msrv
           #- runs-on: macos-latest
           #  backend: vulkan
+          #  rust-version: stable
+          #- runs-on: macos-latest
+          #  backend: vulkan
+          #  rust-version: msrv
           #- runs-on: macos-latest
           #  backend: opengl
+          #  rust-version: stable
+          #- runs-on: macos-latest
+          #  backend: opengl
+          #  rust-version: msrv
     steps:
-      - run: rustup update stable && rustup default stable
       - uses: actions/checkout@v4
       - uses: taiki-e/install-action@v2
         with: { tool: 'just' }
@@ -97,30 +118,21 @@ jobs:
           if [ "${{ matrix.backend }}" = "vulkan" ]; then
             brew install molten-vk vulkan-headers
           fi
-      # Regular tests
-      - run: just ci-test ${{ matrix.backend }}
-      - run: just test-doc ${{ matrix.backend }}
-      # Test MSRV
+      # Setup rust version
+      - run: rustup update stable && rustup default stable
+        if: matrix.rust-version == 'stable'
       - name: Read MSRV
         id: msrv
         run: echo "value=$(sed -nE 's/^rust-version[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' Cargo.toml)" >> $GITHUB_OUTPUT
+        if: matrix.rust-version == 'msrv'
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: ${{ steps.msrv.outputs.value }}
+        if: matrix.rust-version == 'msrv'
+      # Run tests
       - run: just ci-test ${{ matrix.backend }}
-      # Test MIRI
-      # Currently disabled due to "unsupported operation: can't call foreign function `mln$bridge$cxxbridge1$MapRenderer_new` on OS `linux`"
-      # Needs reinvestigation if this can be fixed via "-Zmiri-native-lib" or maybe "-Zmiri-native-lib-enable-tracing"
-      # Tracking issue upstream https://github.com/rust-lang/miri/issues/11
-      # - run: |
-      #     echo "NIGHTLY=nightly-$(curl -s https://rust-lang.github.io/rustup-components-history/x86_64-unknown-linux-gnu/miri)" >> "$GITHUB_ENV"
-      # - name: Install ${{ env.NIGHTLY }}
-      #   uses: dtolnay/rust-toolchain@master
-      #   with:
-      #     toolchain: ${{ env.NIGHTLY }}
-      #     components: miri
-      # - run: just test-miri ${{ matrix.backend }}
+      - run: just test-doc ${{ matrix.backend }}
   release:
     needs: [test, lint]
     runs-on: ubuntu-latest
