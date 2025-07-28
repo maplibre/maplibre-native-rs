@@ -95,6 +95,8 @@ jobs:
           fi
       # Regular tests
       - run: just ci-test ${{ matrix.backend }}
+        env:
+          EGL_PLATFORM: surfaceless
       - run: just test-doc ${{ matrix.backend }}
       # Test MSRV
       - name: Read MSRV
@@ -105,8 +107,6 @@ jobs:
         with:
           toolchain: ${{ steps.msrv.outputs.value }}
       - run: just ci-test ${{ matrix.backend }}
-        env:
-          EGL_PLATFORM: surfaceless
       # Test MIRI
       # Currently disabled due to "unsupported operation: can't call foreign function `mln$bridge$cxxbridge1$MapRenderer_new` on OS `linux`"
       # Needs reinvestigation if this can be fixed via "-Zmiri-native-lib" or maybe "-Zmiri-native-lib-enable-tracing"
