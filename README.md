@@ -59,7 +59,7 @@ sudo apt-get install -y \
   libicu-dev
 
 # OpenGL
-sudo apt-get install -y libopengl0 libx11-dev
+sudo apt-get install -y libopengl0
 
 # Vulkan
 sudo apt-get install -y mesa-vulkan-drivers glslang-dev
