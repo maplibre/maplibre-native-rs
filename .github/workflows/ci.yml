@@ -29,7 +29,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: just ci-lint
   test:
-    name: Test ${{ matrix.runs-on }} - ${{ matrix.backend }}
+    name: Test ${{ matrix.runs-on }} - ${{ matrix.backend }} - rust@${{ matrix.rust-version }}
     runs-on: ${{ matrix.runs-on }}
     strategy:
       fail-fast: false
