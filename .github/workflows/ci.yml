@@ -25,7 +25,7 @@ jobs:
       - run: rustup update stable && rustup default stable
       - uses: actions/checkout@v4
       - uses: taiki-e/install-action@v2
-        with: { tool: "just" }
+        with: { tool: 'just' }
       - uses: Swatinem/rust-cache@v2
       - run: just ci-lint
   test:
