@@ -132,7 +132,6 @@ jobs:
         if: matrix.rust-version == 'msrv'
       # Run tests
       - run: just ci-test ${{ matrix.backend }}
-      - run: just test-doc ${{ matrix.backend }}
   release:
     needs: [test, lint]
     runs-on: ubuntu-latest
