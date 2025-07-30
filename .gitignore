@@ -1,6 +1,15 @@
+**/*.rs.bk
+*.pdb
 .ccache
-Cargo.lock
+.idea/
+.vscode/
 cache.sqlite
+debug/
 out.png
 target/
-tmp
+temp/
+tmp/
+venv/
+
+# This is a library, no lock
+Cargo.lock
