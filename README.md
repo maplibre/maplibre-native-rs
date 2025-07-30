@@ -27,11 +27,13 @@ If no feature is specified, the crate will automatically select the platform-app
 
 The following platform and rendering-API combinations are supported and tested in CI:
 
-| Platform  | Metal | Vulkan | OpenGL |
-| --------- | ----- | ------ | ------ |
-| Linux x86 | ❌    | ✅     | ✅     |
-| Linux ARM | ❌    | ✅     | ✅     |
-| macOS ARM | 🟨    | 🟨[^1] | ❌     |
+| Platform    | Metal | Vulkan | OpenGL |
+| ----------- | ----- | ------ | ------ |
+| Linux x86   | ❌    | ✅     | ✅     |
+| Linux ARM   | ❌    | ✅     | ✅     |
+| Windows x86 | ❌    | 🟨     | 🟨     |
+| Windows ARM | ❌    | 🟨     | 🟨     |
+| macOS ARM   | 🟨    | 🟨[^1] | ❌     |
 
 <sub>
 ✅ = IS supported and tested in CI
