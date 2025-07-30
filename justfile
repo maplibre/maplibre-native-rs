@@ -1,7 +1,6 @@
 #!/usr/bin/env just --justfile
 
 main_crate := 'maplibre_native'
-features_flag := '--all-features'
 
 # if running in CI, treat warnings as errors by setting RUSTFLAGS and RUSTDOCFLAGS to '-D warnings' unless they are already set
 # Use `CI=true just ci-test` to run the same tests as in GitHub CI.
@@ -14,19 +13,22 @@ export RUST_BACKTRACE := env('RUST_BACKTRACE', if ci_mode == '1' {'1'} else {''}
 @_default:
     {{just_executable()}} --list
 
-# Build the library
-build backend="vulkan":
-    RUSTFLAGS='-D warnings' cargo build --workspace --features {{backend}} --all-targets
+# Build the project
+build backend='vulkan':
+    cargo build --workspace --features {{backend}} --all-targets
 
 # Quick compile without building a binary
 check:
-    RUSTFLAGS='-D warnings' cargo check --workspace --all-targets
+    cargo check --workspace --all-targets
 
 # Lint the project
-ci-lint: rust-info test-fmt clippy
+ci-lint: env-info test-fmt clippy
 
 # Run all tests as expected by CI
-ci-test backend: rust-info (build backend) (test backend) (test-doc backend)
+ci-test backend: env-info (build backend) (test backend) (test-doc backend) && assert-git-is-clean
+
+# Run minimal subset of tests to ensure compatibility with MSRV
+ci-test-msrv backend: (ci-test backend)  # for now, same as ci-test
 
 # Clean all build artifacts
 clean:
@@ -34,16 +36,17 @@ clean:
     rm -f Cargo.lock
 
 # Run cargo clippy to lint the code
-clippy:
-    cargo clippy --workspace --all-targets -- -D warnings
+clippy *args:
+    cargo clippy --workspace --all-targets {{args}}
 
 # Build and open code documentation
-docs:
-    cargo doc --no-deps --open
+docs backend *args='--open':
+    DOCS_RS=1 cargo doc --no-deps {{args}} --workspace --features {{backend}}
 
 # Print environment info
 env-info:
     @echo "Running {{if ci_mode == '1' {'in CI mode'} else {'in dev mode'} }} on {{os()}} / {{arch()}}"
+    echo "PWD $(pwd)"
     {{just_executable()}} --version
     rustc --version
     cargo --version
@@ -56,7 +59,7 @@ env-info:
 fmt:
     #!/usr/bin/env bash
     set -euo pipefail
-    if command -v cargo +nightly &> /dev/null; then
+    if (rustup toolchain list | grep nightly && rustup component list --toolchain nightly | grep rustfmt) &> /dev/null; then
         echo 'Reformatting Rust code using nightly Rust fmt to sort imports'
         cargo +nightly fmt --all -- --config imports_granularity=Module,group_imports=StdExternalCrate
     else
@@ -64,33 +67,45 @@ fmt:
         cargo fmt --all
     fi
 
-# Find the minimum supported Rust version (MSRV) using cargo-msrv extension, and update Cargo.toml
-msrv:
-    cargo msrv find --write-msrv --ignore-lockfile
+# Get any package's field from the metadata
+get-crate-field field package=main_crate:  (assert-cmd 'jq')
+    cargo metadata --format-version 1 | jq -e -r '.packages | map(select(.name == "{{package}}")) | first | .{{field}} | select(. != null)'
 
-# Run cargo-release
-release *args='': (cargo-install 'release-plz')
-    release-plz {{args}}
+# Get the minimum supported Rust version (MSRV) for the crate
+get-msrv package=main_crate:  (get-crate-field 'rust_version' package)
 
-# Check semver compatibility with prior published version. Install it with `cargo install cargo-semver-checks`
-semver *args:  (cargo-install 'cargo-semver-checks')
-    cargo semver-checks {{features_flag}} {{args}}
+# Install Linux dependencies (Ubuntu/Debian). Supports 'vulkan' and 'opengl' backends.
+[linux]
+install-dependencies backend='vulkan':
+    sudo apt-get update
+    sudo apt-get install -y \
+      {{if backend == 'opengl' {'libgl1-mesa-dev libglu1-mesa-dev'} else if backend == 'vulkan' {'mesa-vulkan-drivers glslang-dev'} else {''} }} \
+      build-essential \
+      libcurl4-openssl-dev \
+      libglfw3-dev \
+      libjpeg-dev \
+      libpng-dev \
+      libsqlite3-dev \
+      libuv1-dev \
+      libwebp-dev \
+      libz-dev
 
-package:
-    cargo package
-
-# Run the demo binary
-run *ARGS:
-    cargo run -p render -- {{ARGS}}
-
-# Print Rust version information
-@rust-info:
-    rustc --version
-    cargo --version
-    echo "PWD $(pwd)"
+# Install macOS dependencies via Homebrew
+[macos]
+install-dependencies backend='vulkan':
+    brew install \
+        {{if backend == 'vulkan' {'molten-vk vulkan-headers'} else {''} }} \
+        curl \
+        glfw \
+        jpeg \
+        libpng \
+        sqlite \
+        libuv \
+        webp \
+        zlib
 
 # Show current maplibre-native dependency information
-maplibre-native-info: (assert "curl") (assert "jq")
+maplibre-native-info: (assert-cmd "curl") (assert-cmd "jq")
     #!/usr/bin/env bash
     set -euo pipefail
 
@@ -103,41 +118,62 @@ maplibre-native-info: (assert "curl") (assert "jq")
         echo "Date: $(echo "$COMMIT_INFO" | jq -r '.commit.author.date')"
     fi
 
-# Run all tests
-test-all:
-    cargo test --all-targets --workspace
+# Find the minimum supported Rust version (MSRV) using cargo-msrv extension, and update Cargo.toml
+msrv:  (cargo-install 'cargo-msrv')
+    cargo msrv find --write-msrv --ignore-lockfile
+
+package:
+    cargo package
+
+# Run cargo-release
+release *args='':  (cargo-install 'release-plz')
+    release-plz {{args}}
+
+# Run the demo binary
+run *ARGS:
+    cargo run -p render -- {{ARGS}}
+
+# Check semver compatibility with prior published version. Install it with `cargo install cargo-semver-checks`
+semver *args:  (cargo-install 'cargo-semver-checks')
+    cargo semver-checks {{args}}
 
 # Run testcases against a specific backend
-test backend="vulkan":
+test backend='vulkan':
     cargo test --all-targets --features {{backend}} --workspace
 
 # Run all tests and accept the changes. Requires cargo-insta to be installed.
 test-accept:
     cargo insta test --accept
 
-# Test documentation
-test-doc backend="vulcan":
-    RUSTDOCFLAGS="-D warnings" cargo test --doc --features {{backend}}
-    RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --features {{backend}}
+# Run all tests
+test-all:
+    cargo test --all-targets --workspace
+
+# Test documentation generation
+test-doc backend: (docs backend '')
 
 # Test code formatting
 test-fmt:
     cargo fmt --all -- --check
 
 # Run testcases against a specific backend
-test-miri backend="vulkan":
+test-miri backend='vulkan':
     MIRIFLAGS="" cargo miri test --all-targets --features {{backend}} --workspace
 
 test-publishing:
     cargo publish --dry-run
 
-# Update all dependencies, including the breaking changes. Requires nightly toolchain (install with `rustup install nightly`)
+# Find unused dependencies. Install it with `cargo install cargo-udeps`
+udeps:  (cargo-install 'cargo-udeps')
+    cargo +nightly udeps --workspace --all-targets
+
+# Update all dependencies, including breaking changes. Requires nightly toolchain (install with `rustup install nightly`)
 update:
     cargo +nightly -Z unstable-options update --breaking
     cargo update
 
 # Update maplibre-native dependency to latest core release
-update-maplibre-native: (assert "curl") (assert "jq")
+update-maplibre-native: (assert-cmd "curl") (assert-cmd "jq")
     #!/usr/bin/env bash
     set -euo pipefail
 
@@ -180,10 +216,21 @@ update-maplibre-native: (assert "curl") (assert "jq")
 
 # Ensure that a certain command is available
 [private]
-assert $COMMAND:
-    @if ! type "{{COMMAND}}" > /dev/null; then \
-        echo "Command '{{COMMAND}}' could not be found. Please make sure it has been installed on your computer." ;\
+assert-cmd command:
+    @if ! type {{command}} > /dev/null; then \
+        echo "Command '{{command}}' could not be found. Please make sure it has been installed on your computer." ;\
         exit 1 ;\
+    fi
+
+# Make sure the git repo has no uncommitted changes
+[private]
+assert-git-is-clean:
+    @if [ -n "$(git status --untracked-files --porcelain)" ]; then \
+      >&2 echo "ERROR: git repo is no longer clean. Make sure compilation and tests artifacts are in the .gitignore, and no repo files are modified." ;\
+      >&2 echo "######### git status ##########" ;\
+      git status ;\
+      git --no-pager diff ;\
+      exit 1 ;\
     fi
 
 # Check if a certain Cargo command is installed, and install it if needed

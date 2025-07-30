@@ -29,8 +29,8 @@ The following platform and backend combinations are supported and tested in CI:
 
 | Platform  | Vulkan | OpenGL | Metal |
 |-----------|--------|--------|-------|
-| Linux x86 | ✅     | ✅     | ❌    |
-| Linux ARM | ✅     | ✅     | ❌    |
+| Linux x86 | ✅      | ✅      | ❌     |
+| Linux ARM | ✅      | ✅      | ❌     |
 | macOS ARM | 🟨     | 🟨     | 🟨    |
 
 <sub>
@@ -39,32 +39,6 @@ The following platform and backend combinations are supported and tested in CI:
 ❌ = Not possible
 </sub>
 
-### Apt Packages
-
-> [!NOTE]
-> The version of `libicu` is quite specific.
-> There [is some work ongoing upstream](https://github.com/maplibre/maplibre-native/issues/3483) to build this into the static library we pull.
-
-```shell
-sudo apt-get install -y \
-  build-essential \
-  libcurl4-openssl-dev \
-  libglfw3-dev \
-  libjpeg-dev \
-  libpng-dev \
-  libsqlite3-dev \
-  libuv1-dev \
-  libwebp-dev \
-  libz-dev \
-  libicu-dev
-
-# OpenGL
-sudo apt-get install -y libopengl0
-
-# Vulkan
-sudo apt-get install -y mesa-vulkan-drivers glslang-dev
-```
-
 ## Development
 
 * This project is easier to develop with [just](https://github.com/casey/just#readme), a modern alternative to `make`.
@@ -72,16 +46,34 @@ sudo apt-get install -y mesa-vulkan-drivers glslang-dev
 * To get a list of available commands, run `just`.
 * To run tests, use `just test`.
 
+### Dependencies
+
+> [!NOTE]
+> The version of `libicu` is quite specific.
+> There [is some work ongoing upstream](https://github.com/maplibre/maplibre-native/issues/3483) to build this into the static library we pull.
+
+This command will install the required dependencies on Linux or macOS for the `vulkan` backend. You may also use it with `opengl` parameter on Linux. It is OK to run this command multiple times for each backend.
+
+```shell
+just install-dependencies vulkan
+```
+
 ### Compiling MapLibre Native
 
 This crate relies on the MapLibre Native library, which is compiled as part of the build process:
+
 * if the `MLN_FROM_SOURCE` environment variable is set, the build script will compile the native library from that dir.
-* if this repo has been cloned, it will contain the `/maplibre-native` submodule, which will be used to compile the library. Make sure to run `git submodule update --init --recursive` to fetch the submodule.
-* if there is no `/maplibre-native` submodule, the build script assumes it is being run as a dependency, and will try to download the source into the `OUT_DIR`.  Note that the first might take significant time to download and compile.
+* if this repo has been cloned, it will contain the
+  `/maplibre-native` submodule, which will be used to compile the library. Make sure to run
+  `git submodule update --init --recursive` to fetch the submodule.
+* if there is no
+  `/maplibre-native` submodule, the build script assumes it is being run as a dependency, and will try to download the source into the
+  `OUT_DIR`. Note that the first might take significant time to download and compile.
 
 ### MapLibre Native Dependency Management
 
-The specific version of [MapLibre Native](https://github.com/maplibre/maplibre-native) used is controlled by the `MLN_REVISION` constant in `build.rs`.
+The specific version of [MapLibre Native](https://github.com/maplibre/maplibre-native) used is controlled by the
+`MLN_REVISION` constant in `build.rs`.
 This dependency is automatically updated via a GitHub workflow on the 1st of each month repository.
 A pull request is created if an update is available.
 
@@ -93,15 +85,15 @@ Join the `#maplibre-martin` slack channel at OSMUS -- automatic invite is at <ht
 
 Licensed under either of
 
-* Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or <http://www.apache.org/licenses/LICENSE-2.0>)
-* MIT license ([LICENSE-MIT](LICENSE-MIT) or <http://opensource.org/licenses/MIT>)
+* Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or <https://www.apache.org/licenses/LICENSE-2.0>)
+* MIT license ([LICENSE-MIT](LICENSE-MIT) or <https://opensource.org/licenses/MIT>)
   at your option.
 
 ### Contribution
 
 Unless you explicitly state otherwise, any contribution intentionally
 submitted for inclusion in the work by you, as defined in the
-Apache-2.0 license, shall be dual licensed as above, without any
+Apache-2.0 license, shall be dual-licensed as above, without any
 additional terms or conditions.
 
 ### MapLibre Native Licence
