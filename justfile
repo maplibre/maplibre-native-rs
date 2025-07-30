@@ -122,6 +122,7 @@ maplibre-native-info: (assert-cmd "curl") (assert-cmd "jq")
 msrv:  (cargo-install 'cargo-msrv')
     cargo msrv find --write-msrv --ignore-lockfile
 
+# Run cargo package
 package:
     cargo package
 
