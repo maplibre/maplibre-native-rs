@@ -125,7 +125,7 @@ msrv:  (cargo-install 'cargo-msrv')
 package:
     cargo package
 
-# Run cargo-release
+# Run release-plz
 release *args='':  (cargo-install 'release-plz')
     release-plz {{args}}
 
