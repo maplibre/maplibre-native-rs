@@ -27,11 +27,11 @@ If no feature is specified, the crate will automatically select the platform-app
 
 The following platform and backend combinations are supported and tested in CI:
 
-| Platform  | Vulkan | OpenGL | Metal |
-|-----------|--------|--------|-------|
-| Linux x86 | ✅     | ✅     | ❌    |
-| Linux ARM | ✅     | ✅     | ❌    |
-| macOS ARM | 🟨 (Molten VK)    | ❌     | 🟨    |
+| Platform  | Vulkan          | OpenGL | Metal |
+|-----------|-----------------|--------|-------|
+| Linux x86 | ✅              | ✅      | ❌    |
+| Linux ARM | ✅              | ✅      | ❌    |
+| macOS ARM | 🟨 (MoltenVK)   | ❌      | 🟨    |
 
 <sub>
 ✅ = IS supported and tested in CI
