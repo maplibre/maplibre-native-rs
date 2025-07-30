@@ -6,8 +6,6 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
-  release:
-    types: [ published ]
   workflow_dispatch:
 
 defaults:
@@ -27,6 +25,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: taiki-e/install-action@v2
         with: { tool: 'just' }
+      - run: just env-info
       - uses: Swatinem/rust-cache@v2
       - run: just ci-lint
   test:
@@ -82,6 +81,7 @@ jobs:
       - uses: taiki-e/install-action@v2
         with: { tool: 'just' }
       - uses: Swatinem/rust-cache@v2
+      - run: just env-info
       - if: startsWith(matrix.runs-on, 'ubuntu')
         name: Install linux dependencies
         run: |
@@ -133,36 +133,12 @@ jobs:
           toolchain: ${{ steps.msrv.outputs.value }}
       # Run tests
       - run: just ci-test ${{ matrix.backend }}
-  release:
-    needs: [test, lint]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: taiki-e/install-action@v2
-        with: { tool: 'just' }
-      - if: github.event_name == 'release'
-        name: Ensure this crate has not yet been published (on release)
-        run: just check-if-published
-      # - name: Check semver
-      #   uses: obi1kenobi/cargo-semver-checks-action@v2
-      #######################################################################################################
-
-      #######################################################################################################
-      ## Publish to crates.io
-      ##
-      - if: github.event_name == 'push'
-        run: just test-publishing
-      - if: github.event_name == 'release' && startsWith(github.ref, 'refs/tags/')
-        name: Publish to crates.io
-        run: cargo publish
-        env:
-          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
 
   # This final step is needed to mark the whole workflow as successful
   # Don't change its name - it is used by the merge protection rules
-  done:
+  ci-passed:
     if: always()
-    needs: [ release ]
+    needs: [ test, lint ]
     name: CI Finished
     runs-on: ubuntu-latest
     steps:
@@ -171,3 +147,37 @@ jobs:
       - if: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped') }}
         name: CI Result
         run: exit 1
+
+  # Release unpublished packages
+  release-plz:
+    needs: [ ci-passed ]
+    if: |
+      always()
+      && needs.ci-passed.result == 'success'
+      && github.event_name == 'push'
+      && github.ref == 'refs/heads/main'
+      && github.repository_owner == 'maplibre'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    concurrency:
+      group: release-plz-${{ github.ref }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Publish to crates.io if crate's version is newer
+        uses: release-plz/action@v0.5
+        id: release
+        with: { command: release }
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_PLZ_TOKEN }}
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+      - if: ${{ steps.release.outputs.releases_created == 'false' }}
+        name: If version is the same, create a PR proposing new version and changelog for the next release
+        uses: release-plz/action@v0.5
+        with: { command: release-pr }
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_PLZ_TOKEN }}
