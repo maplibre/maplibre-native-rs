@@ -32,6 +32,7 @@ The following platform and rendering-API combinations are supported and tested i
 | Linux x86   | ❌    | ✅     | ✅     |
 | Linux ARM   | ❌    | ✅     | ✅     |
 | Windows x86 | ❌    | 🟨     | 🟨     |
+| Windows ARM | ❌    | 🟨     | 🟨     |
 | macOS ARM   | 🟨    | 🟨[^1] | ❌     |
 
 <sub>
