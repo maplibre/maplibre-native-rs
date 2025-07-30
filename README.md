@@ -25,19 +25,22 @@ If no feature is specified, the crate will automatically select the platform-app
 
 ### Platform Support
 
-The following platform and backend combinations are supported and tested in CI:
+The following platform and rendering-API combinations are supported and tested in CI:
 
-| Platform  | Vulkan        | OpenGL | Metal |
-| --------- | ------------- | ------ | ----- |
-| Linux x86 | ✅            | ✅     | ❌    |
-| Linux ARM | ✅            | ✅     | ❌    |
-| macOS ARM | 🟨 (MoltenVK) | ❌     | 🟨    |
+| Platform  | Metal | Vulkan | OpenGL |
+| --------- | ----- | ------ | ------ |
+| Linux x86 | ❌    | ✅     | ✅     |
+| Linux ARM | ❌    | ✅     | ✅     |
+| macOS ARM | 🟨    | 🟨[^1] | ❌     |
 
 <sub>
 ✅ = IS supported and tested in CI
 🟨 = SHOULD be supported, but currently is not
 ❌ = Not possible
 </sub>
+
+[^1]: Vulcan support on macos is provided via MoltenVK. There is a slight performance and binary size overhead for this with little to no upsides. Both Metal and Vulcan run through the same extensive test suite upstream. You can use Vulcan if you find a bug in the Metal implementation until we have fixed it upstream.
+
 
 ### Apt Packages
 
