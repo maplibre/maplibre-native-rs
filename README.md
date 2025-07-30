@@ -27,11 +27,11 @@ If no feature is specified, the crate will automatically select the platform-app
 
 The following platform and backend combinations are supported and tested in CI:
 
-| Platform  | Vulkan          | OpenGL | Metal |
-|-----------|-----------------|--------|-------|
-| Linux x86 | ✅              | ✅      | ❌    |
-| Linux ARM | ✅              | ✅      | ❌    |
-| macOS ARM | 🟨 (MoltenVK)   | ❌      | 🟨    |
+| Platform  | Vulkan        | OpenGL | Metal |
+| --------- | ------------- | ------ | ----- |
+| Linux x86 | ✅            | ✅     | ❌    |
+| Linux ARM | ✅            | ✅     | ❌    |
+| macOS ARM | 🟨 (MoltenVK) | ❌     | 🟨    |
 
 <sub>
 ✅ = IS supported and tested in CI
@@ -67,17 +67,18 @@ sudo apt-get install -y mesa-vulkan-drivers glslang-dev
 
 ## Development
 
-* This project is easier to develop with [just](https://github.com/casey/just#readme), a modern alternative to `make`.
+- This project is easier to develop with [just](https://github.com/casey/just#readme), a modern alternative to `make`.
   Install it with `cargo install just`.
-* To get a list of available commands, run `just`.
-* To run tests, use `just test`.
+- To get a list of available commands, run `just`.
+- To run tests, use `just test`.
 
 ### Compiling MapLibre Native
 
 This crate relies on the MapLibre Native library, which is compiled as part of the build process:
-* if the `MLN_FROM_SOURCE` environment variable is set, the build script will compile the native library from that dir.
-* if this repo has been cloned, it will contain the `/maplibre-native` submodule, which will be used to compile the library. Make sure to run `git submodule update --init --recursive` to fetch the submodule.
-* if there is no `/maplibre-native` submodule, the build script assumes it is being run as a dependency, and will try to download the source into the `OUT_DIR`.  Note that the first might take significant time to download and compile.
+
+- if the `MLN_FROM_SOURCE` environment variable is set, the build script will compile the native library from that dir.
+- if this repo has been cloned, it will contain the `/maplibre-native` submodule, which will be used to compile the library. Make sure to run `git submodule update --init --recursive` to fetch the submodule.
+- if there is no `/maplibre-native` submodule, the build script assumes it is being run as a dependency, and will try to download the source into the `OUT_DIR`. Note that the first might take significant time to download and compile.
 
 ### MapLibre Native Dependency Management
 
@@ -93,8 +94,8 @@ Join the `#maplibre-martin` slack channel at OSMUS -- automatic invite is at <ht
 
 Licensed under either of
 
-* Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or <http://www.apache.org/licenses/LICENSE-2.0>)
-* MIT license ([LICENSE-MIT](LICENSE-MIT) or <http://opensource.org/licenses/MIT>)
+- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or <http://www.apache.org/licenses/LICENSE-2.0>)
+- MIT license ([LICENSE-MIT](LICENSE-MIT) or <http://opensource.org/licenses/MIT>)
   at your option.
 
 ### Contribution
