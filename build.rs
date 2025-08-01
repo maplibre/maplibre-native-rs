@@ -406,10 +406,6 @@ fn add_link_targets(cpp_root: &Path) {
     }
 
     // FIXME:  These should not be manually set like this here
-    println!("cargo:rustc-link-lib=icuuc");
-    println!("cargo:rustc-link-lib=icui18n");
-    println!("cargo:rustc-link-lib=jpeg");
-    println!("cargo:rustc-link-lib=png");
     println!("cargo:rustc-link-lib=z");
     println!("cargo:rustc-link-lib=curl");
 }
@@ -456,9 +452,6 @@ fn build_mln() {
         );
 
         println!("cargo:rustc-link-lib=uv");
-        println!("cargo:rustc-link-lib=jpeg");
-        println!("cargo:rustc-link-lib=png");
-        println!("cargo:rustc-link-lib=webp");
         println!("cargo:rustc-link-lib=curl");
         println!("cargo:rustc-link-lib=z");
         match GraphicsRenderingAPI::from_selected_features() {
