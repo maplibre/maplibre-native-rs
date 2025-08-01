@@ -46,10 +46,6 @@ The following platform and rendering-API combinations are supported and tested i
 
 ### Apt Packages
 
-> [!NOTE]
-> The version of `libicu` is quite specific.
-> There [is some work ongoing upstream](https://github.com/maplibre/maplibre-native/issues/3483) to build this into the static library we pull.
-
 ```shell
 sudo apt-get install -y \
   build-essential \
@@ -60,8 +56,7 @@ sudo apt-get install -y \
   libsqlite3-dev \
   libuv1-dev \
   libwebp-dev \
-  libz-dev \
-  libicu-dev
+  libz-dev
 
 # OpenGL
 sudo apt-get install -y libopengl0
