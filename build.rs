@@ -455,7 +455,6 @@ fn build_mln() {
             cpp_root.parent().unwrap().display()
         );
 
-        println!("cargo:rustc-link-lib=sqlite3");
         println!("cargo:rustc-link-lib=uv");
         println!("cargo:rustc-link-lib=jpeg");
         println!("cargo:rustc-link-lib=png");

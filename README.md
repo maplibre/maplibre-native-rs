@@ -53,7 +53,6 @@ sudo apt-get install -y \
   libglfw3-dev \
   libjpeg-dev \
   libpng-dev \
-  libsqlite3-dev \
   libuv1-dev \
   libwebp-dev \
   libz-dev
