@@ -50,10 +50,7 @@ The following platform and rendering-API combinations are supported and tested i
 sudo apt-get install -y \
   libcurl4-openssl-dev \
   libglfw3-dev \
-  libjpeg-dev \
-  libpng-dev \
   libuv1-dev \
-  libwebp-dev \
   libz-dev
 
 # OpenGL
