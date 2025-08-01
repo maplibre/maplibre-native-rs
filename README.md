@@ -48,7 +48,6 @@ The following platform and rendering-API combinations are supported and tested i
 
 ```shell
 sudo apt-get install -y \
-  build-essential \
   libcurl4-openssl-dev \
   libglfw3-dev \
   libjpeg-dev \

@@ -88,7 +88,6 @@ jobs:
           sudo apt-get update
           # Make sure this list matches README
           sudo apt-get install -y \
-            build-essential \
             libcurl4-openssl-dev \
             libglfw3-dev \
             libjpeg-dev \
