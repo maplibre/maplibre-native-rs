@@ -47,11 +47,7 @@ The following platform and rendering-API combinations are supported and tested i
 ### Apt Packages
 
 ```shell
-sudo apt-get install -y \
-  libcurl4-openssl-dev \
-  libglfw3-dev \
-  libuv1-dev \
-  libz-dev
+sudo apt-get install -y libglfw3-dev 
 
 # OpenGL
 sudo apt-get install -y libopengl0

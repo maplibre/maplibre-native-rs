@@ -87,11 +87,7 @@ jobs:
         run: |
           sudo apt-get update
           # Make sure this list matches README
-          sudo apt-get install -y \
-            libcurl4-openssl-dev \
-            libglfw3-dev \
-            libuv1-dev \
-            libz-dev
+          sudo apt-get install -y libglfw3-dev 
           if [ "${{ matrix.backend }}" = "opengl" ]; then
             sudo apt-get install -y libopengl0
           elif [ "${{ matrix.backend }}" = "vulkan" ]; then
