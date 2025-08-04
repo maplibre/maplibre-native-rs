@@ -405,13 +405,6 @@ fn add_link_targets(cpp_root: &Path) {
         println!("{instr}");
     }
 
-    // FIXME:  These should not be manually set like this here
-    println!("cargo:rustc-link-lib=icuuc");
-    println!("cargo:rustc-link-lib=icui18n");
-    println!("cargo:rustc-link-lib=jpeg");
-    println!("cargo:rustc-link-lib=png");
-    println!("cargo:rustc-link-lib=z");
-    println!("cargo:rustc-link-lib=curl");
 }
 
 /// Build the actual "mbgl-core" static library target.
@@ -455,16 +448,6 @@ fn build_mln() {
             cpp_root.parent().unwrap().display()
         );
 
-        println!("cargo:rustc-link-lib=sqlite3");
-        println!("cargo:rustc-link-lib=uv");
-        println!("cargo:rustc-link-lib=icuuc");
-        println!("cargo:rustc-link-lib=icui18n");
-        //println!("cargo:rustc-link-lib=nu"); // todo add to docs => git clone https://bitbucket.org/alekseyt/nunicode.git && cmake .  && make && sudo make install
-        println!("cargo:rustc-link-lib=jpeg");
-        println!("cargo:rustc-link-lib=png");
-        println!("cargo:rustc-link-lib=webp");
-        println!("cargo:rustc-link-lib=curl");
-        println!("cargo:rustc-link-lib=z");
         match GraphicsRenderingAPI::from_selected_features() {
             GraphicsRenderingAPI::Vulkan => {
                 // all libraries below are from glslang-dev despite their names
