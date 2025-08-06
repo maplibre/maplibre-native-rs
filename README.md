@@ -1,10 +1,10 @@
 # MapLibre-native-rs
 
-[![GitHub](https://img.shields.io/badge/github-nyurik/maplibre--native--rs-8da0cb?logo=github)](https://github.com/nyurik/maplibre-native-rs)
+[![GitHub](https://img.shields.io/badge/github-maplibre/maplibre--native--rs-8da0cb?logo=github)](https://github.com/maplibre/maplibre-native-rs)
 [![crates.io version](https://img.shields.io/crates/v/maplibre_native)](https://crates.io/crates/maplibre_native)
 [![docs.rs](https://img.shields.io/docsrs/maplibre_native)](https://docs.rs/maplibre_native)
-[![crates.io license](https://img.shields.io/crates/l/maplibre_native)](https://github.com/nyurik/maplibre-native-rs/blob/main/LICENSE-APACHE)
-[![CI build](https://github.com/nyurik/maplibre-native-rs/actions/workflows/ci.yml/badge.svg)](https://github.com/nyurik/maplibre-native-rs/actions)
+[![crates.io license](https://img.shields.io/crates/l/maplibre_native)](https://github.com/maplibre/maplibre-native-rs/blob/main/LICENSE-APACHE)
+[![CI build](https://github.com/maplibre/maplibre-native-rs/actions/workflows/ci.yml/badge.svg)](https://github.com/maplibre/maplibre-native-rs/actions)
 
 Rust bindings to the [MapLibre Native](https://github.com/maplibre/maplibre-native) map rendering engine.
 
