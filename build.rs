@@ -404,7 +404,6 @@ fn add_link_targets(cpp_root: &Path) {
     for instr in parse_deps(&deps_contents, &deps_build_dir.join("build"), true) {
         println!("{instr}");
     }
-
 }
 
 /// Build the actual "mbgl-core" static library target.

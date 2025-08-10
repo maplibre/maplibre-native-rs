@@ -87,7 +87,7 @@ jobs:
         run: |
           sudo apt-get update
           # Make sure this list matches README
-          sudo apt-get install -y libglfw3-dev 
+          sudo apt-get install -y libglfw3-dev
           if [ "${{ matrix.backend }}" = "opengl" ]; then
             sudo apt-get install -y libopengl0
           elif [ "${{ matrix.backend }}" = "vulkan" ]; then

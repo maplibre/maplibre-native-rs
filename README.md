@@ -47,7 +47,7 @@ The following platform and rendering-API combinations are supported and tested i
 ### Apt Packages
 
 ```shell
-sudo apt-get install -y libglfw3-dev 
+sudo apt-get install -y libglfw3-dev
 
 # OpenGL
 sudo apt-get install -y libopengl0
