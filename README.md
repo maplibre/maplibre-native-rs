@@ -47,7 +47,17 @@ The following platform and rendering-API combinations are supported and tested i
 ### Apt Packages
 
 ```shell
-sudo apt-get install -y libglfw3-dev
+sudo apt-get install -y \
+  build-essential \
+  libcurl4-openssl-dev \
+  libglfw3-dev \
+  libjpeg-dev \
+  libpng-dev \
+  libsqlite3-dev \
+  libuv1-dev \
+  libwebp-dev \
+  libz-dev \
+  libicu-dev
 
 # OpenGL
 sudo apt-get install -y libopengl0
