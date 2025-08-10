@@ -51,13 +51,9 @@ sudo apt-get install -y \
   build-essential \
   libcurl4-openssl-dev \
   libglfw3-dev \
-  libjpeg-dev \
-  libpng-dev \
   libsqlite3-dev \
   libuv1-dev \
-  libwebp-dev \
-  libz-dev \
-  libicu-dev
+  libz-dev
 
 # OpenGL
 sudo apt-get install -y libopengl0
