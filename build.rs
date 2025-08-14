@@ -13,7 +13,7 @@ use build_helper::parse_deps;
 use walkdir::WalkDir;
 
 const MLN_GIT_REPO: &str = "https://github.com/maplibre/maplibre-native.git";
-const MLN_REVISION: &str = "aeaadc06b4e0614f4f243db4dce210c22dde9f9c";
+const MLN_REVISION: &str = "fe158c7e9b0b3f748f88d34ad384a7bcbc2cf903";
 
 trait CfgBool {
     fn define_bool(&mut self, key: &str, value: bool);
@@ -457,14 +457,9 @@ fn build_mln() {
 
         println!("cargo:rustc-link-lib=sqlite3");
         println!("cargo:rustc-link-lib=uv");
-        println!("cargo:rustc-link-lib=icuuc");
-        println!("cargo:rustc-link-lib=icui18n");
-        //println!("cargo:rustc-link-lib=nu"); // todo add to docs => git clone https://bitbucket.org/alekseyt/nunicode.git && cmake .  && make && sudo make install
-        println!("cargo:rustc-link-lib=jpeg");
-        println!("cargo:rustc-link-lib=png");
-        println!("cargo:rustc-link-lib=webp");
         println!("cargo:rustc-link-lib=curl");
         println!("cargo:rustc-link-lib=z");
+
         match GraphicsRenderingAPI::from_selected_features() {
             GraphicsRenderingAPI::Vulkan => {
                 // all libraries below are from glslang-dev despite their names
