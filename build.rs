@@ -252,8 +252,8 @@ fn build_mln() {
         println!("cargo:rustc-link-lib=icu-uc");
         println!("cargo:rustc-link-lib=icu-i18n");
     } else {
-      println!("cargo:rustc-link-lib=icuuc");
-      println!("cargo:rustc-link-lib=icui18n");
+        println!("cargo:rustc-link-lib=icuuc");
+        println!("cargo:rustc-link-lib=icui18n");
     }
     //println!("cargo:rustc-link-lib=nu"); // todo add to docs => git clone https://bitbucket.org/alekseyt/nunicode.git && cmake .  && make && sudo make install
     println!("cargo:rustc-link-lib=jpeg");
