@@ -3,7 +3,7 @@ use std::{env, fs};
 
 use downloader::{Download, Downloader};
 
-const MLN_REVISION: &str = "core-fe158c7e9b0b3f748f88d34ad384a7bcbc2cf903";
+const MLN_REVISION: &str = "core-aeaadc06b4e0614f4f243db4dce210c22dde9f9c";
 
 /// Supported graphics rendering APIs.
 #[derive(PartialEq, Eq, Clone, Copy)]
