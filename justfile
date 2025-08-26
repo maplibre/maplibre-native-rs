@@ -102,7 +102,8 @@ install-dependencies backend='vulkan':
         sqlite \
         libuv \
         webp \
-        zlib
+        zlib \
+        icu4c
 
 # Show current maplibre-native dependency information
 maplibre-native-info: (assert-cmd "curl") (assert-cmd "jq")
