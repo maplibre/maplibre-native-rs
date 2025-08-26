@@ -29,11 +29,11 @@ The following platform and rendering-API combinations are supported and tested i
 
 | Platform    | Metal | Vulkan | OpenGL |
 |-------------|-------|--------|--------|
-| Linux x86   | ❌     | ✅      | ✅      |
-| Linux ARM   | ❌     | ✅      | ✅      |
-| Windows x86 | ❌     | 🟨     | 🟨     |
-| Windows ARM | ❌     | 🟨     | 🟨     |
-| macOS ARM   | 🟨    | 🟨[^1] | ❌      |
+| Linux x86   | ❌    | ✅     | ✅     |
+| Linux ARM   | ❌    | ✅     | ✅     |
+| Windows x86 | ❌    | 🟨     | 🟨     |
+| Windows ARM | ❌    | 🟨     | 🟨     |
+| macOS ARM   | 🟨    | 🟨[^1] | ❌     |
 
 <sub>
 ✅ = IS supported and tested in CI
