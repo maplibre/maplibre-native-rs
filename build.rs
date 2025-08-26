@@ -218,6 +218,34 @@ fn build_mln() {
         cpp_root.parent().unwrap().display()
     );
 
+    // Add system library search paths for macOS
+    if cfg!(target_os = "macos") {
+        // Check for Homebrew installation paths
+        if let Ok(homebrew_prefix) = env::var("HOMEBREW_PREFIX") {
+            println!("cargo:rustc-link-search=native={homebrew_prefix}/lib");
+        } else if Path::new("/opt/homebrew").exists() {
+            println!("cargo:rustc-link-search=native=/opt/homebrew/lib");
+        } else if Path::new("/usr/local").exists() {
+            println!("cargo:rustc-link-search=native=/usr/local/lib");
+        }
+
+        // macOS system library paths
+        println!("cargo:rustc-link-search=native=/usr/lib");
+        println!("cargo:rustc-link-search=native=/System/Library/Frameworks");
+
+        // Add pkg-config paths if available
+        if let Ok(pkgconfig_path) = env::var("PKG_CONFIG_PATH") {
+            for path in pkgconfig_path.split(':') {
+                let lib_path = Path::new(path).parent().map(|p| p.join("lib"));
+                if let Some(lib_path) = lib_path {
+                    if lib_path.exists() {
+                        println!("cargo:rustc-link-search=native={}", lib_path.display());
+                    }
+                }
+            }
+        }
+    }
+
     println!("cargo:rustc-link-lib=sqlite3");
     println!("cargo:rustc-link-lib=uv");
     println!("cargo:rustc-link-lib=icuuc");
@@ -244,8 +272,14 @@ fn build_mln() {
             println!("cargo:rustc-link-lib=EGL");
         }
         GraphicsRenderingAPI::Metal => {
-            // macOS does require dynamic linking against some proprietary system libraries
-            // We have not tested this part
+            // macOS Metal framework dependencies
+            println!("cargo:rustc-link-lib=framework=Metal");
+            println!("cargo:rustc-link-lib=framework=MetalKit");
+            println!("cargo:rustc-link-lib=framework=QuartzCore");
+            println!("cargo:rustc-link-lib=framework=Foundation");
+            println!("cargo:rustc-link-lib=framework=CoreGraphics");
+            println!("cargo:rustc-link-lib=framework=AppKit");
+            println!("cargo:rustc-link-lib=framework=CoreLocation");
         }
     }
     let lib_name = cpp_root
