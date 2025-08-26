@@ -1,10 +1,10 @@
 # MapLibre-native-rs
 
-[![GitHub](https://img.shields.io/badge/github-nyurik/maplibre--native--rs-8da0cb?logo=github)](https://github.com/nyurik/maplibre-native-rs)
+[![GitHub](https://img.shields.io/badge/github-maplibre/maplibre--native--rs-8da0cb?logo=github)](https://github.com/maplibre/maplibre-native-rs)
 [![crates.io version](https://img.shields.io/crates/v/maplibre_native)](https://crates.io/crates/maplibre_native)
 [![docs.rs](https://img.shields.io/docsrs/maplibre_native)](https://docs.rs/maplibre_native)
-[![crates.io license](https://img.shields.io/crates/l/maplibre_native)](https://github.com/nyurik/maplibre-native-rs/blob/main/LICENSE-APACHE)
-[![CI build](https://github.com/nyurik/maplibre-native-rs/actions/workflows/ci.yml/badge.svg)](https://github.com/nyurik/maplibre-native-rs/actions)
+[![crates.io license](https://img.shields.io/crates/l/maplibre_native)](https://github.com/maplibre/maplibre-native-rs/blob/main/LICENSE-APACHE)
+[![CI build](https://github.com/maplibre/maplibre-native-rs/actions/workflows/ci.yml/badge.svg)](https://github.com/maplibre/maplibre-native-rs/actions)
 
 Rust bindings to the [MapLibre Native](https://github.com/maplibre/maplibre-native) map rendering engine.
 
@@ -62,26 +62,31 @@ sudo apt-get install -y libopengl0
 sudo apt-get install -y mesa-vulkan-drivers glslang-dev
 ```
 
+### Gettting MapLibre Native Core
+
+Since we wrap the Maplibre native library, we need this and its headers to be included.
+
+We can get the library and headers from two places:
+- <details><summary>(default) downloaded from the releases page</summary>
+
+  The specific version of [MapLibre Native](https://github.com/maplibre/maplibre-native) used is controlled by the `MLN_REVISION` constant in `build.rs`.
+  This dependency is automatically updated via a GitHub workflow on the 1st of each month repository.
+  A pull request is created if an update is available.
+
+  </details>
+- <details><summary>if the env vars `MLN_CORE_LIBRARY_PATH` and `MLN_CORE_HEADERS_PATH` are set: from local disk via the environment variables</summary>
+
+  If you don't want to allow network access during buildscript execution, we allow you to download the release and tell us where you have downloaded the contents.
+  You can also build from source by following the steps that maplibre-native does in CI to produce the artefacts.
+
+  </details>
+
 ## Development
 
 - This project is easier to develop with [just](https://github.com/casey/just#readme), a modern alternative to `make`.
   Install it with `cargo install just`.
 - To get a list of available commands, run `just`.
 - To run tests, use `just test`.
-
-### Compiling MapLibre Native
-
-This crate relies on the MapLibre Native library, which is compiled as part of the build process:
-
-- if the `MLN_FROM_SOURCE` environment variable is set, the build script will compile the native library from that dir.
-- if this repo has been cloned, it will contain the `/maplibre-native` submodule, which will be used to compile the library. Make sure to run `git submodule update --init --recursive` to fetch the submodule.
-- if there is no `/maplibre-native` submodule, the build script assumes it is being run as a dependency, and will try to download the source into the `OUT_DIR`. Note that the first might take significant time to download and compile.
-
-### MapLibre Native Dependency Management
-
-The specific version of [MapLibre Native](https://github.com/maplibre/maplibre-native) used is controlled by the `MLN_REVISION` constant in `build.rs`.
-This dependency is automatically updated via a GitHub workflow on the 1st of each month repository.
-A pull request is created if an update is available.
 
 ## Getting Involved
 
