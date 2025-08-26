@@ -9,7 +9,7 @@ license.workspace = true
 keywords = ["maplibre", "rendering", "gis", "tiles"]
 categories = ["external-ffi-bindings", "science::geo", "rendering"]
 rust-version = "1.82" # due to icu_collections@2
-exclude = ["maplibre-native/", ".gitmodules"]
+exclude = []
 
 [features]
 default = [] # automatically picks the platform-specific features
@@ -42,7 +42,6 @@ workspace = true
 [workspace]
 members = [
     ".",
-    "build_tester",
     "examples/*",
 ]
 
