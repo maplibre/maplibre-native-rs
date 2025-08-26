@@ -28,7 +28,7 @@ If no feature is specified, the crate will automatically select the platform-app
 The following platform and rendering-API combinations are supported and tested in CI:
 
 | Platform    | Metal | Vulkan | OpenGL |
-| ----------- | ----- | ------ | ------ |
+|-------------|-------|--------|--------|
 | Linux x86   | ❌    | ✅     | ✅     |
 | Linux ARM   | ❌    | ✅     | ✅     |
 | Windows x86 | ❌    | 🟨     | 🟨     |
@@ -43,23 +43,14 @@ The following platform and rendering-API combinations are supported and tested i
 
 [^1]: Vulcan support on macos is provided via MoltenVK. There is a slight performance overhead for this with little upsides. Both Metal and Vulcan run through the same extensive test suite upstream. You can use Vulcan if you find a bug in the Metal implementation until we have fixed it upstream.
 
+### Dependencies
 
-### Apt Packages
+This command will install the required dependencies on Linux or macOS for the `vulkan` backend.
+You may also use it with `opengl` parameter on Linux.
+It is OK to run this command multiple times for each backend.
 
 ```shell
-sudo apt-get install -y \
-  build-essential \
-  libcurl4-openssl-dev \
-  libglfw3-dev \
-  libsqlite3-dev \
-  libuv1-dev \
-  libz-dev
-
-# OpenGL
-sudo apt-get install -y libopengl0
-
-# Vulkan
-sudo apt-get install -y mesa-vulkan-drivers glslang-dev
+just install-dependencies vulkan
 ```
 
 ### Gettting MapLibre Native Core
@@ -96,15 +87,15 @@ Join the `#maplibre-martin` slack channel at OSMUS -- automatic invite is at <ht
 
 Licensed under either of
 
-- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or <http://www.apache.org/licenses/LICENSE-2.0>)
-- MIT license ([LICENSE-MIT](LICENSE-MIT) or <http://opensource.org/licenses/MIT>)
+- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or <https://www.apache.org/licenses/LICENSE-2.0>)
+- MIT license ([LICENSE-MIT](LICENSE-MIT) or <https://opensource.org/licenses/MIT>)
   at your option.
 
 ### Contribution
 
 Unless you explicitly state otherwise, any contribution intentionally
 submitted for inclusion in the work by you, as defined in the
-Apache-2.0 license, shall be dual licensed as above, without any
+Apache-2.0 license, shall be dual-licensed as above, without any
 additional terms or conditions.
 
 ### MapLibre Native Licence
