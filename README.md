@@ -70,22 +70,31 @@ sudo apt-get install -y libopengl0
 sudo apt-get install -y mesa-vulkan-drivers glslang-dev
 ```
 
+### Gettting MapLibre Native Core
+
+Since we wrap the Maplibre native library, we need this and its headers to be included.
+
+We can get the library and headers from two places:
+- <details><summary>(default) downloaded from the releases page</summary>
+  
+  The specific version of [MapLibre Native](https://github.com/maplibre/maplibre-native) used is controlled by the `MLN_REVISION` constant in `build.rs`.
+  This dependency is automatically updated via a GitHub workflow on the 1st of each month repository.
+  A pull request is created if an update is available.
+  
+  </details>
+- <details><summary>if the env vars `MLN_CORE_LIBRARY_PATH` and `MLN_CORE_HEADERS_PATH` are set: from local disk via the environment variables</summary>
+  
+  If you don't want to allow network access during buildscript execution, we allow you to download the release and tell us where you have downloaded the contents.
+  You can also build from source by following the steps that maplibre-native does in CI to produce the artefacts.
+
+  </details>
+
 ## Development
 
 - This project is easier to develop with [just](https://github.com/casey/just#readme), a modern alternative to `make`.
   Install it with `cargo install just`.
 - To get a list of available commands, run `just`.
 - To run tests, use `just test`.
-
-### Compiling MapLibre Native
-
-This crate relies on the MapLibre Native library, which is compiled as part of the build process:
-
-- if the `MLN_CORE_LIBRARY_PATH` environment variable is set, the build script will use the library at this path.
-- if unset, the build script will download and compile against a tested/fixed recent version of MapLibre Native.
-  The specific version of [MapLibre Native](https://github.com/maplibre/maplibre-native) used is controlled by the `MLN_REVISION` constant in `build.rs`.
-  This dependency is automatically updated via a GitHub workflow on the 1st of each month repository.
-  A pull request is created if an update is available.
 
 ## Getting Involved
 
