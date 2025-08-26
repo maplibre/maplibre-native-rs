@@ -104,6 +104,7 @@ install-dependencies backend='vulkan':
         webp \
         zlib \
         icu4c
+    brew link icu4c --force
 
 # Show current maplibre-native dependency information
 maplibre-native-info: (assert-cmd "curl") (assert-cmd "jq")
