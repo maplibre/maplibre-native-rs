@@ -83,11 +83,8 @@ install-dependencies backend='vulkan':
       build-essential \
       libcurl4-openssl-dev \
       libglfw3-dev \
-      libjpeg-dev \
-      libpng-dev \
       libsqlite3-dev \
       libuv1-dev \
-      libwebp-dev \
       libz-dev
 
 # Install macOS dependencies via Homebrew
@@ -97,11 +94,8 @@ install-dependencies backend='vulkan':
         {{if backend == 'vulkan' {'molten-vk vulkan-headers'} else {''} }} \
         curl \
         glfw \
-        jpeg \
-        libpng \
         sqlite \
         libuv \
-        webp \
         zlib
 
 # Show current maplibre-native dependency information
