@@ -43,13 +43,6 @@ The following platform and rendering-API combinations are supported and tested i
 
 [^1]: Vulcan support on macos is provided via MoltenVK. There is a slight performance overhead for this with little upsides. Both Metal and Vulcan run through the same extensive test suite upstream. You can use Vulcan if you find a bug in the Metal implementation until we have fixed it upstream.
 
-## Development
-
-- This project is easier to develop with [just](https://github.com/casey/just#readme), a modern alternative to `make`.
-  Install it with `cargo install just`.
-- To get a list of available commands, run `just`.
-- To run tests, use `just test`.
-
 ### Dependencies
 
 This command will install the required dependencies on Linux or macOS for the `vulkan` backend. You may also use it with `opengl` parameter on Linux. It is OK to run this command multiple times for each backend.
