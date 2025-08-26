@@ -72,9 +72,9 @@ fn download_static(out_dir: &Path, revision: &str) -> (PathBuf, PathBuf) {
     let graphics_api = GraphicsRenderingAPI::from_selected_features();
 
     let target = if cfg!(all(target_os = "linux", target_arch = "aarch64")) {
-        "linux-arm64"
+        "amalgam-linux-arm64"
     } else if cfg!(all(target_os = "linux", target_arch = "x86_64")) {
-        "linux-x64"
+        "amalgam-linux-x64"
     } else if cfg!(all(target_os = "macos", target_arch = "aarch64")) {
         "macos-arm64"
     } else {
@@ -84,7 +84,7 @@ fn download_static(out_dir: &Path, revision: &str) -> (PathBuf, PathBuf) {
     };
 
     let mut tasks = Vec::new();
-    let lib_filename = format!("libmaplibre-native-core-amalgam-{target}-{graphics_api}.a");
+    let lib_filename = format!("libmaplibre-native-core-{target}-{graphics_api}.a");
     let library_file = out_dir.join(&lib_filename);
     if !library_file.is_file() {
         let static_url = format!("https://github.com/maplibre/maplibre-native/releases/download/core-{revision}/{lib_filename}");
