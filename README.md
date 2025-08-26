@@ -52,10 +52,6 @@ The following platform and rendering-API combinations are supported and tested i
 
 ### Dependencies
 
-> [!NOTE]
-> The version of `libicu` is quite specific.
-> There [is some work ongoing upstream](https://github.com/maplibre/maplibre-native/issues/3483) to build this into the static library we pull.
-
 This command will install the required dependencies on Linux or macOS for the `vulkan` backend. You may also use it with `opengl` parameter on Linux. It is OK to run this command multiple times for each backend.
 
 ```shell
