@@ -10,9 +10,6 @@ export RUSTFLAGS := env('RUSTFLAGS', if ci_mode == '1' {'-D warnings'} else {''}
 export RUSTDOCFLAGS := env('RUSTDOCFLAGS', if ci_mode == '1' {'-D warnings'} else {''})
 export RUST_BACKTRACE := env('RUST_BACKTRACE', if ci_mode == '1' {'1'} else {''})
 
-export MLN_REPO := `cargo metadata --format-version 1 --no-deps | jq -e -r '.packages[] | select(.name == "maplibre_native") | .metadata.mln.repo // error("MLN repo missing from Cargo metadata")'`
-export MLN_CORE_RELEASE_SHA := `cargo metadata --format-version 1 --no-deps | jq -e -r '.packages[] | select(.name == "maplibre_native") | .metadata.mln.release // error("MLN release missing from Cargo metadata")'`
-
 @_default:
     {{just_executable()}} --list
 
@@ -72,7 +69,7 @@ fmt:
 
 # Get any package's field from the metadata
 get-crate-field field package=main_crate:  (assert-cmd 'jq')
-    cargo metadata --format-version 1 | jq -e -r '.packages | map(select(.name == "{{package}}")) | first | .{{field}} | select(. != null)'
+    @cargo metadata --format-version 1 | jq -e -r '.packages | map(select(.name == "{{package}}")) | first | .{{field}} // error("Field \"{{field}}\" is missing in Cargo.toml for package {{package}}")'
 
 # Get the minimum supported Rust version (MSRV) for the crate
 get-msrv package=main_crate:  (get-crate-field 'rust_version' package)
@@ -111,6 +108,9 @@ install-dependencies backend='vulkan':
 maplibre-native-info: (assert-cmd "curl") (assert-cmd "jq")
     #!/usr/bin/env bash
     set -euo pipefail
+
+    export MLN_REPO="`{{just_executable()}} get-crate-field 'metadata.mln.repo'`"
+    export MLN_CORE_RELEASE_SHA="`{{just_executable()}} get-crate-field 'metadata.mln.release'`"
 
     echo "Github Repo: ${MLN_REPO}"
     echo "Release: ${MLN_CORE_RELEASE_SHA}"
@@ -179,6 +179,9 @@ update:
 update-maplibre-native: (assert-cmd "curl") (assert-cmd "jq")
     #!/usr/bin/env bash
     set -euo pipefail
+
+    export MLN_REPO="`{{just_executable()}} get-crate-field 'metadata.mln.repo'`"
+    export MLN_CORE_RELEASE_SHA="`{{just_executable()}} get-crate-field 'metadata.mln.release'`"
 
     # Hit the GitHub releases API for maplibre-native and pull the latest
     # releases, avoiding drafts and prereleases.
