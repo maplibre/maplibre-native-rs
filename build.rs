@@ -156,13 +156,13 @@ fn resolve_mln_core(root: &Path) -> (PathBuf, Vec<PathBuf>) {
       (None, None) => download_static(&out_dir, MLN_REVISION),
      };
     assert!(
-        !library_file.is_file(),
+        library_file.is_file(),
         "The MLN library at {} must be a file",
         library_file.display()
     );
     assert!(
-        !headers.is_dir(),
-        "The headers directory at {} must be a directory",
+        headers.is_file(),
+        "The MLN headers at {} must be a zip file containing the headers",
         headers.display()
     );
 
