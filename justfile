@@ -111,8 +111,8 @@ maplibre-native-info: (assert-cmd "curl") (assert-cmd "jq")
     #!/usr/bin/env bash
     set -euo pipefail
 
-    export MLN_REPO="$({{just_executable()}} get-crate-field 'metadata.mln.repo')"
-    export MLN_CORE_RELEASE_SHA="$({{just_executable()}} get-crate-field 'metadata.mln.release')"
+    MLN_REPO="$({{just_executable()}} get-crate-field 'metadata.mln.repo')"
+    MLN_CORE_RELEASE_SHA="$({{just_executable()}} get-crate-field 'metadata.mln.release')"
 
     echo "Github Repo: ${MLN_REPO}"
     echo "Release: ${MLN_CORE_RELEASE_SHA}"
@@ -182,8 +182,8 @@ update-maplibre-native: (assert-cmd "curl") (assert-cmd "jq")
     #!/usr/bin/env bash
     set -euo pipefail
 
-    export MLN_REPO="$({{just_executable()}} get-crate-field 'metadata.mln.repo')"
-    export MLN_CORE_RELEASE_SHA="$({{just_executable()}} get-crate-field 'metadata.mln.release')"
+    MLN_REPO="$({{just_executable()}} get-crate-field 'metadata.mln.repo')"
+    MLN_CORE_RELEASE_SHA="$({{just_executable()}} get-crate-field 'metadata.mln.release')"
 
     # Hit the GitHub releases API for maplibre-native and pull the latest
     # releases, avoiding drafts and prereleases.
