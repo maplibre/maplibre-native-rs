@@ -66,3 +66,7 @@ unused_qualifications = "warn"
 [workspace.lints.clippy]
 pedantic = { level = "warn", priority = -1 }
 missing_panics_doc = "allow" # FIXME: remove
+
+[package.metadata.mln]
+repo = "maplibre/maplibre-native"
+release = "core-aeaadc06b4e0614f4f243db4dce210c22dde9f9c"

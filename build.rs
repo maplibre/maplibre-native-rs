@@ -3,7 +3,7 @@ use std::{env, fs};
 
 use downloader::{Download, Downloader};
 
-const MLN_REVISION: &str = "aeaadc06b4e0614f4f243db4dce210c22dde9f9c";
+const MLN_REVISION: &str = "core-aeaadc06b4e0614f4f243db4dce210c22dde9f9c";
 
 /// Supported graphics rendering APIs.
 #[derive(PartialEq, Eq, Clone, Copy)]
@@ -87,14 +87,14 @@ fn download_static(out_dir: &Path, revision: &str) -> (PathBuf, PathBuf) {
     let lib_filename = format!("libmaplibre-native-core-{target}-{graphics_api}.a");
     let library_file = out_dir.join(&lib_filename);
     if !library_file.is_file() {
-        let static_url = format!("https://github.com/maplibre/maplibre-native/releases/download/core-{revision}/{lib_filename}");
+        let static_url = format!("https://github.com/maplibre/maplibre-native/releases/download/{revision}/{lib_filename}");
         println!("cargo:warning=Downloading precompiled maplibre-native core library from {static_url} into {}", out_dir.display());
         tasks.push(Download::new(&static_url));
     }
 
     let headers_file = out_dir.join("maplibre-native-headers.tar.gz");
     if !headers_file.is_file() {
-        let headers_url = format!("https://github.com/maplibre/maplibre-native/releases/download/core-{revision}/maplibre-native-headers.tar.gz");
+        let headers_url = format!("https://github.com/maplibre/maplibre-native/releases/download/{revision}/maplibre-native-headers.tar.gz");
         println!("cargo:warning=Downloading headers for maplibre-native core library from {headers_url} into {}", out_dir.display());
         tasks.push(Download::new(&headers_url));
     }
