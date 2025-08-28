@@ -96,7 +96,6 @@ install-dependencies backend='vulkan':
         glfw \
         sqlite \
         libuv \
-        webp \
         zlib \
         icu4c
     brew link icu4c --force
