@@ -246,7 +246,6 @@ fn build_mln() {
         }
     }
 
-    println!("cargo:rustc-link-lib=sqlite3");
     println!("cargo:rustc-link-lib=curl");
     println!("cargo:rustc-link-lib=z");
     match GraphicsRenderingAPI::from_selected_features() {
