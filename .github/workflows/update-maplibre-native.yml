@@ -40,7 +40,7 @@ jobs:
           body: |
             ## Automated `maplibre-native` dependency update
 
-            This PR updates `MLN_REVISION` to the latest core release.
+            This PR updates `package.metadata.mln.release` in `Cargo.toml` to the latest Maplibre Native Core release.
 
             ${{ steps.maplibre-details.outputs.details }}
           branch: update-maplibre-native-dependency

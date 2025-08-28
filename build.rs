@@ -3,7 +3,7 @@ use std::{env, fs};
 
 use downloader::{Download, Downloader};
 
-const MLN_REVISION: &str = "fe158c7e9b0b3f748f88d34ad384a7bcbc2cf903";
+const MLN_REVISION: &str = "core-4e47c6c0258f064996b7040502b52cbdf89b44ce";
 
 /// Supported graphics rendering APIs.
 #[derive(PartialEq, Eq, Clone, Copy)]
@@ -72,9 +72,9 @@ fn download_static(out_dir: &Path, revision: &str) -> (PathBuf, PathBuf) {
     let graphics_api = GraphicsRenderingAPI::from_selected_features();
 
     let target = if cfg!(all(target_os = "linux", target_arch = "aarch64")) {
-        "linux-arm64"
+        "amalgam-linux-arm64"
     } else if cfg!(all(target_os = "linux", target_arch = "x86_64")) {
-        "linux-x64"
+        "amalgam-linux-x64"
     } else if cfg!(all(target_os = "macos", target_arch = "aarch64")) {
         "macos-arm64"
     } else {
@@ -84,17 +84,17 @@ fn download_static(out_dir: &Path, revision: &str) -> (PathBuf, PathBuf) {
     };
 
     let mut tasks = Vec::new();
-    let lib_filename = format!("libmaplibre-native-core-amalgam-{target}-{graphics_api}.a");
+    let lib_filename = format!("libmaplibre-native-core-{target}-{graphics_api}.a");
     let library_file = out_dir.join(&lib_filename);
     if !library_file.is_file() {
-        let static_url = format!("https://github.com/maplibre/maplibre-native/releases/download/core-{revision}/{lib_filename}");
+        let static_url = format!("https://github.com/maplibre/maplibre-native/releases/download/{revision}/{lib_filename}");
         println!("cargo:warning=Downloading precompiled maplibre-native core library from {static_url} into {}", out_dir.display());
         tasks.push(Download::new(&static_url));
     }
 
     let headers_file = out_dir.join("maplibre-native-headers.tar.gz");
     if !headers_file.is_file() {
-        let headers_url = format!("https://github.com/maplibre/maplibre-native/releases/download/core-{revision}/maplibre-native-headers.tar.gz");
+        let headers_url = format!("https://github.com/maplibre/maplibre-native/releases/download/{revision}/maplibre-native-headers.tar.gz");
         println!("cargo:warning=Downloading headers for maplibre-native core library from {headers_url} into {}", out_dir.display());
         tasks.push(Download::new(&headers_url));
     }
@@ -218,6 +218,34 @@ fn build_mln() {
         cpp_root.parent().unwrap().display()
     );
 
+    // Add system library search paths for macOS
+    if cfg!(target_os = "macos") {
+        // Check for Homebrew installation paths
+        if let Ok(homebrew_prefix) = env::var("HOMEBREW_PREFIX") {
+            println!("cargo:rustc-link-search=native={homebrew_prefix}/lib");
+        } else if Path::new("/opt/homebrew").exists() {
+            println!("cargo:rustc-link-search=native=/opt/homebrew/lib");
+        } else if Path::new("/usr/local").exists() {
+            println!("cargo:rustc-link-search=native=/usr/local/lib");
+        }
+
+        // macOS system library paths
+        println!("cargo:rustc-link-search=native=/usr/lib");
+        println!("cargo:rustc-link-search=native=/System/Library/Frameworks");
+
+        // Add pkg-config paths if available
+        if let Ok(pkgconfig_path) = env::var("PKG_CONFIG_PATH") {
+            for path in pkgconfig_path.split(':') {
+                let lib_path = Path::new(path).parent().map(|p| p.join("lib"));
+                if let Some(lib_path) = lib_path {
+                    if lib_path.exists() {
+                        println!("cargo:rustc-link-search=native={}", lib_path.display());
+                    }
+                }
+            }
+        }
+    }
+
     println!("cargo:rustc-link-lib=sqlite3");
     println!("cargo:rustc-link-lib=uv");
     println!("cargo:rustc-link-lib=curl");
@@ -238,8 +266,14 @@ fn build_mln() {
             println!("cargo:rustc-link-lib=EGL");
         }
         GraphicsRenderingAPI::Metal => {
-            // macOS does require dynamic linking against some proprietary system libraries
-            // We have not tested this part
+            // macOS Metal framework dependencies
+            println!("cargo:rustc-link-lib=framework=Metal");
+            println!("cargo:rustc-link-lib=framework=MetalKit");
+            println!("cargo:rustc-link-lib=framework=QuartzCore");
+            println!("cargo:rustc-link-lib=framework=Foundation");
+            println!("cargo:rustc-link-lib=framework=CoreGraphics");
+            println!("cargo:rustc-link-lib=framework=AppKit");
+            println!("cargo:rustc-link-lib=framework=CoreLocation");
         }
     }
     let lib_name = cpp_root
