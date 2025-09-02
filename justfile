@@ -94,9 +94,7 @@ install-dependencies backend='vulkan':
         curl \
         glfw \
         libuv \
-        zlib \
-        icu4c
-    brew link icu4c --force
+        zlib
 
 # Show current maplibre-native dependency information
 maplibre-native-info: (assert-cmd "curl") (assert-cmd "jq")
