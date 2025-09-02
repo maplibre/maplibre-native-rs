@@ -76,7 +76,7 @@ fn download_static(out_dir: &Path, revision: &str) -> (PathBuf, PathBuf) {
     } else if cfg!(all(target_os = "linux", target_arch = "x86_64")) {
         "amalgam-linux-x64"
     } else if cfg!(all(target_os = "macos", target_arch = "aarch64")) {
-        "macos-arm64"
+        "amalgam-macos-arm64"
     } else {
         panic!(
             "unsupported target: only linux and macos are currently supported by maplibre-native"
