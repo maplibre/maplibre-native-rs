@@ -250,14 +250,6 @@ fn build_mln() {
     println!("cargo:rustc-link-lib=z");
     match GraphicsRenderingAPI::from_selected_features() {
         GraphicsRenderingAPI::Vulkan => {
-            // all libraries below are from glslang-dev despite their names
-            println!("cargo:rustc-link-lib=glslang");
-            println!("cargo:rustc-link-lib=glslang-default-resource-limits");
-            println!("cargo:rustc-link-lib=SPIRV");
-            println!("cargo:rustc-link-lib=SPIRV-Tools-opt");
-            println!("cargo:rustc-link-lib=SPIRV-Tools");
-            println!("cargo:rustc-link-lib=MachineIndependent");
-            println!("cargo:rustc-link-lib=GenericCodeGen");
         }
         GraphicsRenderingAPI::OpenGL => {
             println!("cargo:rustc-link-lib=GL");
