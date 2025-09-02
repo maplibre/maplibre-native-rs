@@ -3,7 +3,7 @@ use std::{env, fs};
 
 use downloader::{Download, Downloader};
 
-const MLN_REVISION: &str = "core-aeaadc06b4e0614f4f243db4dce210c22dde9f9c";
+const MLN_REVISION: &str = "core-9b6325a14e2cf1cc29ab28c1855ad376f1ba4903";
 
 /// Supported graphics rendering APIs.
 #[derive(PartialEq, Eq, Clone, Copy)]
@@ -76,7 +76,7 @@ fn download_static(out_dir: &Path, revision: &str) -> (PathBuf, PathBuf) {
     } else if cfg!(all(target_os = "linux", target_arch = "x86_64")) {
         "amalgam-linux-x64"
     } else if cfg!(all(target_os = "macos", target_arch = "aarch64")) {
-        "macos-arm64"
+        "amalgam-macos-arm64"
     } else {
         panic!(
             "unsupported target: only linux and macos are currently supported by maplibre-native"
@@ -246,27 +246,10 @@ fn build_mln() {
         }
     }
 
-    println!("cargo:rustc-link-lib=sqlite3");
-    println!("cargo:rustc-link-lib=uv");
-    println!("cargo:rustc-link-lib=icuuc");
-    println!("cargo:rustc-link-lib=icui18n");
-    //println!("cargo:rustc-link-lib=nu"); // todo add to docs => git clone https://bitbucket.org/alekseyt/nunicode.git && cmake .  && make && sudo make install
-    println!("cargo:rustc-link-lib=jpeg");
-    println!("cargo:rustc-link-lib=png");
-    println!("cargo:rustc-link-lib=webp");
     println!("cargo:rustc-link-lib=curl");
     println!("cargo:rustc-link-lib=z");
     match GraphicsRenderingAPI::from_selected_features() {
-        GraphicsRenderingAPI::Vulkan => {
-            // all libraries below are from glslang-dev despite their names
-            println!("cargo:rustc-link-lib=glslang");
-            println!("cargo:rustc-link-lib=glslang-default-resource-limits");
-            println!("cargo:rustc-link-lib=SPIRV");
-            println!("cargo:rustc-link-lib=SPIRV-Tools-opt");
-            println!("cargo:rustc-link-lib=SPIRV-Tools");
-            println!("cargo:rustc-link-lib=MachineIndependent");
-            println!("cargo:rustc-link-lib=GenericCodeGen");
-        }
+        GraphicsRenderingAPI::Vulkan => {}
         GraphicsRenderingAPI::OpenGL => {
             println!("cargo:rustc-link-lib=GL");
             println!("cargo:rustc-link-lib=EGL");
