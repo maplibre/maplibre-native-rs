@@ -249,8 +249,7 @@ fn build_mln() {
     println!("cargo:rustc-link-lib=curl");
     println!("cargo:rustc-link-lib=z");
     match GraphicsRenderingAPI::from_selected_features() {
-        GraphicsRenderingAPI::Vulkan => {
-        }
+        GraphicsRenderingAPI::Vulkan => {}
         GraphicsRenderingAPI::OpenGL => {
             println!("cargo:rustc-link-lib=GL");
             println!("cargo:rustc-link-lib=EGL");
