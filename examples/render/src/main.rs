@@ -158,7 +158,7 @@ impl Args {
                     println!("Warning: nonzero pitch is ignored in tile-mode");
                 }
                 let mut map = map.build_tile_renderer();
-                map.load_style_from_path(&self.style);
+                map.load_style_from_url(&self.style);
                 if let Some(debug) = self.debug {
                     map.set_debug_flags(debug.into());
                 }
