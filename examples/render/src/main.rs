@@ -141,7 +141,7 @@ impl Args {
                     map.set_debug_flags(debug.into());
                 }
                 if let Ok(url) = url::Url::parse(&self.style) {
-                    map.load_style_from_url(url);
+                    map.load_style_from_url(&url);
                 } else {
                     map.load_style_from_path(self.style)
                         .expect("the path to be valid");
@@ -164,7 +164,7 @@ impl Args {
                 }
                 let mut map = map.build_tile_renderer();
                 if let Ok(url) = url::Url::parse(&self.style) {
-                    map.load_style_from_url(url);
+                    map.load_style_from_url(&url);
                 } else {
                     map.load_style_from_path(self.style)
                         .expect("the path to be valid");

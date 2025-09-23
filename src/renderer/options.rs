@@ -162,7 +162,7 @@ impl<S> ImageRenderer<S> {
             &opts.cache_path,
             &opts.asset_root,
             &opts.api_key,
-            &opts.base_url.to_string(),
+            opts.base_url.as_ref(),
             &opts.uri_scheme_alias,
             &opts.api_key_parameter_name,
             &opts.source_template,
@@ -170,7 +170,7 @@ impl<S> ImageRenderer<S> {
             &opts.sprites_template,
             &opts.glyphs_template,
             &opts.tile_template,
-            &opts.default_style_url.to_string(),
+            opts.default_style_url.as_ref(),
             opts.requires_api_key,
         );
 

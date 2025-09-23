@@ -33,15 +33,18 @@ pub struct ImageRenderer<S> {
 
 impl<S> ImageRenderer<S> {
     /// Set the style URL for the map.
-    pub fn load_style_from_url(&mut self, url: url::Url) -> &mut Self {
+    pub fn load_style_from_url(&mut self, url: &url::Url) -> &mut Self {
         self.style_specified = true;
-        ffi::MapRenderer_getStyle_loadURL(self.instance.pin_mut(), &url.to_string());
+        ffi::MapRenderer_getStyle_loadURL(self.instance.pin_mut(), url.as_ref());
         self
     }
 
     /// Load the style from the specified path.
     ///
-    /// The style will be loaded from the path, but won't be refreshed automatically if the file changes.
+    /// The style will be loaded from the path, but won't be refreshed automatically if the file changes
+    ///
+    /// # Errors
+    /// Returns an error if the path is not a valid file.
     pub fn load_style_from_path(
         &mut self,
         path: impl AsRef<Path>,
@@ -71,6 +74,10 @@ impl<S> ImageRenderer<S> {
 
 impl ImageRenderer<Static> {
     /// Render the map as a static [`Image`] where the camera can be freely controlled.
+    ///
+    /// # Errors
+    /// Returns an error if
+    /// - the style has not been specified via either [`load_style_from_path`](Self::load_style_from_path) or [`load_style_from_url`](Self::load_style_from_url).
     pub fn render_static(
         &mut self,
         lat: f64,
@@ -91,6 +98,10 @@ impl ImageRenderer<Static> {
 
 impl ImageRenderer<Tile> {
     /// Render a top-down tile of the map as a static [`Image`].
+    ///
+    /// # Errors
+    /// Returns an error if
+    /// - the style has not been specified via either [`load_style_from_path`](Self::load_style_from_path) or [`load_style_from_url`](Self::load_style_from_url).
     pub fn render_tile(&mut self, zoom: u8, x: u32, y: u32) -> Result<Image, RenderingError> {
         if !self.style_specified {
             return Err(RenderingError::StyleNotSpecified);
