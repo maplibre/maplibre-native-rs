@@ -19,6 +19,8 @@ vulkan = []  # default on other platforms
 
 [dependencies]
 cxx.workspace = true
+url.workspace = true
+thiserror.workspace = true
 
 [dev-dependencies]
 
@@ -58,6 +60,8 @@ downloader = "0.2.8"
 flate2 = "1.1.1"
 maplibre_native = { path = ".", version = "0.1.2" }
 tar = "0.4.44"
+thiserror = "2.0.16"
+url = "2.5.7"
 walkdir = "2.5.0"
 
 [workspace.lints.rust]

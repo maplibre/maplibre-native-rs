@@ -25,61 +25,82 @@ pub struct Static;
 pub struct Tile;
 
 /// Configuration options for a tile server.
-pub struct ImageRenderer<S>(
-    pub(crate) UniquePtr<ffi::MapRenderer>,
-    pub(crate) PhantomData<S>,
-);
+pub struct ImageRenderer<S> {
+    pub(crate) instance: UniquePtr<ffi::MapRenderer>,
+    pub(crate) _marker: PhantomData<S>,
+    style_specified: bool,
+}
 
 impl<S> ImageRenderer<S> {
     /// Set the style URL for the map.
-    // FIXME: without this call, renderer just hangs
-    pub fn load_style_from_url(&mut self, url: &str) -> &mut Self {
-        // FIXME: return a result instead of panicking
-        assert!(url.contains("://"));
-        ffi::MapRenderer_getStyle_loadURL(self.0.pin_mut(), url);
+    pub fn load_style_from_url(&mut self, url: url::Url) -> &mut Self {
+        self.style_specified = true;
+        ffi::MapRenderer_getStyle_loadURL(self.instance.pin_mut(), &url.to_string());
         self
     }
 
     /// Load the style from the specified path.
     ///
     /// The style will be loaded from the path, but won't be refreshed automatically if the file changes.
-    pub fn load_style_from_path(&mut self, path: impl AsRef<Path>) -> &mut Self {
-        // TODO: check if the file exists?
-        // FIXME: return a result instead of panicking
-        let path = path.as_ref().to_str().expect("Path is not valid UTF-8");
-        ffi::MapRenderer_getStyle_loadURL(self.0.pin_mut(), &format!("file://{path}"));
-        self
+    pub fn load_style_from_path(
+        &mut self,
+        path: impl AsRef<Path>,
+    ) -> Result<&mut Self, std::io::Error> {
+        let path = path.as_ref();
+        if !path.is_file() {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::NotFound,
+                format!("Path {} is not a file", path.display()),
+            ));
+        }
+        let Some(path) = path.to_str() else {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                format!("Path {} is not valid UTF-8", path.display()),
+            ));
+        };
+        ffi::MapRenderer_getStyle_loadURL(self.instance.pin_mut(), &format!("file://{path}"));
+        Ok(self)
     }
 
-    pub fn set_camera(
+    pub fn set_debug_flags(&mut self, flags: MapDebugOptions) -> &mut Self {
+        ffi::MapRenderer_setDebugFlags(self.instance.pin_mut(), flags);
+        self
+    }
+}
+
+impl ImageRenderer<Static> {
+    /// Render the map as a static [`Image`] where the camera can be freely controlled.
+    pub fn render_static(
         &mut self,
         lat: f64,
         lon: f64,
         zoom: f64,
         bearing: f64,
         pitch: f64,
-    ) -> &mut Self {
-        ffi::MapRenderer_setCamera(self.0.pin_mut(), lat, lon, zoom, bearing, pitch);
-        self
-    }
+    ) -> Result<Image, RenderingError> {
+        if !self.style_specified {
+            return Err(RenderingError::StyleNotSpecified);
+        }
 
-    pub fn set_debug_flags(&mut self, flags: MapDebugOptions) -> &mut Self {
-        ffi::MapRenderer_setDebugFlags(self.0.pin_mut(), flags);
-        self
-    }
-}
-
-impl ImageRenderer<Static> {
-    pub fn render_static(&mut self) -> Image {
-        Image(ffi::MapRenderer_render(self.0.pin_mut()))
+        ffi::MapRenderer_setCamera(self.instance.pin_mut(), lat, lon, zoom, bearing, pitch);
+        let img = ffi::MapRenderer_render(self.instance.pin_mut());
+        Ok(Image(img))
     }
 }
 
 impl ImageRenderer<Tile> {
-    pub fn render_tile(&mut self, zoom: u8, x: u32, y: u32) -> Image {
+    /// Render a top-down tile of the map as a static [`Image`].
+    pub fn render_tile(&mut self, zoom: u8, x: u32, y: u32) -> Result<Image, RenderingError> {
+        if !self.style_specified {
+            return Err(RenderingError::StyleNotSpecified);
+        }
+
         let (lat, lon) = coords_to_lat_lon(f64::from(zoom), x, y);
-        ffi::MapRenderer_setCamera(self.0.pin_mut(), lat, lon, f64::from(zoom), 0.0, 0.0);
-        Image(ffi::MapRenderer_render(self.0.pin_mut()))
+        ffi::MapRenderer_setCamera(self.instance.pin_mut(), lat, lon, f64::from(zoom), 0.0, 0.0);
+
+        let img = ffi::MapRenderer_render(self.instance.pin_mut());
+        Ok(Image(img))
     }
 }
 
@@ -92,4 +113,10 @@ fn coords_to_lat_lon(zoom: f64, x: u32, y: u32) -> (f64, f64) {
         .atan()
         .to_degrees();
     (lat, lng)
+}
+
+#[derive(thiserror::Error, Debug)]
+pub enum RenderingError {
+    #[error("Style must be specified to render a tile")]
+    StyleNotSpecified,
 }
