@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0](https://github.com/maplibre/maplibre-native-rs/compare/v0.1.2...v0.2.0) - 2025-09-23
+
+### Fixed
+
+- *(api)* clearer style rendering semantics ([#63](https://github.com/maplibre/maplibre-native-rs/pull/63))
+
 ## [0.1.2](https://github.com/maplibre/maplibre-native-rs/compare/v0.1.1...v0.1.2) - 2025-09-18
 
 ### Added
