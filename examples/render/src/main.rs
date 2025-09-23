@@ -140,7 +140,7 @@ impl Args {
                 if let Some(debug) = self.debug {
                     map.set_debug_flags(debug.into());
                 }
-                map.load_style_from_path(&self.style);
+                map.load_style_from_url(&self.style);
                 map.set_camera(
                     f64::from(self.x),
                     f64::from(self.y),
