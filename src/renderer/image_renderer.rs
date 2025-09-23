@@ -41,7 +41,7 @@ impl<S> ImageRenderer<S> {
     }
 
     /// Load the style from the specified path.
-    /// 
+    ///
     /// The style will be loaded from the path, but won't be refreshed automatically if the file changes.
     pub fn load_style_path(&mut self, path: impl AsRef<Path>) -> &mut Self {
         // TODO: check if the file exists?
