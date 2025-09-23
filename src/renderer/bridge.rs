@@ -90,6 +90,6 @@ pub mod ffi {
             bearing: f64,
             pitch: f64,
         );
-        fn MapRenderer_loadStyleFromUrl(obj: Pin<&mut MapRenderer>, url: &str);
+        fn MapRenderer_getStyle_loadURL(obj: Pin<&mut MapRenderer>, url: &str);
     }
 }

@@ -36,7 +36,7 @@ impl<S> ImageRenderer<S> {
     pub fn load_style_from_url(&mut self, url: &str) -> &mut Self {
         // FIXME: return a result instead of panicking
         assert!(url.contains("://"));
-        ffi::MapRenderer_loadStyleFromUrl(self.0.pin_mut(), url);
+        ffi::MapRenderer_getStyle_loadURL(self.0.pin_mut(), url);
         self
     }
 
@@ -47,7 +47,7 @@ impl<S> ImageRenderer<S> {
         // TODO: check if the file exists?
         // FIXME: return a result instead of panicking
         let path = path.as_ref().to_str().expect("Path is not valid UTF-8");
-        ffi::MapRenderer_loadStyleFromUrl(self.0.pin_mut(), &format!("file://{path}"));
+        ffi::MapRenderer_getStyle_loadURL(self.0.pin_mut(), &format!("file://{path}"));
         self
     }
 
