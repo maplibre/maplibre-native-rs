@@ -140,7 +140,7 @@ impl Args {
                 if let Some(debug) = self.debug {
                     map.set_debug_flags(debug.into());
                 }
-                map.set_style_url(&self.style);
+                map.load_style_from_path(&self.style);
                 map.set_camera(
                     f64::from(self.x),
                     f64::from(self.y),
@@ -158,7 +158,7 @@ impl Args {
                     println!("Warning: nonzero pitch is ignored in tile-mode");
                 }
                 let mut map = map.build_tile_renderer();
-                map.set_style_url(&self.style);
+                map.load_style_from_path(&self.style);
                 if let Some(debug) = self.debug {
                     map.set_debug_flags(debug.into());
                 }

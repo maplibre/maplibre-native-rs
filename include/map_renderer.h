@@ -107,7 +107,7 @@ inline void MapRenderer_setCamera(
     self.map->jumpTo(cameraOptions);
 }
 
-inline void MapRenderer_loadFromStyleUrl(MapRenderer& self, const rust::Str styleUrl) {
+inline void MapRenderer_loadStyleFromUrl(MapRenderer& self, const rust::Str styleUrl) {
     self.map->getStyle().loadURL((std::string)styleUrl);
 }
 

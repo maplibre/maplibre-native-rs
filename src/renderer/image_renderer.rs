@@ -33,21 +33,21 @@ pub struct ImageRenderer<S>(
 impl<S> ImageRenderer<S> {
     /// Set the style URL for the map.
     // FIXME: without this call, renderer just hangs
-    pub fn load_style_url(&mut self, url: &str) -> &mut Self {
+    pub fn load_style_from_url(&mut self, url: &str) -> &mut Self {
         // FIXME: return a result instead of panicking
         assert!(url.contains("://"));
-        ffi::MapRenderer_loadFromStyleUrl(self.0.pin_mut(), url);
+        ffi::MapRenderer_loadStyleFromUrl(self.0.pin_mut(), url);
         self
     }
 
     /// Load the style from the specified path.
     ///
     /// The style will be loaded from the path, but won't be refreshed automatically if the file changes.
-    pub fn load_style_path(&mut self, path: impl AsRef<Path>) -> &mut Self {
+    pub fn load_style_from_path(&mut self, path: impl AsRef<Path>) -> &mut Self {
         // TODO: check if the file exists?
         // FIXME: return a result instead of panicking
         let path = path.as_ref().to_str().expect("Path is not valid UTF-8");
-        ffi::MapRenderer_loadFromStyleUrl(self.0.pin_mut(), &format!("file://{path}"));
+        ffi::MapRenderer_loadStyleFromUrl(self.0.pin_mut(), &format!("file://{path}"));
         self
     }
 
