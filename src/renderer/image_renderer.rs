@@ -28,7 +28,7 @@ pub struct Tile;
 pub struct ImageRenderer<S> {
     pub(crate) instance: UniquePtr<ffi::MapRenderer>,
     pub(crate) _marker: PhantomData<S>,
-    style_specified: bool,
+    pub(crate) style_specified: bool,
 }
 
 impl<S> ImageRenderer<S> {

@@ -8,6 +8,7 @@ license.workspace = true
 
 [dependencies]
 clap.workspace = true
+url.workspace = true
 maplibre_native.workspace = true
 
 [lints]
