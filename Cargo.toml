@@ -12,17 +12,17 @@ rust-version = "1.82" # due to icu_collections@2
 exclude = []
 
 [features]
-default = [] # automatically picks the platform-specific features
+default = ["pool"] # automatically picks the platform-specific features
 metal = [] # default on Apple platforms, do not add to default features
 opengl = []
 vulkan = []  # default on other platforms
+pool = ["dep:tokio"]
 
 [dependencies]
 cxx.workspace = true
 url.workspace = true
 thiserror.workspace = true
-
-[dev-dependencies]
+tokio = { workspace = true, optional = true }
 
 [build-dependencies]
 cmake.workspace = true
@@ -61,6 +61,7 @@ flate2 = "1.1.1"
 maplibre_native = { path = ".", version = "0.1.2" }
 tar = "0.4.44"
 thiserror = "2.0.16"
+tokio = { version = "1", features = ["sync"], default-features = false }
 url = "2.5.7"
 walkdir = "2.5.0"
 

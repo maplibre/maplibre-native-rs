@@ -10,6 +10,7 @@ use crate::renderer::{ImageRendererOptions, MapDebugOptions, MapMode};
 /// A rendered map image.
 ///
 /// The image is stored as a PNG byte array in a buffer allocated by the C++ code.
+#[derive(Debug)]
 pub struct Image(UniquePtr<CxxString>);
 
 impl Image {
