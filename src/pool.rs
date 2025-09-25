@@ -67,7 +67,9 @@ impl SingleThreadedRenderPool {
                 // Load style if it is different from current
                 if current_style.as_ref() != Some(&request.style_path) {
                     if let Err(e) = renderer.load_style_from_path(&request.style_path) {
-                        let _ = request.response.send(Err(SingleThreadedRenderPoolError::IOError(e)));
+                        let _ = request
+                            .response
+                            .send(Err(SingleThreadedRenderPoolError::IOError(e)));
                         continue;
                     }
                     current_style = Some(request.style_path.clone());
