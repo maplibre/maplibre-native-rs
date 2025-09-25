@@ -37,7 +37,7 @@ struct RenderRequest {
     z: u8,
     x: u32,
     y: u32,
-    response: oneshot::Sender<Result<Image, PoolError>>,
+    response: oneshot::Sender<Result<Image, SingleThreadedRenderPoolError>>,
 }
 
 /// A thread-safe rendering pool that serializes [MapLibre Native](https://maplibre.org/projects/native/) tile rendering
@@ -67,7 +67,7 @@ impl SingleThreadedRenderPool {
                 // Load style if it is different from current
                 if current_style.as_ref() != Some(&request.style_path) {
                     if let Err(e) = renderer.load_style_from_path(&request.style_path) {
-                        let _ = request.response.send(Err(PoolError::IOError(e)));
+                        let _ = request.response.send(Err(SingleThreadedRenderPoolError::IOError(e)));
                         continue;
                     }
                     current_style = Some(request.style_path.clone());
@@ -77,7 +77,7 @@ impl SingleThreadedRenderPool {
                 // Render the tile
                 let result = renderer
                     .render_tile(request.z, request.x, request.y)
-                    .map_err(PoolError::RenderingError);
+                    .map_err(SingleThreadedRenderPoolError::RenderingError);
                 let _ = request.response.send(result);
             }
         });
@@ -98,7 +98,7 @@ impl SingleThreadedRenderPool {
         z: u8,
         x: u32,
         y: u32,
-    ) -> Result<Image, PoolError> {
+    ) -> Result<Image, SingleThreadedRenderPoolError> {
         let (response_tx, response_rx) = oneshot::channel();
 
         self.rendering_requests
@@ -109,11 +109,11 @@ impl SingleThreadedRenderPool {
                 y,
                 response: response_tx,
             })
-            .map_err(|_| PoolError::FailedToSendRequest)?;
+            .map_err(|_| SingleThreadedRenderPoolError::FailedToSendRequest)?;
 
         response_rx
             .await
-            .map_err(|_| PoolError::FailedToReceiveResponse)?
+            .map_err(|_| SingleThreadedRenderPoolError::FailedToReceiveResponse)?
     }
 
     /// Get the global rendering pool instance.
@@ -127,7 +127,7 @@ impl SingleThreadedRenderPool {
 }
 
 #[derive(thiserror::Error, Debug)]
-pub enum PoolError {
+pub enum SingleThreadedRenderPoolError {
     #[error(transparent)]
     IOError(#[from] std::io::Error),
 

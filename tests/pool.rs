@@ -3,7 +3,7 @@
 use std::path::PathBuf;
 
 use insta::{assert_binary_snapshot, assert_debug_snapshot};
-use maplibre_native::pool::SingleThreadedRenderPool;
+use maplibre_native::SingleThreadedRenderPool;
 
 fn fixture_path(name: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
