@@ -1,5 +1,6 @@
 use cxx::{CxxString, UniquePtr};
 
+#[allow(clippy::borrow_as_ptr)]
 #[cxx::bridge(namespace = "mln::bridge")]
 pub mod ffi {
     //
