@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0](https://github.com/maplibre/maplibre-native-rs/compare/v0.2.0...v0.3.0) - 2025-09-25
+
+### Added
+
+- *(renderer)* refactored parts of the public API to be nicer to work with and less error prawn ([#66](https://github.com/maplibre/maplibre-native-rs/pull/66))
+- *(renderer)* logging via `log` from maplibre-native ([#71](https://github.com/maplibre/maplibre-native-rs/pull/71))
+
+### Other
+
+- *(renderer)* Add more derives and rename conversation function on `Image` ([#73](https://github.com/maplibre/maplibre-native-rs/pull/73))
+- *(ci)* change to `secrets.GITHUB_TOKEN` instead of our manual secret ([#67](https://github.com/maplibre/maplibre-native-rs/pull/67))
+- sort toml files ([#70](https://github.com/maplibre/maplibre-native-rs/pull/70))
+
 ## [0.2.0](https://github.com/maplibre/maplibre-native-rs/compare/v0.1.2...v0.2.0) - 2025-09-23
 
 ### Fixed
