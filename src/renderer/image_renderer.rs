@@ -73,6 +73,7 @@ impl<S> ImageRenderer<S> {
                 format!("Path {} is not valid UTF-8", path.display()),
             ));
         };
+        self.style_specified = true;
         ffi::MapRenderer_getStyle_loadURL(self.instance.pin_mut(), &format!("file://{path}"));
         Ok(self)
     }
