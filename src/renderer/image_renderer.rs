@@ -11,6 +11,7 @@ use crate::renderer::{ImageRendererOptions, MapDebugOptions, MapMode};
 /// A rendered map image.
 ///
 /// The image is stored as a PNG byte array in a buffer allocated by the C++ code.
+#[derive(PartialEq, Eq, Hash)]
 pub struct Image(UniquePtr<CxxString>);
 
 impl Debug for Image {
@@ -22,8 +23,9 @@ impl Debug for Image {
 }
 
 impl Image {
+    /// Convert the image to a byte slice.
     #[must_use]
-    pub fn as_slice(&self) -> &[u8] {
+    pub fn as_bytes(&self) -> &[u8] {
         self.0.as_bytes()
     }
 }
