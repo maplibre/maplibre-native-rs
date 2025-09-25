@@ -1,9 +1,7 @@
-//! Tests for SingleThreadedRenderPool
-
 #![cfg(feature = "pool")]
 
 use insta::{assert_binary_snapshot, assert_debug_snapshot};
-use maplibre_native::pool::{PoolError, SingleThreadedRenderPool};
+use maplibre_native::pool::SingleThreadedRenderPool;
 use std::path::PathBuf;
 
 fn fixture_path(name: &str) -> PathBuf {
@@ -27,10 +25,17 @@ async fn sequential_errors_dont_break_pool() {
 #[tokio::test]
 async fn large_coordinates_handled() {
     let pool = SingleThreadedRenderPool::global_pool();
-    let path = PathBuf::from("test.json");
+    let style = fixture_path("test-style.json");
 
-    let result = pool.render_tile(path, 15, 32767, 32767).await;
-    assert!(result.is_err()); // Expected to fail gracefully
+    let result = pool.render_tile(style, 1, 32767, 32767).await;
+    assert_debug_snapshot!(result.unwrap_err(), @r#"
+    IOError(
+        Custom {
+            kind: NotFound,
+            error: "Path missing.json is not a file",
+        },
+    )
+    "#);
 }
 
 #[tokio::test]
