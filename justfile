@@ -67,6 +67,10 @@ fmt:
         cargo fmt --all
     fi
 
+# Reformat all Cargo.toml files using cargo-sort
+fmt-toml *args: (cargo-install 'cargo-sort')
+    cargo sort --workspace --order package,lib,bin,bench,features,dependencies,build-dependencies,dev-dependencies {{args}}
+
 # Get any package's field from the metadata
 get-crate-field field package=main_crate:  (assert-cmd 'jq')
     @cargo metadata --format-version 1 | jq -e -r '.packages | map(select(.name == "{{package}}")) | first | .{{field}} // error("Field \"{{field}}\" is missing in Cargo.toml for package {{package}}")'
@@ -148,7 +152,7 @@ test-all:
 test-doc backend: (docs backend '')
 
 # Test code formatting
-test-fmt:
+test-fmt: (fmt-toml '--check' '--check-format')
     cargo fmt --all -- --check
 
 # Run testcases against a specific backend
