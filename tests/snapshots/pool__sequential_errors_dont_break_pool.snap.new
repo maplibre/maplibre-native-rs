@@ -1,0 +1,7 @@
+---
+source: tests/pool.rs
+assertion_line: 26
+expression: result.as_slice().to_vec()
+extension: png
+snapshot_kind: binary
+---

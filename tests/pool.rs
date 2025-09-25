@@ -17,10 +17,13 @@ async fn sequential_errors_dont_break_pool() {
     let pool = SingleThreadedRenderPool::global_pool();
 
     for i in 0..3 {
-        let path = PathBuf::from(format!("invalid_{}.json", i));
+        let path = PathBuf::from(format!("invalid_{i}.json"));
         let result = pool.render_tile(path, 0, i, 0).await;
         assert!(result.is_err());
     }
+    let working_style = fixture_path("test-style.json");
+    let result = pool.render_tile(working_style.clone(), 1, 0, 0).await.unwrap();
+    assert_binary_snapshot!(".png", result.as_slice().to_vec());
 }
 
 #[tokio::test]
