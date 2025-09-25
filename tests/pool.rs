@@ -28,15 +28,8 @@ async fn large_coordinates_handled() {
     let pool = SingleThreadedRenderPool::global_pool();
     let style = fixture_path("test-style.json");
 
-    let result = pool.render_tile(style, 1, 32767, 32767).await;
-    assert_debug_snapshot!(result.unwrap_err(), @r#"
-    IOError(
-        Custom {
-            kind: NotFound,
-            error: "Path missing.json is not a file",
-        },
-    )
-    "#);
+    let result = pool.render_tile(style, 1, 32767, 32767).await.unwrap();
+    assert_binary_snapshot!(".png", result.as_slice().to_vec());
 }
 
 #[tokio::test]
