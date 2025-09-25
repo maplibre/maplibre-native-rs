@@ -196,6 +196,7 @@ fn resolve_mln_core(root: &Path) -> (PathBuf, Vec<PathBuf>) {
 fn build_bridge(lib_name: &str, include_dirs: &[PathBuf]) {
     println!("cargo:rerun-if-changed=src/renderer/bridge.rs");
     println!("cargo:rerun-if-changed=include/map_renderer.h");
+    println!("cargo:rerun-if-changed=include/rust_log_observer.h");
     cxx_build::bridge("src/renderer/bridge.rs")
         .includes(include_dirs)
         .file("src/renderer/bridge.cpp")
