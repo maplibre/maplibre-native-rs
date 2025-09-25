@@ -17,7 +17,7 @@ pub struct ImageRendererOptions {
     // TODO: remove?
     api_key: String,
 
-    base_url: String,
+    base_url: url::Url,
     uri_scheme_alias: String,
     api_key_parameter_name: String,
     source_template: String,
@@ -25,7 +25,7 @@ pub struct ImageRendererOptions {
     sprites_template: String,
     glyphs_template: String,
     tile_template: String,
-    default_style_url: String,
+    default_style_url: url::Url,
     requires_api_key: bool,
 }
 
@@ -45,7 +45,9 @@ impl ImageRendererOptions {
             cache_path: "cache.sqlite".to_string(),
             asset_root: ".".to_string(),
             api_key: String::new(),
-            base_url: "https://demotiles.maplibre.org".to_string(),
+            base_url: "https://demotiles.maplibre.org"
+                .parse()
+                .expect("is a valid url"),
             uri_scheme_alias: "maplibre".to_string(),
             api_key_parameter_name: String::new(),
             source_template: "/tiles/{domain}.json".to_string(),
@@ -53,7 +55,9 @@ impl ImageRendererOptions {
             sprites_template: "/{path}/sprite{scale}.{format}".to_string(),
             glyphs_template: "/font/{fontstack}/{start}-{end}.pbf".to_string(),
             tile_template: "/{path}".to_string(),
-            default_style_url: String::from("https://demotiles.maplibre.org/style.json"),
+            default_style_url: "https://demotiles.maplibre.org/style.json"
+                .parse()
+                .expect("is a valid url"),
             requires_api_key: false,
         }
     }
@@ -84,7 +88,7 @@ impl ImageRendererOptions {
         self
     }
 
-    pub fn with_base_url(&mut self, base_url: String) -> &mut Self {
+    pub fn with_base_url(&mut self, base_url: url::Url) -> &mut Self {
         self.base_url = base_url;
         self
     }
@@ -124,7 +128,7 @@ impl ImageRendererOptions {
         self
     }
 
-    pub fn with_default_style_url(&mut self, default_style_url: String) -> &mut Self {
+    pub fn with_default_style_url(&mut self, default_style_url: url::Url) -> &mut Self {
         self.default_style_url = default_style_url;
         self
     }
@@ -158,7 +162,7 @@ impl<S> ImageRenderer<S> {
             &opts.cache_path,
             &opts.asset_root,
             &opts.api_key,
-            &opts.base_url,
+            opts.base_url.as_ref(),
             &opts.uri_scheme_alias,
             &opts.api_key_parameter_name,
             &opts.source_template,
@@ -166,10 +170,14 @@ impl<S> ImageRenderer<S> {
             &opts.sprites_template,
             &opts.glyphs_template,
             &opts.tile_template,
-            &opts.default_style_url,
+            opts.default_style_url.as_ref(),
             opts.requires_api_key,
         );
 
-        Self(map, PhantomData)
+        Self {
+            instance: map,
+            style_specified: false,
+            _marker: PhantomData,
+        }
     }
 }

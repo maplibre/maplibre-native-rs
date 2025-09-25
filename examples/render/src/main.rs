@@ -13,7 +13,7 @@ struct Args {
     #[arg(short = 't', long = "apikey", env = "MLN_API_KEY")]
     apikey: Option<String>,
 
-    /// Map stylesheet
+    /// Map stylesheet either as an URL or a path to a local file
     #[arg(
         short = 's',
         long = "style",
@@ -141,15 +141,20 @@ impl Args {
                 if let Some(debug) = self.debug {
                     map.set_debug_flags(debug.into());
                 }
-                map.load_style_from_url(&self.style);
-                map.set_camera(
+                if let Ok(url) = url::Url::parse(&self.style) {
+                    map.load_style_from_url(&url);
+                } else {
+                    map.load_style_from_path(self.style)
+                        .expect("the path to be valid");
+                }
+                map.render_static(
                     f64::from(self.x),
                     f64::from(self.y),
                     f64::from(self.zoom),
                     self.bearing,
                     self.pitch,
-                );
-                map.render_static()
+                )
+                .expect("could not render image")
             }
             Mode::Tile => {
                 if self.bearing != 0.0 {
@@ -159,11 +164,17 @@ impl Args {
                     println!("Warning: nonzero pitch is ignored in tile-mode");
                 }
                 let mut map = map.build_tile_renderer();
-                map.load_style_from_url(&self.style);
+                if let Ok(url) = url::Url::parse(&self.style) {
+                    map.load_style_from_url(&url);
+                } else {
+                    map.load_style_from_path(self.style)
+                        .expect("the path to be valid");
+                }
                 if let Some(debug) = self.debug {
                     map.set_debug_flags(debug.into());
                 }
                 map.render_tile(self.zoom, self.x, self.y)
+                    .expect("could not render image")
             }
             Mode::Continuous => {
                 todo!("not yet implemented in the wrapper")

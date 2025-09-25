@@ -15,6 +15,7 @@ clap.workspace = true
 env_logger.workspace = true
 log.workspace = true
 maplibre_native.workspace = true
+url.workspace = true
 
 [lints]
 workspace = true
