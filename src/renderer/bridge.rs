@@ -1,20 +1,9 @@
 use cxx::{CxxString, UniquePtr};
 
-/// Enable or disable MapLibre Native's internal logging thread
+/// Enable or disable the internal logging thread
 ///
-/// By default, MapLibre Native logs asynchronously except for Error level messages.
+/// By default, logs are generated asynchronously except for Error level messages.
 /// In crash scenarios, pending async log entries may be lost.
-///
-/// # Arguments
-/// * `enable` - Whether to use async logging thread
-///
-/// # Example
-/// ```rust
-/// use maplibre_native::set_log_thread_enabled;
-///
-/// // Disable async logging for better crash debugging
-/// set_log_thread_enabled(false);
-/// ```
 pub fn set_log_thread_enabled(enable: bool) {
     // This will be called through FFI to mbgl::Log::useLogThread
     unsafe {
@@ -23,22 +12,22 @@ pub fn set_log_thread_enabled(enable: bool) {
 }
 
 fn log_from_cpp(severity: ffi::EventSeverity, event: ffi::Event, code: i64, message: &str) {
+    #[cfg(feature = "log")]
     match severity {
         ffi::EventSeverity::Debug => log::debug!("{event:?} (code={code}) {message}"),
         ffi::EventSeverity::Info => log::info!("{event:?} (code={code}) {message}"),
         ffi::EventSeverity::Warning => log::warn!("{event:?} (code={code}) {message}"),
         ffi::EventSeverity::Error => log::error!("{event:?} (code={code}) {message}"),
         ffi::EventSeverity { repr } => {
-            log::error!("{event:?} (severity={repr}, code={code}) {message}")
+            log::error!("{event:?} (severity={repr}, code={code}) {message}");
         }
     }
 }
 
+#[allow(clippy::borrow_as_ptr)]
 #[cxx::bridge(namespace = "mln::bridge")]
 pub mod ffi {
-    //
     // CXX validates enum types against the C++ definition during compilation
-    //
 
     #[repr(u32)]
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -82,7 +71,7 @@ pub mod ffi {
 
     /// MapLibre Native Event Severity levels
     #[repr(u8)]
-    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
     pub enum EventSeverity {
         Debug = 0,
         Info = 1,
