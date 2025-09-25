@@ -199,7 +199,7 @@ fn main() {
         output.display()
     );
     println!("Note: Future renders using the same instance would be faster due to amortized initialization");
-    fs::write(&output, data.as_slice()).unwrap_or_else(|e| {
+    fs::write(&output, data.as_bytes()).unwrap_or_else(|e| {
         panic!(
             "Failed to write rendered map to {} because of {e:?}",
             output.display()
@@ -220,7 +220,7 @@ mod tests {
             ..Args::parse()
         };
         let data = args.render();
-        assert!(!data.as_slice().is_empty());
+        assert!(!data.as_bytes().is_empty());
 
         let args = Args {
             width: 64,
@@ -229,6 +229,6 @@ mod tests {
             ..Args::parse()
         };
         let data = args.render();
-        assert!(!data.as_slice().is_empty());
+        assert!(!data.as_bytes().is_empty());
     }
 }
