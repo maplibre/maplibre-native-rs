@@ -24,7 +24,7 @@ jobs:
         with: { fetch-depth: 0, persist-credentials: false }
       - if: github.event_name != 'release' && github.event_name != 'workflow_dispatch'
         uses: Swatinem/rust-cache@f13886b937689c021905a6b90929199931d60db1 # v2.8.1
-      - run: rustup update stable && rustup default stable
+      - run: rustup update stable && rustup default stable && rustup component add rustfmt
       - uses: taiki-e/install-action@0e09747a63ae497bf945b3dcaf38fef0050d0109 # v2.62.0
         with: { tool: 'just' }
       - run: just ci-lint
