@@ -11,6 +11,10 @@ categories = ["external-ffi-bindings", "science::geo", "rendering"]
 rust-version = "1.82" # due to icu_collections@2
 exclude = []
 
+[package.metadata.mln]
+repo = "maplibre/maplibre-native"
+release = "core-aeaadc06b4e0614f4f243db4dce210c22dde9f9c"
+
 [features]
 default = [] # automatically picks the platform-specific features
 metal = [] # default on Apple platforms, do not add to default features
@@ -21,9 +25,6 @@ vulkan = []  # default on other platforms
 cxx.workspace = true
 log.workspace = true
 
-[dev-dependencies]
-env_logger.workspace = true
-
 [build-dependencies]
 cmake.workspace = true
 cxx-build.workspace = true
@@ -31,6 +32,9 @@ downloader.workspace = true
 flate2.workspace = true
 tar.workspace = true
 walkdir.workspace = true
+
+[dev-dependencies]
+env_logger.workspace = true
 
 [lints]
 workspace = true
@@ -42,10 +46,7 @@ workspace = true
 ##########################################################
 
 [workspace]
-members = [
-    ".",
-    "examples/*",
-]
+members = [".", "examples/*"]
 
 [workspace.package]
 edition = "2021"
@@ -70,7 +71,3 @@ unused_qualifications = "warn"
 [workspace.lints.clippy]
 pedantic = { level = "warn", priority = -1 }
 missing_panics_doc = "allow" # FIXME: remove
-
-[package.metadata.mln]
-repo = "maplibre/maplibre-native"
-release = "core-aeaadc06b4e0614f4f243db4dce210c22dde9f9c"
