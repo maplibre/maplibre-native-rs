@@ -47,6 +47,7 @@ struct RenderRequest {
 /// sequentially. Automatically loads and caches styles as needed.
 ///
 /// Use [`SingleThreadedRenderPool::global_pool`] to access the shared instance.
+#[derive(Debug, Clone)]
 pub struct SingleThreadedRenderPool {
     rendering_requests: mpsc::Sender<RenderRequest>,
 }
