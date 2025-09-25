@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - *(renderer)* refactored parts of the public API to be nicer to work with and less error prawn ([#66](https://github.com/maplibre/maplibre-native-rs/pull/66))
-- logging ([#71](https://github.com/maplibre/maplibre-native-rs/pull/71))
+- *(renderer)* logging via `log` from maplibre-native ([#71](https://github.com/maplibre/maplibre-native-rs/pull/71))
 
 ### Other
 
