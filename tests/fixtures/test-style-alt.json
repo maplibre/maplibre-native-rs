@@ -1,14 +1,14 @@
 {
-	"version": 8,
-	"name": "Alternative Test Style",
-	"sources": {},
-	"layers": [
-		{
-			"id": "background",
-			"type": "background",
-			"paint": {
-				"background-color": "#4a90e2"
-			}
-		}
-	]
+    "version": 8,
+    "name": "Alternative Test Style",
+    "sources": {},
+    "layers": [
+        {
+            "id": "background",
+            "type": "background",
+            "paint": {
+                "background-color": "#4a90e2"
+            }
+        }
+    ]
 }
