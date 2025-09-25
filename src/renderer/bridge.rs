@@ -28,7 +28,9 @@ fn log_from_cpp(severity: ffi::EventSeverity, event: ffi::Event, code: i64, mess
         ffi::EventSeverity::Info => log::info!("{event:?} (code={code}) {message}"),
         ffi::EventSeverity::Warning => log::warn!("{event:?} (code={code}) {message}"),
         ffi::EventSeverity::Error => log::error!("{event:?} (code={code}) {message}"),
-        ffi::EventSeverity { repr } => log::error!("{event:?} (severity={repr}, code={code}) {message}")
+        ffi::EventSeverity { repr } => {
+            log::error!("{event:?} (severity={repr}, code={code}) {message}")
+        }
     }
 }
 
@@ -161,8 +163,8 @@ pub mod ffi {
     }
 
     extern "Rust" {
-      /// Bridge logging from C++ to Rust log crate
-      fn log_from_cpp(severity: EventSeverity, event: Event, code: i64, message: &str);
+        /// Bridge logging from C++ to Rust log crate
+        fn log_from_cpp(severity: EventSeverity, event: Event, code: i64, message: &str);
     }
 
     unsafe extern "C++" {

@@ -175,7 +175,7 @@ impl Args {
 fn main() {
     env_logger::Builder::from_env(Env::new().default_filter_or("trace")).init();
     log::info!("Starting MapLibre Native renderer with logging enabled");
-    
+
     let args = Args::parse();
     println!("Rendering arguments: {args:#?}");
     let output = args.output.clone();
