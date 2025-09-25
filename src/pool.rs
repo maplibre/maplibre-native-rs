@@ -1,7 +1,7 @@
-//! Simple rendering pool for thread-safe MapLibre Native rendering.
+//! Simple rendering pool for thread-safe [MapLibre Native](https://maplibre.org/projects/native/) rendering.
 //!
 //! This module provides a minimal thread-safe rendering pool that prevents
-//! segmentation faults when MapLibre Native is used concurrently.
+//! segmentation faults when used concurrently.
 //!
 //! # Example
 //!
@@ -40,7 +40,7 @@ struct RenderRequest {
     response: oneshot::Sender<Result<Image, PoolError>>,
 }
 
-/// A thread-safe rendering pool that serializes MapLibre Native tile rendering
+/// A thread-safe rendering pool that serializes [MapLibre Native](https://maplibre.org/projects/native/) tile rendering
 /// operations through a single worker thread.
 ///
 /// Prevents segmentation faults by ensuring all rendering operations are handled
@@ -86,9 +86,11 @@ impl SingleThreadedRenderPool {
         }
     }
 
-    /// Render a tile asynchronously in a centralised pool
+    /// Render an encoded tile [`Image`] asynchronously in a centralised pool
     ///
-    /// Returns an encoded [`Image`].
+    /// # Errors
+    /// 
+    /// If the rendering fails, the response channel is dropped, or the request fails to send.
     pub async fn render_tile(
         &self,
         style_path: PathBuf,
@@ -114,6 +116,7 @@ impl SingleThreadedRenderPool {
     }
 
     /// Get the global rendering pool instance.
+    #[must_use]
     pub fn global_pool() -> &'static SingleThreadedRenderPool {
         static GLOBAL_POOL: LazyLock<SingleThreadedRenderPool> =
             LazyLock::new(SingleThreadedRenderPool::new);
