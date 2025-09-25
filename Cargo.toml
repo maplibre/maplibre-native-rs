@@ -32,6 +32,11 @@ flate2.workspace = true
 tar.workspace = true
 walkdir.workspace = true
 
+[dev-dependencies]
+futures = "0.3"
+insta = { workspace = true, features = ["json", "redactions"] }
+tokio.workspace = true
+
 [lints]
 workspace = true
 
@@ -63,6 +68,7 @@ tar = "0.4.44"
 thiserror = "2.0.16"
 tokio = { version = "1", features = ["sync"], default-features = false }
 url = "2.5.7"
+insta = "1.43.2"
 walkdir = "2.5.0"
 
 [workspace.lints.rust]

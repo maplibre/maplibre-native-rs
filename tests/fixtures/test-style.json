@@ -1,0 +1,14 @@
+{
+  "version": 8,
+  "name": "Test Style",
+  "sources": {},
+  "layers": [
+    {
+      "id": "background",
+      "type": "background",
+      "paint": {
+        "background-color": "#e0e0e0"
+      }
+    }
+  ]
+}
