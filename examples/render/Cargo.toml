@@ -6,13 +6,15 @@ description = "Rendering example"
 edition.workspace = true
 license.workspace = true
 
+[[bin]]
+name = "render"
+path = "src/main.rs"
+
 [dependencies]
 clap.workspace = true
+env_logger.workspace = true
+log.workspace = true
 maplibre_native.workspace = true
 
 [lints]
 workspace = true
-
-[[bin]]
-name = "render"
-path = "src/main.rs"

@@ -11,6 +11,8 @@
 #include <vector>
 #include <stdexcept>
 #include "rust/cxx.h"
+#include "rust_log_observer.h"
+#include <mbgl/map/map_observer.hpp>
 
 namespace mln {
 namespace bridge {
@@ -82,6 +84,10 @@ inline std::unique_ptr<MapRenderer> MapRenderer_new(
 
     MapOptions mapOptions;
     mapOptions.withMapMode(mapMode).withSize(size).withPixelRatio(pixelRatio);
+
+    // Set up logging observer for Rust bridge
+    auto logObserver = std::make_unique<mln::bridge::RustLogObserver>();
+    mbgl::Log::setObserver(std::move(logObserver));
 
     auto map = std::make_unique<mbgl::Map>(*frontend, MapObserver::nullObserver(), mapOptions, resourceOptions);
 

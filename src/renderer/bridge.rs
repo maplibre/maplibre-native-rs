@@ -1,10 +1,33 @@
 use cxx::{CxxString, UniquePtr};
 
+/// Enable or disable the internal logging thread
+///
+/// By default, logs are generated asynchronously except for Error level messages.
+/// In crash scenarios, pending async log entries may be lost.
+pub fn set_log_thread_enabled(enable: bool) {
+    // This will be called through FFI to mbgl::Log::useLogThread
+    unsafe {
+        ffi::Log_useLogThread(enable);
+    }
+}
+
+fn log_from_cpp(severity: ffi::EventSeverity, event: ffi::Event, code: i64, message: &str) {
+    #[cfg(feature = "log")]
+    match severity {
+        ffi::EventSeverity::Debug => log::debug!("{event:?} (code={code}) {message}"),
+        ffi::EventSeverity::Info => log::info!("{event:?} (code={code}) {message}"),
+        ffi::EventSeverity::Warning => log::warn!("{event:?} (code={code}) {message}"),
+        ffi::EventSeverity::Error => log::error!("{event:?} (code={code}) {message}"),
+        ffi::EventSeverity { repr } => {
+            log::error!("{event:?} (severity={repr}, code={code}) {message}");
+        }
+    }
+}
+
+#[allow(clippy::borrow_as_ptr)]
 #[cxx::bridge(namespace = "mln::bridge")]
 pub mod ffi {
-    //
     // CXX validates enum types against the C++ definition during compilation
-    //
 
     #[repr(u32)]
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -46,12 +69,47 @@ pub mod ffi {
         DepthBuffer = 0b1000_0000, // 1 << 7
     }
 
+    /// MapLibre Native Event Severity levels
+    #[repr(u8)]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+    pub enum EventSeverity {
+        Debug = 0,
+        Info = 1,
+        Warning = 2,
+        Error = 3,
+    }
+
+    /// MapLibre Native Event types
+    #[repr(u8)]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+    pub enum Event {
+        General = 0,
+        Setup = 1,
+        Shader = 2,
+        ParseStyle = 3,
+        ParseTile = 4,
+        Render = 5,
+        Style = 6,
+        Database = 7,
+        HttpRequest = 8,
+        Sprite = 9,
+        Image = 10,
+        OpenGL = 11,
+        JNI = 12,
+        Android = 13,
+        Crash = 14,
+        Glyph = 15,
+        Timing = 16,
+    }
+
     #[namespace = "mbgl"]
     unsafe extern "C++" {
         include!("mbgl/map/mode.hpp");
 
         type MapMode;
         type MapDebugOptions;
+        pub type EventSeverity;
+        pub type Event;
     }
 
     unsafe extern "C++" {
@@ -91,5 +149,16 @@ pub mod ffi {
             pitch: f64,
         );
         fn MapRenderer_getStyle_loadURL(obj: Pin<&mut MapRenderer>, url: &str);
+    }
+
+    extern "Rust" {
+        /// Bridge logging from C++ to Rust log crate
+        fn log_from_cpp(severity: EventSeverity, event: Event, code: i64, message: &str);
+    }
+
+    unsafe extern "C++" {
+        include!("rust_log_observer.h");
+
+        fn Log_useLogThread(enable: bool);
     }
 }
