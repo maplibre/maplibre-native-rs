@@ -64,7 +64,7 @@ impl SingleThreadedRenderPool {
             let mut current_style: Option<PathBuf> = None;
 
             while let Ok(request) = rx.recv() {
-                // Load style if different from current
+                // Load style if it is different from current
                 if current_style.as_ref() != Some(&request.style_path) {
                     if let Err(e) = renderer.load_style_from_path(&request.style_path) {
                         let _ = request.response.send(Err(PoolError::IOError(e)));
@@ -72,7 +72,7 @@ impl SingleThreadedRenderPool {
                     }
                     current_style = Some(request.style_path.clone());
                 }
-                // TODO: handle style on disk changing content^
+                // TODO: handle style changing on the disk
 
                 // Render the tile
                 let result = renderer
