@@ -1,6 +1,6 @@
 ---
 source: tests/pool.rs
-assertion_line: 26
+assertion_line: 29
 expression: result.as_slice().to_vec()
 extension: png
 snapshot_kind: binary
