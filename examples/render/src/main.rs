@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use std::time::Instant;
 
 use clap::Parser;
+use env_logger::Env;
 use maplibre_native::{Image, ImageRendererOptions, MapDebugOptions};
 
 /// Command-line tool to render a map via [`mapLibre-native`](https://github.com/maplibre/maplibre-native)
@@ -183,6 +184,9 @@ impl Args {
 }
 
 fn main() {
+    env_logger::Builder::from_env(Env::new().default_filter_or("trace")).init();
+    log::info!("Starting MapLibre Native renderer with logging enabled");
+
     let args = Args::parse();
     println!("Rendering arguments: {args:#?}");
     let output = args.output.clone();

@@ -1,4 +1,5 @@
 use std::f64::consts::PI;
+use std::fmt::Debug;
 use std::marker::PhantomData;
 use std::path::Path;
 
@@ -12,6 +13,14 @@ use crate::renderer::{ImageRendererOptions, MapDebugOptions, MapMode};
 /// The image is stored as a PNG byte array in a buffer allocated by the C++ code.
 #[derive(Debug)]
 pub struct Image(UniquePtr<CxxString>);
+
+impl Debug for Image {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Image")
+            .field("size_bytes", &self.0.as_bytes().len())
+            .finish()
+    }
+}
 
 impl Image {
     #[must_use]

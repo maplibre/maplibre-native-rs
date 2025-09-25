@@ -11,11 +11,16 @@ categories = ["external-ffi-bindings", "science::geo", "rendering"]
 rust-version = "1.82" # due to icu_collections@2
 exclude = []
 
+[package.metadata.mln]
+repo = "maplibre/maplibre-native"
+release = "core-aeaadc06b4e0614f4f243db4dce210c22dde9f9c"
+
 [features]
-default = ["pool"] # automatically picks the platform-specific features
+default = ["log", "pool"] # automatically picks the platform-specific features
 metal = [] # default on Apple platforms, do not add to default features
 opengl = []
 vulkan = []  # default on other platforms
+log = ["dep:log"]
 pool = ["dep:tokio"]
 
 [dependencies]
@@ -23,6 +28,7 @@ cxx.workspace = true
 url.workspace = true
 thiserror.workspace = true
 tokio = { workspace = true, optional = true }
+log = { workspace = true, optional = true }
 
 [build-dependencies]
 cmake.workspace = true
@@ -33,6 +39,7 @@ tar.workspace = true
 walkdir.workspace = true
 
 [dev-dependencies]
+env_logger.workspace = true
 futures = "0.3"
 insta = { workspace = true, features = ["json", "redactions"] }
 tokio = { workspace = true, features = ["macros", "sync", "rt-multi-thread"] }
@@ -47,10 +54,7 @@ workspace = true
 ##########################################################
 
 [workspace]
-members = [
-    ".",
-    "examples/*",
-]
+members = [".", "examples/*"]
 
 [workspace.package]
 edition = "2021"
@@ -62,7 +66,9 @@ cmake = "0.1"
 cxx = "1.0.138"
 cxx-build = "1.0.138"
 downloader = "0.2.8"
+env_logger = "0.11"
 flate2 = "1.1.1"
+log = "0.4"
 maplibre_native = { path = ".", version = "0.2.0" }
 tar = "0.4.44"
 thiserror = "2.0.16"
@@ -77,7 +83,3 @@ unused_qualifications = "warn"
 [workspace.lints.clippy]
 pedantic = { level = "warn", priority = -1 }
 missing_panics_doc = "allow" # FIXME: remove
-
-[package.metadata.mln]
-repo = "maplibre/maplibre-native"
-release = "core-aeaadc06b4e0614f4f243db4dce210c22dde9f9c"
