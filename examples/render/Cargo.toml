@@ -8,6 +8,8 @@ license.workspace = true
 
 [dependencies]
 clap.workspace = true
+env_logger.workspace = true
+log.workspace = true
 maplibre_native.workspace = true
 
 [lints]

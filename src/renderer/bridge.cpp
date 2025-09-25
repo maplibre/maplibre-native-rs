@@ -1,10 +1,21 @@
 #include "map_renderer.h"
+#include "rust_log_observer.h"
 #include "maplibre_native/src/renderer/bridge.rs.h"
-
-//
-// This file is unused at the moment, but we may need it later so keeping it for now
-//
+#include <mbgl/util/logging.hpp>
 
 namespace mln {
-namespace bridge {} // namespace bridge
+namespace bridge {
+
+bool RustLogObserver::onRecord(mbgl::EventSeverity severity, mbgl::Event event, int64_t code, const std::string& msg) {
+    // Call the Rust logging function through the CXX bridge
+    log_from_cpp(severity, event, code, msg);
+    return true;
+}
+
+// Wrapper function for MapLibre's Log::useLogThread which takes optional parameters
+void Log_useLogThread(bool enable) {
+    mbgl::Log::useLogThread(enable);
+}
+
+} // namespace bridge
 } // namespace mln
