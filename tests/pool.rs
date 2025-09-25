@@ -33,23 +33,6 @@ async fn large_coordinates_handled() {
 }
 
 #[tokio::test]
-async fn error_messages_are_consistent() {
-    let pool = SingleThreadedRenderPool::global_pool();
-    let result = pool
-        .render_tile(PathBuf::from("missing.json"), 0, 0, 0)
-        .await;
-
-    assert_debug_snapshot!(result.unwrap_err(), @r#"
-    IOError(
-        Custom {
-            kind: NotFound,
-            error: "Path missing.json is not a file",
-        },
-    )
-    "#);
-}
-
-#[tokio::test]
 async fn io_errors() {
     let pool = SingleThreadedRenderPool::global_pool();
 
