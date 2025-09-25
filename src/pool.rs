@@ -89,7 +89,7 @@ impl SingleThreadedRenderPool {
     /// Render an encoded tile [`Image`] asynchronously in a centralised pool
     ///
     /// # Errors
-    /// 
+    ///
     /// If the rendering fails, the response channel is dropped, or the request fails to send.
     pub async fn render_tile(
         &self,
