@@ -26,7 +26,7 @@ async fn sequential_errors_dont_break_pool() {
         .render_tile(working_style.clone(), 1, 0, 0)
         .await
         .unwrap();
-    assert_binary_snapshot!(".png", result.as_slice().to_vec());
+    assert_binary_snapshot!(".png", result.as_bytes().to_vec());
 }
 
 #[tokio::test]
@@ -35,7 +35,7 @@ async fn large_coordinates_handled() {
     let style = fixture_path("test-style.json");
 
     let result = pool.render_tile(style, 1, 32767, 32767).await.unwrap();
-    assert_binary_snapshot!(".png", result.as_slice().to_vec());
+    assert_binary_snapshot!(".png", result.as_bytes().to_vec());
 }
 
 #[tokio::test]
@@ -89,11 +89,11 @@ async fn style_switching_() {
     let style2 = fixture_path("test-style-alt.json");
 
     let result = pool.render_tile(style1.clone(), 1, 0, 0).await.unwrap();
-    assert_binary_snapshot!(".png", result.as_slice().to_vec());
+    assert_binary_snapshot!(".png", result.as_bytes().to_vec());
     let result = pool.render_tile(style1.clone(), 1, 0, 1).await.unwrap();
-    assert_binary_snapshot!(".png", result.as_slice().to_vec());
+    assert_binary_snapshot!(".png", result.as_bytes().to_vec());
     let result = pool.render_tile(style2.clone(), 1, 0, 0).await.unwrap();
-    assert_binary_snapshot!(".png", result.as_slice().to_vec());
+    assert_binary_snapshot!(".png", result.as_bytes().to_vec());
 }
 
 #[tokio::test(flavor = "multi_thread")]
