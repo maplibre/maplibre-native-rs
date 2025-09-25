@@ -15,11 +15,11 @@
 //!
 //! // Render a tile with a MapLibre style
 //! let style_path = PathBuf::from("path/to/style.json");
-//! let image = pool.render_tile(style_path, 10, 512, 384).await.unwrap();
+//! let image = pool.render_tile(style_path.clone(), 10, 512, 384).await.unwrap();
 //!
 //! // The pool automatically handles style caching - subsequent renders
 //! // with the same style will be faster
-//! let another_tile = pool.render_tile(style_path, 10, 513, 384).await.unwrap();
+//! let another_tile = pool.render_tile(style_path.clone(), 10, 513, 384).await.unwrap();
 //! # }
 //! ```
 
@@ -87,7 +87,7 @@ impl SingleThreadedRenderPool {
     }
 
     /// Render a tile asynchronously in a centralised pool
-    /// 
+    ///
     /// Returns an encoded [`Image`].
     pub async fn render_tile(
         &self,

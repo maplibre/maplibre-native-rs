@@ -35,7 +35,7 @@ walkdir.workspace = true
 [dev-dependencies]
 futures = "0.3"
 insta = { workspace = true, features = ["json", "redactions"] }
-tokio.workspace = true
+tokio = { workspace = true, features = ["macros", "sync", "rt-multi-thread"] }
 
 [lints]
 workspace = true
