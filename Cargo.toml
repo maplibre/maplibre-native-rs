@@ -24,11 +24,9 @@ log = ["dep:log"]
 
 [dependencies]
 cxx.workspace = true
-url.workspace = true
-thiserror.workspace = true
-
-[dev-dependencies]
 log = { workspace = true, optional = true }
+thiserror.workspace = true
+url.workspace = true
 
 [build-dependencies]
 cmake.workspace = true
