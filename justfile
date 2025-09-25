@@ -152,7 +152,7 @@ test-all:
 test-doc backend: (docs backend '')
 
 # Test code formatting
-test-fmt: && (cargo-install 'cargo-sort') (fmt-toml '--check' '--check-format')
+test-fmt: (fmt-toml '--check' '--check-format')
     cargo fmt --all -- --check
 
 # Run testcases against a specific backend
