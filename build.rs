@@ -247,7 +247,6 @@ fn build_mln() {
         }
     }
 
-    println!("cargo:rustc-link-lib=curl");
     println!("cargo:rustc-link-lib=z");
     match GraphicsRenderingAPI::from_selected_features() {
         GraphicsRenderingAPI::Vulkan => {}
@@ -266,6 +265,8 @@ fn build_mln() {
             println!("cargo:rustc-link-lib=framework=CoreLocation");
         }
     }
+    println!("cargo:rustc-link-lib=curl");
+
     let lib_name = cpp_root
         .file_name()
         .expect("static library base has a file name")
