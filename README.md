@@ -6,7 +6,7 @@
 [![crates.io license](https://img.shields.io/crates/l/maplibre_native)](https://github.com/maplibre/maplibre-native-rs/blob/main/LICENSE-APACHE)
 [![CI build](https://github.com/maplibre/maplibre-native-rs/actions/workflows/ci.yml/badge.svg)](https://github.com/maplibre/maplibre-native-rs/actions)
 
-Rust bindings to the [MapLibre Native](https://github.com/maplibre/maplibre-native) map rendering engine.
+Rust bindings to the [MapLibre Native](https://maplibre.org/projects/native/) map rendering engine.
 
 ## Usage
 
@@ -55,12 +55,12 @@ just install-dependencies vulkan
 
 ### Gettting MapLibre Native Core
 
-Since we wrap the Maplibre native library, we need this and its headers to be included.
+Since we wrap the [Maplibre native library](https://maplibre.org/projects/native/), we need this and its headers to be included.
 
 We can get the library and headers from two places:
 - <details><summary>default: downloaded from the releases page</summary>
 
-  The specific version of [MapLibre Native](https://github.com/maplibre/maplibre-native) used is controlled by `package.metadata.mln.release` in `Cargo.toml`.
+  The specific version of [MapLibre Native](https://maplibre.org/projects/native/) used is controlled by `package.metadata.mln.release` in `Cargo.toml`.
   This dependency is automatically updated via a GitHub workflow on the 1st of each month repository.
   A pull request is created if an update is available.
 

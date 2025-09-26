@@ -16,16 +16,18 @@ repo = "maplibre/maplibre-native"
 release = "core-aeaadc06b4e0614f4f243db4dce210c22dde9f9c"
 
 [features]
-default = ["log"] # automatically pick the platform-specific features
+default = ["log", "pool"] # automatically picks the platform-specific features
 metal = [] # default on Apple platforms, do not add to default features
 opengl = []
 vulkan = []  # default on other platforms
 log = ["dep:log"]
+pool = ["dep:tokio"]
 
 [dependencies]
 cxx.workspace = true
 log = { workspace = true, optional = true }
 thiserror.workspace = true
+tokio = { workspace = true, optional = true }
 url.workspace = true
 
 [build-dependencies]
@@ -38,6 +40,9 @@ walkdir.workspace = true
 
 [dev-dependencies]
 env_logger.workspace = true
+futures.workspace = true
+insta = { workspace = true, features = ["json", "redactions"] }
+tokio = { workspace = true, features = ["macros", "sync", "rt-multi-thread"] }
 
 [lints]
 workspace = true
@@ -63,10 +68,13 @@ cxx-build = "1.0.138"
 downloader = "0.2.8"
 env_logger = "0.11"
 flate2 = "1.1.1"
+futures = "0.3"
+insta = "1.43.2"
 log = "0.4"
 maplibre_native = { path = ".", version = "0.3.0" }
 tar = "0.4.44"
 thiserror = "2.0.16"
+tokio = { version = "1", features = ["sync"], default-features = false }
 url = "2.5.7"
 walkdir = "2.5.0"
 
