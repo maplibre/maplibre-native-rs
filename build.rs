@@ -265,8 +265,6 @@ fn build_mln() {
             println!("cargo:rustc-link-lib=framework=CoreLocation");
         }
     }
-    println!("cargo:rustc-link-lib=curl");
-
     let lib_name = cpp_root
         .file_name()
         .expect("static library base has a file name")
@@ -275,6 +273,7 @@ fn build_mln() {
         .replacen("lib", "", 1)
         .replace(".a", "");
     build_bridge(&lib_name, &include_dirs);
+    println!("cargo:rustc-link-lib=curl");
 }
 
 fn main() {
