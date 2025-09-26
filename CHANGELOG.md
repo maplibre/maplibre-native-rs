@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.1](https://github.com/maplibre/maplibre-native-rs/compare/v0.3.0...v0.3.1) - 2025-09-26
+
+### Added
+
+- *(pool)* Add a single-threaded image rendering pool ([#68](https://github.com/maplibre/maplibre-native-rs/pull/68))
+
+### Fixed
+
+- *(release)* Revert permission change for CI ([#74](https://github.com/maplibre/maplibre-native-rs/pull/74))
+
+### Other
+
+- *(release)* another test if we can reduce our permissions for releases ([#75](https://github.com/maplibre/maplibre-native-rs/pull/75))
+
 ## [0.3.0](https://github.com/maplibre/maplibre-native-rs/compare/v0.2.0...v0.3.0) - 2025-09-25
 
 ### Added
