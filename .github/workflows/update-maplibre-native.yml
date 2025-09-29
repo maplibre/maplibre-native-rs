@@ -17,7 +17,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       - name: Install just
-        uses: taiki-e/install-action@0e09747a63ae497bf945b3dcaf38fef0050d0109 # v2.62.0
+        uses: taiki-e/install-action@efd8b64311f7a0a9b888ed13d0df78ec9184c163 # v2.62.11
         with:
           tool: just
 
