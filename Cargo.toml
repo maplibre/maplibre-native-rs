@@ -21,7 +21,7 @@ metal = [] # default on Apple platforms, do not add to default features
 opengl = []
 vulkan = []  # default on other platforms
 log = ["dep:log"]
-pool = ["dep:tokio"]
+pool = ["dep:tokio", "tokio/rt", "tokio/time", "tokio/rt-multi-thread"]
 
 [dependencies]
 cxx.workspace = true
