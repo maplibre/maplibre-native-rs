@@ -6,6 +6,7 @@
 #include <mbgl/style/style.hpp>
 #include <mbgl/util/image.hpp>
 #include <mbgl/util/run_loop.hpp>
+#include <mbgl/util/premultiply.hpp>
 #include <mbgl/util/tile_server_options.hpp>
 #include <memory>
 #include <vector>
@@ -96,45 +97,23 @@ inline std::unique_ptr<MapRenderer> MapRenderer_new(
 
 inline std::unique_ptr<std::string> MapRenderer_render(MapRenderer& self) {
     auto result = self.frontend->render(*self.map);
-    auto& image = result.image;
-    
-    // Convert ARGB32_Premultiplied to RGBA8 and return as string with dimensions prepended
-    const size_t pixelCount = image.size.width * image.size.height;
+    auto unpremultipliedImage = mbgl::util::unpremultiply(std::move(result.image));
+
+    // Prepare string with dimensions and pixel data
+    const size_t pixelCount = unpremultipliedImage.size.width * unpremultipliedImage.size.height;
     std::string data;
-    data.reserve(8 + pixelCount * 4); // 8 bytes for dimensions + pixel data
-    
+    data.reserve(sizeof(uint32_t) * 2 + pixelCount * 4);
+
     // First 8 bytes: width and height as uint32_t (little-endian)
-    uint32_t width = image.size.width;
-    uint32_t height = image.size.height;
+    uint32_t width = unpremultipliedImage.size.width;
+    uint32_t height = unpremultipliedImage.size.height;
     data.append(reinterpret_cast<const char*>(&width), sizeof(uint32_t));
     data.append(reinterpret_cast<const char*>(&height), sizeof(uint32_t));
-    
-    const uint32_t* srcPixels = reinterpret_cast<const uint32_t*>(image.data.get());
-    
-    for (size_t i = 0; i < pixelCount; ++i) {
-        uint32_t pixel = srcPixels[i];
-        
-        // MapLibre uses RGBA format stored as 32-bit values
-        // On little-endian systems, this means: A|B|G|R in memory (reversed byte order)
-        uint8_t r = pixel & 0xFF;
-        uint8_t g = (pixel >> 8) & 0xFF;
-        uint8_t b = (pixel >> 16) & 0xFF;
-        uint8_t a = (pixel >> 24) & 0xFF;
-        
-        // Convert from premultiplied alpha to straight alpha
-        if (a > 0) {
-            r = (r * 255) / a;
-            g = (g * 255) / a;
-            b = (b * 255) / a;
-        }
-        
-        // Store as RGBA
-        data.push_back(static_cast<char>(r));
-        data.push_back(static_cast<char>(g));
-        data.push_back(static_cast<char>(b));
-        data.push_back(static_cast<char>(a));
-    }
-    
+
+    // Append the unpremultiplied RGBA pixel data directly
+    const char* pixelData = reinterpret_cast<const char*>(unpremultipliedImage.data.get());
+    data.append(pixelData, pixelCount * 4);
+
     return std::make_unique<std::string>(std::move(data));
 }
 
