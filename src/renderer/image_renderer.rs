@@ -7,7 +7,7 @@ use cxx::UniquePtr;
 use image::{ImageBuffer, Rgba};
 
 use crate::renderer::bridge::ffi;
-use crate::renderer::{ImageRendererOptions, MapDebugOptions, MapMode};
+use crate::renderer::MapDebugOptions;
 
 /// A rendered map image.
 ///

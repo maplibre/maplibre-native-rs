@@ -1,7 +1,5 @@
 use std::marker::PhantomData;
 
-use cxx::UniquePtr;
-
 use crate::renderer::bridge::ffi;
 use crate::renderer::{ImageRenderer, MapMode, Static, Tile};
 

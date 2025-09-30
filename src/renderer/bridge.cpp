@@ -12,10 +12,6 @@ bool RustLogObserver::onRecord(mbgl::EventSeverity severity, mbgl::Event event, 
     return true;
 }
 
-// Wrapper function for MapLibre's Log::useLogThread which takes optional parameters
-void Log_useLogThread(bool enable) {
-    mbgl::Log::useLogThread(enable);
-}
 
 } // namespace bridge
 } // namespace mln
