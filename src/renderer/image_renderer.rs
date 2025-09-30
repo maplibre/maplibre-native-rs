@@ -17,10 +17,11 @@ use crate::renderer::{ImageRendererOptions, MapDebugOptions, MapMode};
 /// # Example
 ///
 /// ```no_run
+/// # fn foo() {
 /// use maplibre_native::{ImageRendererOptions, Image};
 ///
-/// let mut renderer = ImageRendererOptions::new()
-/// renderer.with_size(512, 512)
+/// let mut renderer = ImageRendererOptions::new();
+/// renderer.with_size(512, 512);
 /// let mut renderer = renderer.build_static_renderer();
 ///
 /// renderer.load_style_from_url(&"https://demotiles.maplibre.org/style.json".parse().unwrap());
@@ -30,6 +31,7 @@ use crate::renderer::{ImageRendererOptions, MapDebugOptions, MapMode};
 /// let img_buffer = image.as_image();
 /// println!("Image dimensions: {}x{}", img_buffer.width(), img_buffer.height());
 /// img_buffer.save("map.png").unwrap();
+/// # }
 /// ```
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct Image(ImageBuffer<Rgba<u8>, Vec<u8>>);
