@@ -3,7 +3,7 @@
 .ccache
 .idea/
 .vscode/
-cache.sqlite
+cache*.sqlite*
 debug/
 out.png
 target/
