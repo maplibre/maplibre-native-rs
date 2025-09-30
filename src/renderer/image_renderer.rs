@@ -131,8 +131,8 @@ impl ImageRenderer<Static> {
             return Err(RenderingError::InvalidImageData);
         }
 
-        let width = u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]);
-        let height = u32::from_le_bytes([bytes[4], bytes[5], bytes[6], bytes[7]]);
+        let width = u32::from_ne_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]);
+        let height = u32::from_ne_bytes([bytes[4], bytes[5], bytes[6], bytes[7]]);
         let rgba_data = bytes[8..].to_vec();
 
         let image =
