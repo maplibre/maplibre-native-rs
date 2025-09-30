@@ -1,10 +1,9 @@
-use std::fs;
 use std::path::PathBuf;
 use std::time::Instant;
 
 use clap::Parser;
 use env_logger::Env;
-use maplibre_native::{Image, ImageRendererOptions, MapDebugOptions};
+use maplibre_native::{Image, ImageRenderer, ImageRendererOptions, MapDebugOptions, Static, Tile};
 
 /// Command-line tool to render a map via [`mapLibre-native`](https://github.com/maplibre/maplibre-native)
 #[derive(Parser, Debug)]
@@ -127,7 +126,7 @@ impl From<DebugMode> for MapDebugOptions {
 }
 
 impl Args {
-    fn render(self) -> Image {
+    fn load(self) -> Renderer {
         let mut map = ImageRendererOptions::new();
         map.with_api_key(self.apikey.unwrap_or_default());
         map.with_cache_path(self.cache.to_string_lossy().to_string());
@@ -147,14 +146,14 @@ impl Args {
                     map.load_style_from_path(self.style)
                         .expect("the path to be valid");
                 }
-                map.render_static(
-                    f64::from(self.x),
-                    f64::from(self.y),
-                    f64::from(self.zoom),
-                    self.bearing,
-                    self.pitch,
-                )
-                .expect("could not render image")
+                Renderer::Static {
+                    map,
+                    x: f64::from(self.x),
+                    y: f64::from(self.y),
+                    zoom: f64::from(self.zoom),
+                    bearing: self.bearing,
+                    pitch: self.pitch,
+                }
             }
             Mode::Tile => {
                 if self.bearing != 0.0 {
@@ -173,8 +172,12 @@ impl Args {
                 if let Some(debug) = self.debug {
                     map.set_debug_flags(debug.into());
                 }
-                map.render_tile(self.zoom, self.x, self.y)
-                    .expect("could not render image")
+                Renderer::Tiled {
+                    map,
+                    x: self.x,
+                    y: self.y,
+                    zoom: self.zoom,
+                }
             }
             Mode::Continuous => {
                 todo!("not yet implemented in the wrapper")
@@ -183,6 +186,41 @@ impl Args {
     }
 }
 
+enum Renderer {
+    Static {
+        map: ImageRenderer<Static>,
+        x: f64,
+        y: f64,
+        zoom: f64,
+        bearing: f64,
+        pitch: f64,
+    },
+    Tiled {
+        map: ImageRenderer<Tile>,
+        x: u32,
+        y: u32,
+        zoom: u8,
+    },
+}
+impl Renderer {
+    fn render(&mut self) -> Image {
+        match self {
+            Renderer::Static {
+                map,
+                x,
+                y,
+                zoom,
+                bearing,
+                pitch,
+            } => map
+                .render_static(*x, *y, *zoom, *bearing, *pitch)
+                .expect("could not render image"),
+            Renderer::Tiled { map, x, y, zoom } => map
+                .render_tile(*zoom, *x, *y)
+                .expect("could not render image"),
+        }
+    }
+}
 fn main() {
     env_logger::Builder::from_env(Env::new().default_filter_or("trace")).init();
     log::info!("Starting MapLibre Native renderer with logging enabled");
@@ -192,19 +230,26 @@ fn main() {
     let output = args.output.clone();
 
     let before_initalisation = Instant::now();
-    let data = args.render();
+    let mut renderer = args.load();
+    println!("intialisation took {:?}", before_initalisation.elapsed());
+    let before_render1 = Instant::now();
+    let data = renderer.render();
     println!(
         "Rendering successfull in {:?}, writing result to {}",
-        before_initalisation.elapsed(),
+        before_render1.elapsed(),
         output.display()
     );
-    println!("Note: Future renders using the same instance would be faster due to amortized initialization");
-    fs::write(&output, data.as_bytes()).unwrap_or_else(|e| {
+    println!("Tip: Future renders using the same instance would be faster due to amortized initialization");
+    data.as_image().save(&output).unwrap_or_else(|e| {
         panic!(
             "Failed to write rendered map to {} because of {e:?}",
             output.display()
         )
     });
+    let before_second_render = Instant::now();
+    let data = renderer.render();
+    assert!(data.as_image().dimensions() != (0, 0));
+    println!("A second render took {:?}", before_second_render.elapsed());
 }
 
 #[cfg(test)]
@@ -219,8 +264,16 @@ mod tests {
             mode: Mode::Static,
             ..Args::parse()
         };
-        let data = args.render();
-        assert!(!data.as_bytes().is_empty());
+        let mut renderer = args.load();
+        let image = renderer.render();
+
+        // Test image properties
+        let img_buffer = image.as_image();
+        assert_eq!(img_buffer.width(), 32);
+        assert_eq!(img_buffer.height(), 32);
+        assert_eq!(img_buffer.dimensions(), (32, 32));
+        assert!(!img_buffer.as_raw().is_empty());
+        assert_eq!(img_buffer.as_raw().len(), 32 * 32 * 4); // RGBA
 
         let args = Args {
             width: 64,
@@ -228,7 +281,14 @@ mod tests {
             mode: Mode::Tile,
             ..Args::parse()
         };
-        let data = args.render();
-        assert!(!data.as_bytes().is_empty());
+        let mut renderer = args.load();
+        let image = renderer.render();
+
+        // Test tile rendering
+        let img_buffer = image.as_image();
+        assert_eq!(img_buffer.width(), 64);
+        assert_eq!(img_buffer.height(), 64);
+        assert!(!img_buffer.as_raw().is_empty());
+        assert_eq!(img_buffer.as_raw().len(), 64 * 64 * 4); // RGBA
     }
 }

@@ -17,6 +17,10 @@ export RUST_BACKTRACE := env('RUST_BACKTRACE', if ci_mode == '1' {'1'} else {''}
 build backend='vulkan':
     cargo build --workspace --features {{backend}} --all-targets
 
+# Run integration tests and save its output as the new expected output
+bless *args:  (cargo-install 'cargo-insta')
+    cargo insta test --accept {{args}}
+
 # Quick compile without building a binary
 check:
     cargo check --workspace --all-targets

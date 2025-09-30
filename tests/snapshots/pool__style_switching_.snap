@@ -1,6 +1,6 @@
 ---
 source: tests/pool.rs
-expression: result.as_bytes().to_vec()
+expression: image_to_png_bytes(&result)
 extension: png
 snapshot_kind: binary
 ---

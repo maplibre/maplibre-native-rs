@@ -25,6 +25,7 @@ pool = ["dep:tokio"]
 
 [dependencies]
 cxx.workspace = true
+image.workspace = true
 log = { workspace = true, optional = true }
 thiserror.workspace = true
 tokio = { workspace = true, optional = true }
@@ -69,6 +70,7 @@ downloader = "0.2.8"
 env_logger = "0.11"
 flate2 = "1.1.1"
 futures = "0.3"
+image = "0.24"
 insta = "1.43.2"
 log = "0.4"
 maplibre_native = { path = ".", version = "0.3.1" }
@@ -84,3 +86,8 @@ unused_qualifications = "warn"
 [workspace.lints.clippy]
 pedantic = { level = "warn", priority = -1 }
 missing_panics_doc = "allow" # FIXME: remove
+
+# https://insta.rs/docs/quickstart/
+[profile.dev.package]
+insta.opt-level = 3
+similar.opt-level = 3

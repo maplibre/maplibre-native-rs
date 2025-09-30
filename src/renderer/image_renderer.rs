@@ -3,30 +3,50 @@ use std::fmt::Debug;
 use std::marker::PhantomData;
 use std::path::Path;
 
-use cxx::{CxxString, UniquePtr};
+use cxx::UniquePtr;
+use image::{ImageBuffer, Rgba};
 
 use crate::renderer::bridge::ffi;
 use crate::renderer::{ImageRendererOptions, MapDebugOptions, MapMode};
 
 /// A rendered map image.
 ///
-/// The image is stored as a PNG byte array in a buffer allocated by the C++ code.
-#[derive(PartialEq, Eq, Hash)]
-pub struct Image(UniquePtr<CxxString>);
-
-impl Debug for Image {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Image")
-            .field("size_bytes", &self.0.as_bytes().len())
-            .finish()
-    }
-}
+/// The image is stored as RGBA pixel data using the `image` crate.
+/// Use [`as_image`](Image::as_image) to access the underlying `ImageBuffer` for all image operations.
+///
+/// # Example
+///
+/// ```no_run
+/// # fn foo() {
+/// use maplibre_native::{ImageRendererOptions, Image};
+///
+/// let mut renderer = ImageRendererOptions::new();
+/// renderer.with_size(512, 512);
+/// let mut renderer = renderer.build_static_renderer();
+///
+/// renderer.load_style_from_url(&"https://demotiles.maplibre.org/style.json".parse().unwrap());
+/// let image: Image = renderer.render_static(0.0, 0.0, 0.0, 0.0, 0.0).unwrap();
+///
+/// // Access the underlying ImageBuffer for all operations
+/// let img_buffer = image.as_image();
+/// println!("Image dimensions: {}x{}", img_buffer.width(), img_buffer.height());
+/// img_buffer.save("map.png").unwrap();
+/// # }
+/// ```
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+pub struct Image(ImageBuffer<Rgba<u8>, Vec<u8>>);
 
 impl Image {
-    /// Convert the image to a byte slice.
+    /// Create an Image from raw RGBA data
+    pub(crate) fn from_raw(width: u32, height: u32, data: Vec<u8>) -> Option<Self> {
+        ImageBuffer::from_vec(width, height, data).map(Image)
+    }
+
+    /// Get access to the underlying image buffer.
+    /// Use this to perform any image operations using the `image` crate.
     #[must_use]
-    pub fn as_bytes(&self) -> &[u8] {
-        self.0.as_bytes()
+    pub fn as_image(&self) -> &ImageBuffer<Rgba<u8>, Vec<u8>> {
+        &self.0
     }
 }
 
@@ -103,8 +123,21 @@ impl ImageRenderer<Static> {
         }
 
         ffi::MapRenderer_setCamera(self.instance.pin_mut(), lat, lon, zoom, bearing, pitch);
-        let img = ffi::MapRenderer_render(self.instance.pin_mut());
-        Ok(Image(img))
+        let data = ffi::MapRenderer_render(self.instance.pin_mut());
+        let bytes = data.as_bytes();
+
+        // Parse dimensions from first 8 bytes
+        if bytes.len() < 8 {
+            return Err(RenderingError::InvalidImageData);
+        }
+
+        let width = u32::from_ne_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]);
+        let height = u32::from_ne_bytes([bytes[4], bytes[5], bytes[6], bytes[7]]);
+        let rgba_data = bytes[8..].to_vec();
+
+        let image =
+            Image::from_raw(width, height, rgba_data).ok_or(RenderingError::InvalidImageData)?;
+        Ok(image)
     }
 }
 
@@ -122,8 +155,21 @@ impl ImageRenderer<Tile> {
         let (lat, lon) = coords_to_lat_lon(f64::from(zoom), x, y);
         ffi::MapRenderer_setCamera(self.instance.pin_mut(), lat, lon, f64::from(zoom), 0.0, 0.0);
 
-        let img = ffi::MapRenderer_render(self.instance.pin_mut());
-        Ok(Image(img))
+        let data = ffi::MapRenderer_render(self.instance.pin_mut());
+        let bytes = data.as_bytes();
+
+        // Parse dimensions from first 8 bytes
+        if bytes.len() < 8 {
+            return Err(RenderingError::InvalidImageData);
+        }
+
+        let width = u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]);
+        let height = u32::from_le_bytes([bytes[4], bytes[5], bytes[6], bytes[7]]);
+        let rgba_data = bytes[8..].to_vec();
+
+        let image =
+            Image::from_raw(width, height, rgba_data).ok_or(RenderingError::InvalidImageData)?;
+        Ok(image)
     }
 }
 
@@ -142,4 +188,6 @@ fn coords_to_lat_lon(zoom: f64, x: u32, y: u32) -> (f64, f64) {
 pub enum RenderingError {
     #[error("Style must be specified to render a tile")]
     StyleNotSpecified,
+    #[error("Invalid image data received from renderer")]
+    InvalidImageData,
 }

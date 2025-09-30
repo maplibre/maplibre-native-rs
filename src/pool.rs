@@ -7,7 +7,7 @@
 //!
 //! ```no_run
 //! # async fn example() {
-//! use maplibre_native::pool::SingleThreadedRenderPool;
+//! use maplibre_native::SingleThreadedRenderPool;
 //! use std::path::PathBuf;
 //!
 //! // Get the global pool instance
