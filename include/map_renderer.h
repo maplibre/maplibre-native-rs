@@ -114,11 +114,12 @@ inline std::unique_ptr<std::string> MapRenderer_render(MapRenderer& self) {
     for (size_t i = 0; i < pixelCount; ++i) {
         uint32_t pixel = srcPixels[i];
         
-        // Extract ARGB components (assuming little-endian)
-        uint8_t a = (pixel >> 24) & 0xFF;
-        uint8_t r = (pixel >> 16) & 0xFF;
+        // MapLibre uses RGBA format stored as 32-bit values
+        // On little-endian systems, this means: A|B|G|R in memory (reversed byte order)
+        uint8_t r = pixel & 0xFF;
         uint8_t g = (pixel >> 8) & 0xFF;
-        uint8_t b = pixel & 0xFF;
+        uint8_t b = (pixel >> 16) & 0xFF;
+        uint8_t a = (pixel >> 24) & 0xFF;
         
         // Convert from premultiplied alpha to straight alpha
         if (a > 0) {
