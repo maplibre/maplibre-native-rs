@@ -95,7 +95,8 @@ inline std::unique_ptr<MapRenderer> MapRenderer_new(
 }
 
 inline std::unique_ptr<std::string> MapRenderer_render(MapRenderer& self) {
-    auto image = encodePNG(self.frontend->render(*self.map).image);
+    auto result = self.frontend->render(*self.map);
+    auto image = encodePNG(result.image);
     return std::make_unique<std::string>(image);
 }
 
