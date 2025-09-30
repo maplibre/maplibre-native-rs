@@ -23,7 +23,8 @@ class MapRenderer {
 public:
     explicit MapRenderer(std::unique_ptr<mbgl::HeadlessFrontend> frontendInstance,
                          std::unique_ptr<mbgl::Map> mapInstance)
-        : frontend(std::move(frontendInstance)),
+        : runLoop(mbgl::util::RunLoop::Type::New),
+          frontend(std::move(frontendInstance)),
           map(std::move(mapInstance)) {}
     ~MapRenderer() {}
 
