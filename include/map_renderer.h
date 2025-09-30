@@ -96,8 +96,45 @@ inline std::unique_ptr<MapRenderer> MapRenderer_new(
 
 inline std::unique_ptr<std::string> MapRenderer_render(MapRenderer& self) {
     auto result = self.frontend->render(*self.map);
-    auto image = encodePNG(result.image);
-    return std::make_unique<std::string>(image);
+    auto& image = result.image;
+    
+    // Convert ARGB32_Premultiplied to RGBA8 and return as string with dimensions prepended
+    const size_t pixelCount = image.size.width * image.size.height;
+    std::string data;
+    data.reserve(8 + pixelCount * 4); // 8 bytes for dimensions + pixel data
+    
+    // First 8 bytes: width and height as uint32_t (little-endian)
+    uint32_t width = image.size.width;
+    uint32_t height = image.size.height;
+    data.append(reinterpret_cast<const char*>(&width), sizeof(uint32_t));
+    data.append(reinterpret_cast<const char*>(&height), sizeof(uint32_t));
+    
+    const uint32_t* srcPixels = reinterpret_cast<const uint32_t*>(image.data.get());
+    
+    for (size_t i = 0; i < pixelCount; ++i) {
+        uint32_t pixel = srcPixels[i];
+        
+        // Extract ARGB components (assuming little-endian)
+        uint8_t a = (pixel >> 24) & 0xFF;
+        uint8_t r = (pixel >> 16) & 0xFF;
+        uint8_t g = (pixel >> 8) & 0xFF;
+        uint8_t b = pixel & 0xFF;
+        
+        // Convert from premultiplied alpha to straight alpha
+        if (a > 0) {
+            r = (r * 255) / a;
+            g = (g * 255) / a;
+            b = (b * 255) / a;
+        }
+        
+        // Store as RGBA
+        data.push_back(static_cast<char>(r));
+        data.push_back(static_cast<char>(g));
+        data.push_back(static_cast<char>(b));
+        data.push_back(static_cast<char>(a));
+    }
+    
+    return std::make_unique<std::string>(std::move(data));
 }
 
 inline void MapRenderer_setDebugFlags(MapRenderer& self, mbgl::MapDebugOptions debugFlags) {
