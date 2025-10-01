@@ -137,7 +137,7 @@ impl ImageRendererBuilder {
     }
 
     /// Sets tile server base URL
-    /// 
+    ///
     /// Default: "https://demotiles.maplibre.org"
     #[must_use]
     pub fn with_base_url(mut self, base_url: url::Url) -> Self {
@@ -146,7 +146,7 @@ impl ImageRendererBuilder {
     }
 
     /// Sets custom URI scheme alias
-    /// 
+    ///
     /// Default: "maplibre"
     #[must_use]
     pub fn with_uri_scheme_alias(mut self, uri_scheme_alias: impl ToString) -> Self {
@@ -155,7 +155,7 @@ impl ImageRendererBuilder {
     }
 
     /// Sets source JSON URL template
-    /// 
+    ///
     /// Default: "/tiles/{domain}.json"
     #[must_use]
     pub fn with_source_template(mut self, source_template: impl ToString) -> Self {
@@ -163,7 +163,7 @@ impl ImageRendererBuilder {
         self
     }
     /// Sets style JSON URL template
-    /// 
+    ///
     /// Default: "{path}.json"
     #[must_use]
     pub fn with_style_template(mut self, style_template: impl ToString) -> Self {
@@ -172,7 +172,7 @@ impl ImageRendererBuilder {
     }
 
     /// Sets sprite URL template
-    /// 
+    ///
     /// Default: "/{path}/sprite{scale}.{format}"
     #[must_use]
     pub fn with_sprites_template(mut self, sprites_template: impl ToString) -> Self {
@@ -181,7 +181,7 @@ impl ImageRendererBuilder {
     }
 
     /// Sets glyph URL template
-    /// 
+    ///
     /// Default: "/font/{fontstack}/{start}-{end}.pbf"
     #[must_use]
     pub fn with_glyphs_template(mut self, glyphs_template: impl ToString) -> Self {
@@ -190,7 +190,7 @@ impl ImageRendererBuilder {
     }
 
     /// Sets tile URL template
-    /// 
+    ///
     /// Default: "/{path}"
     #[must_use]
     pub fn with_tile_template(mut self, tile_template: impl ToString) -> Self {
@@ -199,7 +199,7 @@ impl ImageRendererBuilder {
     }
 
     /// Sets API key parameter name
-    /// 
+    ///
     /// Default: ""
     #[must_use]
     pub fn with_api_key_parameter_name(mut self, api_key_parameter_name: impl ToString) -> Self {
@@ -208,7 +208,7 @@ impl ImageRendererBuilder {
     }
 
     /// Sets API key
-    /// 
+    ///
     /// Default: ""
     #[must_use]
     pub fn with_api_key(mut self, api_key: impl ToString) -> Self {
@@ -217,7 +217,7 @@ impl ImageRendererBuilder {
     }
 
     /// Sets whether API key is required
-    /// 
+    ///
     /// Default: `false`
     #[must_use]
     pub fn set_requires_api_key(mut self, requires_api_key: impl Into<bool>) -> Self {
