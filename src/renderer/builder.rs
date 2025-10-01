@@ -1,4 +1,4 @@
-//! Image renderer configuration and builder.
+//! Image renderer configuration and builder
 
 use std::marker::PhantomData;
 use std::num::NonZeroU32;
@@ -9,7 +9,7 @@ use cxx::UniquePtr;
 use crate::renderer::bridge::ffi;
 use crate::renderer::{ImageRenderer, MapMode, Static, Tile};
 
-/// Builder for configuring [`ImageRenderer`] instances.
+/// Builder for configuring [`ImageRenderer`] instances
 ///
 /// # Examples
 ///
@@ -67,35 +67,41 @@ impl Default for ImageRendererBuilder {
             width: 512,
             height: 512,
             pixel_ratio: 1.0,
+
             cache_path: None,
-            asset_root: None,
-            api_key: String::new(),
+            asset_root: std::env::current_dir().ok(),
+
             base_url: "https://demotiles.maplibre.org"
                 .parse()
                 .expect("is a valid url"),
             uri_scheme_alias: "maplibre".to_string(),
-            api_key_parameter_name: String::new(),
+            default_style_url: "https://demotiles.maplibre.org/style.json"
+                .parse()
+                .expect("is a valid url"),
+
             source_template: "/tiles/{domain}.json".to_string(),
             style_template: "{path}.json".to_string(),
             sprites_template: "/{path}/sprite{scale}.{format}".to_string(),
             glyphs_template: "/font/{fontstack}/{start}-{end}.pbf".to_string(),
             tile_template: "/{path}".to_string(),
-            default_style_url: "https://demotiles.maplibre.org/style.json"
-                .parse()
-                .expect("is a valid url"),
+
+            api_key_parameter_name: String::new(),
+            api_key: String::new(),
             requires_api_key: false,
         }
     }
 }
 
 impl ImageRendererBuilder {
-    /// Creates a new builder with default values.
+    /// Creates a new builder with default values
     #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
-    /// Sets image dimensions.
+    /// Sets image dimensions
+    ///
+    /// Default: `512` x `512`
     #[must_use]
     pub fn with_size(mut self, width: NonZeroU32, height: NonZeroU32) -> Self {
         self.width = width.get();
@@ -103,112 +109,130 @@ impl ImageRendererBuilder {
         self
     }
 
-    /// Sets pixel ratio for high-DPI displays.
+    /// Sets pixel ratio for high-DPI displays
+    ///
+    /// Default: `1.0`
     #[must_use]
     pub fn with_pixel_ratio(mut self, pixel_ratio: impl Into<f32>) -> Self {
         self.pixel_ratio = pixel_ratio.into();
         self
     }
 
-    /// Sets cache database file path.
+    /// Sets cache database file path
+    ///
+    /// Default: no cache
     #[must_use]
     pub fn with_cache_path(mut self, cache_path: impl AsRef<Path>) -> Self {
         self.cache_path = Some(cache_path.as_ref().to_path_buf());
         self
     }
 
-    /// Sets assets root directory.
+    /// Sets assets root directory
+    ///
+    /// Default: current working directory
     #[must_use]
     pub fn with_asset_root(mut self, asset_root: impl AsRef<Path>) -> Self {
         self.asset_root = Some(asset_root.as_ref().to_path_buf());
         self
     }
 
-    /// Sets tile server base URL.
+    /// Sets tile server base URL
+    /// 
+    /// Default: "https://demotiles.maplibre.org"
     #[must_use]
     pub fn with_base_url(mut self, base_url: url::Url) -> Self {
         self.base_url = base_url;
         self
     }
 
-    /// Sets custom URI scheme alias.
+    /// Sets custom URI scheme alias
+    /// 
+    /// Default: "maplibre"
     #[must_use]
     pub fn with_uri_scheme_alias(mut self, uri_scheme_alias: impl ToString) -> Self {
         self.uri_scheme_alias = uri_scheme_alias.to_string();
         self
     }
 
-    /// Sets source JSON URL template.
+    /// Sets source JSON URL template
+    /// 
+    /// Default: "/tiles/{domain}.json"
     #[must_use]
     pub fn with_source_template(mut self, source_template: impl ToString) -> Self {
         self.source_template = source_template.to_string();
         self
     }
-
-    /// Sets style JSON URL template.
+    /// Sets style JSON URL template
+    /// 
+    /// Default: "{path}.json"
     #[must_use]
     pub fn with_style_template(mut self, style_template: impl ToString) -> Self {
         self.style_template = style_template.to_string();
         self
     }
 
-    /// Sets sprite URL template.
+    /// Sets sprite URL template
+    /// 
+    /// Default: "/{path}/sprite{scale}.{format}"
     #[must_use]
     pub fn with_sprites_template(mut self, sprites_template: impl ToString) -> Self {
         self.sprites_template = sprites_template.to_string();
         self
     }
 
-    /// Sets glyph URL template.
+    /// Sets glyph URL template
+    /// 
+    /// Default: "/font/{fontstack}/{start}-{end}.pbf"
     #[must_use]
     pub fn with_glyphs_template(mut self, glyphs_template: impl ToString) -> Self {
         self.glyphs_template = glyphs_template.to_string();
         self
     }
 
-    /// Sets tile URL template.
+    /// Sets tile URL template
+    /// 
+    /// Default: "/{path}"
     #[must_use]
     pub fn with_tile_template(mut self, tile_template: impl ToString) -> Self {
         self.tile_template = tile_template.to_string();
         self
     }
 
-    /// Sets default style URL.
+    /// Sets API key parameter name
+    /// 
+    /// Default: ""
     #[must_use]
-    pub fn with_default_style_url(mut self, default_style_url: url::Url) -> Self {
-        self.default_style_url = default_style_url;
-        self
-    }
-
-    /// Sets API key parameter name.
-    #[must_use]
-    pub fn with_api_key_(mut self, api_key_parameter_name: impl ToString) -> Self {
+    pub fn with_api_key_parameter_name(mut self, api_key_parameter_name: impl ToString) -> Self {
         self.api_key_parameter_name = api_key_parameter_name.to_string();
         self
     }
 
     /// Sets API key
+    /// 
+    /// Default: ""
     #[must_use]
     pub fn with_api_key(mut self, api_key: impl ToString) -> Self {
         self.api_key = api_key.to_string();
         self
     }
 
-    /// Sets whether API key is required.
+    /// Sets whether API key is required
+    /// 
+    /// Default: `false`
     #[must_use]
     pub fn set_requires_api_key(mut self, requires_api_key: impl Into<bool>) -> Self {
         self.requires_api_key = requires_api_key.into();
         self
     }
 
-    /// Builds a static image renderer.
+    /// Builds a static image renderer
     #[must_use]
     pub fn build_static_renderer(self) -> ImageRenderer<Static> {
         // TODO: Should the width/height be passed in here, or have another `build_static_with_size` method?
         ImageRenderer::new(MapMode::Static, &self)
     }
 
-    /// Builds a tile renderer.
+    /// Builds a tile renderer
     #[must_use]
     pub fn build_tile_renderer(self) -> ImageRenderer<Tile> {
         // TODO: Is the width/height used for this mode?
@@ -217,7 +241,7 @@ impl ImageRendererBuilder {
 }
 
 impl<S> ImageRenderer<S> {
-    /// Creates a new renderer instance.
+    /// Creates a new renderer instance
     fn new(map_mode: MapMode, opts: &ImageRendererBuilder) -> Self {
         let cache = opts
             .cache_path

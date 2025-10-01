@@ -60,20 +60,15 @@ inline std::unique_ptr<MapRenderer> MapRenderer_new(
 
     auto frontend = std::make_unique<mbgl::HeadlessFrontend>(size, pixelRatio);
 
-    std::vector<mbgl::util::DefaultStyle> styles{
-         mbgl::util::DefaultStyle((std::string)defaultStyleUrl, "Basic", 1)};
-
     TileServerOptions options = TileServerOptions()
         .withBaseURL((std::string)baseUrl)
         .withUriSchemeAlias((std::string)uriSchemeAlias)
-        .withApiKeyParameterName((std::string)apiKeyParameterName)
         .withSourceTemplate((std::string)sourceTemplate, "", {})
         .withStyleTemplate((std::string)styleTemplate, "maps", {})
         .withSpritesTemplate((std::string)spritesTemplate, "", {})
         .withGlyphsTemplate((std::string)glyphsTemplate, "fonts", {})
         .withTileTemplate((std::string)tileTemplate, "tiles", {})
-        .withDefaultStyles(styles)
-        .withDefaultStyle("Basic")
+        .withApiKeyParameterName((std::string)apiKeyParameterName)
         .setRequiresApiKey(requiresApiKey);
 
     ResourceOptions resourceOptions;
