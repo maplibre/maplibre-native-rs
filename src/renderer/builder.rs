@@ -97,7 +97,7 @@ impl ImageRendererBuilder {
     ///
     /// Default: `512` x `512`
     #[must_use]
-    #[allow(clippy::needless_pass_by_value, reason = "false posiitive")]
+    #[allow(clippy::needless_pass_by_value, reason = "false positive")]
     pub fn with_size(mut self, width: NonZeroU32, height: NonZeroU32) -> Self {
         self.width = width.get();
         self.height = height.get();
