@@ -21,9 +21,7 @@ private:
 };
 
 // Wrapper function for MapLibre's Log::useLogThread
-void Log_useLogThread(bool enable) {
-    mbgl::Log::useLogThread(enable);
-}
+void Log_useLogThread(bool enable);
 
 } // namespace bridge
 } // namespace mln
