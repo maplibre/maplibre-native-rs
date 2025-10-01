@@ -7,7 +7,8 @@ use cxx::UniquePtr;
 use image::{ImageBuffer, Rgba};
 
 use crate::renderer::bridge::ffi;
-use crate::renderer::{ImageRendererOptions, MapDebugOptions, MapMode};
+use crate::renderer::MapDebugOptions;
+use crate::ImageRendererBuilder;
 
 /// A rendered map image.
 ///
@@ -18,11 +19,11 @@ use crate::renderer::{ImageRendererOptions, MapDebugOptions, MapMode};
 ///
 /// ```no_run
 /// # fn foo() {
-/// use maplibre_native::{ImageRendererOptions, Image};
+/// use maplibre_native::{ImageRendererBuilder, Image};
 ///
-/// let mut renderer = ImageRendererOptions::new();
-/// renderer.with_size(512, 512);
-/// let mut renderer = renderer.build_static_renderer();
+/// let renderer = ImageRendererBuilder::new()
+///     .with_size(512, 512)
+///     .build_static_renderer();
 ///
 /// renderer.load_style_from_url(&"https://demotiles.maplibre.org/style.json".parse().unwrap());
 /// let image: Image = renderer.render_static(0.0, 0.0, 0.0, 0.0, 0.0).unwrap();
@@ -38,8 +39,16 @@ pub struct Image(ImageBuffer<Rgba<u8>, Vec<u8>>);
 
 impl Image {
     /// Create an Image from raw RGBA data
-    pub(crate) fn from_raw(width: u32, height: u32, data: Vec<u8>) -> Option<Self> {
-        ImageBuffer::from_vec(width, height, data).map(Image)
+    pub(crate) fn from_raw(bytes: &[u8]) -> Option<Self> {
+        // Parse dimensions from first 8 bytes
+        if bytes.len() < 8 {
+            return None;
+        }
+
+        let width = u32::from_ne_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]);
+        let height = u32::from_ne_bytes([bytes[4], bytes[5], bytes[6], bytes[7]]);
+        let data = bytes[8..].to_vec();
+        ImageBuffer::from_vec(width, height, data.to_vec()).map(Image)
     }
 
     /// Get access to the underlying image buffer.
@@ -126,17 +135,7 @@ impl ImageRenderer<Static> {
         let data = ffi::MapRenderer_render(self.instance.pin_mut());
         let bytes = data.as_bytes();
 
-        // Parse dimensions from first 8 bytes
-        if bytes.len() < 8 {
-            return Err(RenderingError::InvalidImageData);
-        }
-
-        let width = u32::from_ne_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]);
-        let height = u32::from_ne_bytes([bytes[4], bytes[5], bytes[6], bytes[7]]);
-        let rgba_data = bytes[8..].to_vec();
-
-        let image =
-            Image::from_raw(width, height, rgba_data).ok_or(RenderingError::InvalidImageData)?;
+        let image = Image::from_raw(bytes).ok_or(RenderingError::InvalidImageData)?;
         Ok(image)
     }
 }
@@ -157,18 +156,7 @@ impl ImageRenderer<Tile> {
 
         let data = ffi::MapRenderer_render(self.instance.pin_mut());
         let bytes = data.as_bytes();
-
-        // Parse dimensions from first 8 bytes
-        if bytes.len() < 8 {
-            return Err(RenderingError::InvalidImageData);
-        }
-
-        let width = u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]);
-        let height = u32::from_le_bytes([bytes[4], bytes[5], bytes[6], bytes[7]]);
-        let rgba_data = bytes[8..].to_vec();
-
-        let image =
-            Image::from_raw(width, height, rgba_data).ok_or(RenderingError::InvalidImageData)?;
+        let image = Image::from_raw(bytes).ok_or(RenderingError::InvalidImageData)?;
         Ok(image)
     }
 }
