@@ -40,8 +40,8 @@ inline std::unique_ptr<MapRenderer> MapRenderer_new(
             uint32_t width,
             uint32_t height,
             float pixelRatio,
-            const rust::Str cachePath,
-            const rust::Str assetRoot,
+            rust::Slice<const uint8_t> cachePath,
+            rust::Slice<const uint8_t> assetRoot,
             const rust::Str apiKey,
             const rust::Str baseUrl,
             const rust::Str uriSchemeAlias,
@@ -72,8 +72,8 @@ inline std::unique_ptr<MapRenderer> MapRenderer_new(
 
     ResourceOptions resourceOptions;
     resourceOptions
-        .withCachePath((std::string)cachePath)
-        .withAssetPath((std::string)assetRoot)
+        .withCachePath(std::string(reinterpret_cast<const char*>(cachePath.data()), cachePath.size()))
+        .withAssetPath(std::string(reinterpret_cast<const char*>(assetRoot.data()), assetRoot.size()))
         .withApiKey((std::string)apiKey)
         .withTileServerOptions(options);
 

@@ -1,8 +1,9 @@
 //! Image renderer configuration and builder
 
+use std::ffi::OsString;
 use std::marker::PhantomData;
 use std::num::NonZeroU32;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use crate::renderer::bridge::ffi;
 use crate::renderer::{ImageRenderer, MapMode, Static, Tile};
@@ -118,8 +119,8 @@ impl ImageRendererBuilder {
     /// Default: no cache
     #[must_use]
     #[allow(clippy::needless_pass_by_value, reason = "false positive")]
-    pub fn with_cache_path(mut self, cache_path: impl AsRef<Path>) -> Self {
-        self.cache_path = Some(cache_path.as_ref().to_path_buf());
+    pub fn with_cache_path(mut self, cache_path: impl Into<PathBuf>) -> Self {
+        self.cache_path = Some(cache_path.into());
         self
     }
 
@@ -128,8 +129,8 @@ impl ImageRendererBuilder {
     /// Default: current working directory
     #[must_use]
     #[allow(clippy::needless_pass_by_value, reason = "false positive")]
-    pub fn with_asset_root(mut self, asset_root: impl AsRef<Path>) -> Self {
-        self.asset_root = Some(asset_root.as_ref().to_path_buf());
+    pub fn with_asset_root(mut self, asset_root: impl Into<PathBuf>) -> Self {
+        self.asset_root = Some(asset_root.into());
         self
     }
 
@@ -235,37 +236,32 @@ impl ImageRendererBuilder {
     #[must_use]
     pub fn build_static_renderer(self) -> ImageRenderer<Static> {
         // TODO: Should the width/height be passed in here, or have another `build_static_with_size` method?
-        ImageRenderer::new(MapMode::Static, &self)
+        ImageRenderer::new(MapMode::Static, self)
     }
 
     /// Builds a tile renderer
     #[must_use]
     pub fn build_tile_renderer(self) -> ImageRenderer<Tile> {
         // TODO: Is the width/height used for this mode?
-        ImageRenderer::new(MapMode::Tile, &self)
+        ImageRenderer::new(MapMode::Tile, self)
     }
 }
 
 impl<S> ImageRenderer<S> {
     /// Creates a new renderer instance
-    fn new(map_mode: MapMode, opts: &ImageRendererBuilder) -> Self {
-        let cache = opts
-            .cache_path
-            .as_deref()
-            .map(|path| path.display().to_string())
-            .unwrap_or_default();
-        let assets = opts
-            .asset_root
-            .as_deref()
-            .map(|path| path.display().to_string())
-            .unwrap_or_default();
+    fn new(map_mode: MapMode, opts: ImageRendererBuilder) -> Self {
         let map = ffi::MapRenderer_new(
             map_mode,
             opts.width,
             opts.height,
             opts.pixel_ratio,
-            &cache,
-            &assets,
+            // cxx.rs does not support OsString, but going via &[u8] is close enough
+            opts.cache_path
+                .map_or(OsString::new(), |path| path.into_os_string())
+                .as_encoded_bytes(),
+            opts.asset_root
+                .map_or(OsString::new(), |path| path.into_os_string())
+                .as_encoded_bytes(),
             &opts.api_key,
             opts.base_url.as_ref(),
             &opts.uri_scheme_alias,
