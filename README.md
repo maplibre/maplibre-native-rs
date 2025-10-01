@@ -26,7 +26,7 @@ If no feature is specified, the crate will automatically select the platform-app
 
 We also support the following other features:
 
-- `pool` A tile rendering pool for building tile servers. See [`SingeThreadedRenderingPool`]() for further details 
+- `pool` A tile rendering pool for building tile servers. See [`SingeThreadedRenderingPool`]() for further details
 - `log`logging via the [`log` library](https://lib.rs/log)
 
 At its core, we work as follows:
