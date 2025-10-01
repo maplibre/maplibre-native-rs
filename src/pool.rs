@@ -29,7 +29,7 @@ use std::thread;
 
 use tokio::sync::oneshot;
 
-use crate::renderer::{Image, ImageRenderer, ImageRendererOptions, RenderingError, Tile};
+use crate::renderer::{Image, ImageRendererOptions, RenderingError};
 
 /// Rendering request sent to the pool.
 struct RenderRequest {

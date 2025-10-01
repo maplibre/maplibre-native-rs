@@ -1,7 +1,5 @@
 use std::marker::PhantomData;
 
-use cxx::UniquePtr;
-
 use crate::renderer::bridge::ffi;
 use crate::renderer::{ImageRenderer, MapMode, Static, Tile};
 
@@ -36,6 +34,7 @@ impl Default for ImageRendererOptions {
 }
 
 impl ImageRendererOptions {
+    #[allow(clippy::missing_panics_doc, reason = "infallible")]
     #[must_use]
     pub fn new() -> Self {
         Self {
