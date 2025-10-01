@@ -10,8 +10,9 @@ Rust bindings to the [MapLibre Native](https://maplibre.org/projects/native/) ma
 
 ## Usage
 
-We use `maplibre-native`s' core build, a static, pre-compiled library.
-We also allow you to compile this yourself. Instructions for this are below.
+We use `maplibre-native`s' "core library", a static, pre-compiled library.
+We also allow you to compile this yourself.
+Instructions for this are below.
 
 ### Backend Features
 
@@ -22,6 +23,31 @@ This crate supports multiple rendering backends:
 - `metal` (default on macOS/iOS): `cargo build --features metal`
 
 If no feature is specified, the crate will automatically select the platform-appropriate default backend.
+
+We also support the following other features:
+
+- `pool` A tile rendering pool for building tile servers. See [`SingeThreadedRenderingPool`]() for further details 
+- `log`logging via the [`log` library](https://lib.rs/log)
+
+At its core, we work as follows:
+
+```rust
+use maplibre_native::{ImageRendererOptions, Image};
+let mut renderer = ImageRendererOptions::new();
+renderer.with_size(512, 512);
+let mut renderer = renderer.build_static_renderer();
+renderer.load_style_from_url(&"https://demotiles.maplibre.org/style.json".parse().unwrap());
+let image: Image = renderer.render_static(0.0, 0.0, 0.0, 0.0, 0.0).unwrap();
+
+// Access the underlying ImageBuffer for all operations
+let img_buffer = image.as_image();
+println!("Image dimensions: {}x{}", img_buffer.width(), img_buffer.height());
+img_buffer.save("map.png").unwrap();
+```
+
+> [!TIP]
+> Next to the static rendering map mode, we also have continous and a tile based one.
+> Continous is desiged to be interactive, while the tile based one is primarily for tile servers
 
 ### Platform Support
 

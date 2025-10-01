@@ -51,8 +51,10 @@ impl Image {
 }
 
 /// Internal state type to render a static map image.
+#[derive(Debug)]
 pub struct Static;
 /// Internal state type to render a map tile.
+#[derive(Debug)]
 pub struct Tile;
 
 /// Configuration options for a tile server.
@@ -60,6 +62,14 @@ pub struct ImageRenderer<S> {
     pub(crate) instance: UniquePtr<ffi::MapRenderer>,
     pub(crate) _marker: PhantomData<S>,
     pub(crate) style_specified: bool,
+}
+
+impl<S> Debug for ImageRenderer<S> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ImageRenderer")
+            .field("style_specified", &self.style_specified)
+            .finish_non_exhaustive()
+    }
 }
 
 impl<S> ImageRenderer<S> {
@@ -98,6 +108,7 @@ impl<S> ImageRenderer<S> {
         Ok(self)
     }
 
+    /// Set debug visualization flags for the map renderer.
     pub fn set_debug_flags(&mut self, flags: MapDebugOptions) -> &mut Self {
         ffi::MapRenderer_setDebugFlags(self.instance.pin_mut(), flags);
         self
@@ -184,10 +195,13 @@ fn coords_to_lat_lon(zoom: f64, x: u32, y: u32) -> (f64, f64) {
     (lat, lng)
 }
 
+/// Errors that can occur during map rendering operations.
 #[derive(thiserror::Error, Debug)]
 pub enum RenderingError {
+    /// Style must be specified before rendering can occur.
     #[error("Style must be specified to render a tile")]
     StyleNotSpecified,
+    /// The renderer returned invalid or corrupted image data.
     #[error("Invalid image data received from renderer")]
     InvalidImageData,
 }
