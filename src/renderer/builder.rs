@@ -4,8 +4,6 @@ use std::marker::PhantomData;
 use std::num::NonZeroU32;
 use std::path::{Path, PathBuf};
 
-use cxx::UniquePtr;
-
 use crate::renderer::bridge::ffi;
 use crate::renderer::{ImageRenderer, MapMode, Static, Tile};
 
@@ -59,6 +57,7 @@ pub struct ImageRendererBuilder {
 }
 
 impl Default for ImageRendererBuilder {
+    #[allow(clippy::missing_panics_doc, reason = "infallible")]
     fn default() -> Self {
         Self {
             width: 512,

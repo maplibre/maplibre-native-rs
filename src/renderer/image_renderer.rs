@@ -8,7 +8,6 @@ use image::{ImageBuffer, Rgba};
 
 use crate::renderer::bridge::ffi;
 use crate::renderer::MapDebugOptions;
-use crate::ImageRendererBuilder;
 
 /// A rendered map image.
 ///
