@@ -8,7 +8,7 @@ edition.workspace = true
 license.workspace = true
 keywords = ["maplibre", "rendering", "gis", "tiles"]
 categories = ["external-ffi-bindings", "science::geo", "rendering"]
-rust-version = "1.82" # due to icu_collections@2
+rust-version = "1.85" # due to image
 exclude = []
 
 [package.metadata.mln]
@@ -70,7 +70,7 @@ downloader = "0.2.8"
 env_logger = "0.11"
 flate2 = "1.1.1"
 futures = "0.3"
-image = "0.24"
+image = "0.25"
 insta = "1.43.2"
 log = "0.4"
 maplibre_native = { path = ".", version = "0.3.1" }
@@ -85,7 +85,6 @@ unused_qualifications = "warn"
 
 [workspace.lints.clippy]
 pedantic = { level = "warn", priority = -1 }
-missing_panics_doc = "allow" # FIXME: remove
 
 # https://insta.rs/docs/quickstart/
 [profile.dev.package]

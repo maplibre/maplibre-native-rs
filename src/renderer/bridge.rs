@@ -1,14 +1,9 @@
-use cxx::{CxxString, UniquePtr};
-
 /// Enable or disable the internal logging thread
 ///
 /// By default, logs are generated asynchronously except for Error level messages.
 /// In crash scenarios, pending async log entries may be lost.
 pub fn set_log_thread_enabled(enable: bool) {
-    // This will be called through FFI to mbgl::Log::useLogThread
-    unsafe {
-        ffi::Log_useLogThread(enable);
-    }
+    ffi::Log_useLogThread(enable);
 }
 
 fn log_from_cpp(severity: ffi::EventSeverity, event: ffi::Event, code: i64, message: &str) {
