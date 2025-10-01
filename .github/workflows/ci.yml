@@ -19,9 +19,11 @@ jobs:
   lint:
     name: Lint
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-        with: { fetch-depth: 0, persist-credentials: false }
+        with: { persist-credentials: false }
       - if: github.event_name != 'release' && github.event_name != 'workflow_dispatch'
         uses: Swatinem/rust-cache@f13886b937689c021905a6b90929199931d60db1 # v2.8.1
       - run: rustup update stable && rustup default stable && rustup component add rustfmt && rustup component add clippy
@@ -31,6 +33,8 @@ jobs:
   test:
     name: Test ${{ matrix.runs-on }} - ${{ matrix.backend }}
     runs-on: ${{ matrix.runs-on }}
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
@@ -50,7 +54,7 @@ jobs:
           #  backend: vulkan
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-        with: { fetch-depth: 0, persist-credentials: false }
+        with: { persist-credentials: false }
       - if: github.event_name != 'release' && github.event_name != 'workflow_dispatch'
         uses: Swatinem/rust-cache@f13886b937689c021905a6b90929199931d60db1 # v2.8.1
       - uses: taiki-e/install-action@efd8b64311f7a0a9b888ed13d0df78ec9184c163 # v2.62.11
@@ -62,6 +66,8 @@ jobs:
   test-msrv:
     name: Test MSRV ${{ matrix.runs-on }} - ${{ matrix.backend }}
     runs-on: ${{ matrix.runs-on }}
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
@@ -81,7 +87,7 @@ jobs:
           #  backend: vulkan
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-        with: { fetch-depth: 0, persist-credentials: false }
+        with: { persist-credentials: false }
       - if: github.event_name != 'release' && github.event_name != 'workflow_dispatch'
         uses: Swatinem/rust-cache@f13886b937689c021905a6b90929199931d60db1 # v2.8.1
       - uses: taiki-e/install-action@efd8b64311f7a0a9b888ed13d0df78ec9184c163 # v2.62.11
@@ -102,6 +108,7 @@ jobs:
     needs: [ lint, test, test-msrv ]
     if: always()
     runs-on: ubuntu-latest
+    permissions: {}
     steps:
       - name: Result of the needed steps
         run: echo "${{ toJSON(needs) }}"
@@ -126,7 +133,7 @@ jobs:
       cancel-in-progress: false
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-        with: { fetch-depth: 0, persist-credentials: false }
+        with: { persist-credentials: false }
       - uses: dtolnay/rust-toolchain@stable
       - name: Publish to crates.io if crate's version is newer
         uses: release-plz/action@acb9246af4d59a270d1d4058a8b9af8c3f3a2559 # v0.5.117
