@@ -34,6 +34,7 @@ impl Default for ImageRendererOptions {
 }
 
 impl ImageRendererOptions {
+    #[allow(clippy::missing_panics_doc, reason = "infallible")]
     #[must_use]
     pub fn new() -> Self {
         Self {
