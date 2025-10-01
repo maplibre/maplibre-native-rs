@@ -48,7 +48,7 @@ impl Image {
         let width = u32::from_ne_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]);
         let height = u32::from_ne_bytes([bytes[4], bytes[5], bytes[6], bytes[7]]);
         let data = bytes[8..].to_vec();
-        ImageBuffer::from_vec(width, height, data.to_vec()).map(Image)
+        ImageBuffer::from_vec(width, height, data).map(Image)
     }
 
     /// Get access to the underlying image buffer.

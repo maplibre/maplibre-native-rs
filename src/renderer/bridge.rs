@@ -135,7 +135,6 @@ pub mod ffi {
             spritesTemplate: &str,
             glyphsTemplate: &str,
             tileTemplate: &str,
-            defaultStyleUrl: &str,
             requiresApiKey: bool,
         ) -> UniquePtr<MapRenderer>;
         fn MapRenderer_render(obj: Pin<&mut MapRenderer>) -> UniquePtr<CxxString>;

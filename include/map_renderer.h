@@ -51,7 +51,6 @@ inline std::unique_ptr<MapRenderer> MapRenderer_new(
             const rust::Str spritesTemplate,
             const rust::Str glyphsTemplate,
             const rust::Str tileTemplate,
-            const rust::Str defaultStyleUrl,
             bool requiresApiKey
 
 ) {

@@ -37,8 +37,6 @@ pub struct ImageRendererBuilder {
     base_url: url::Url,
     /// Custom URI scheme alias
     uri_scheme_alias: String,
-    /// Default style URL
-    default_style_url: url::Url,
 
     /// Source JSON URL template
     source_template: String,
@@ -61,7 +59,6 @@ pub struct ImageRendererBuilder {
 }
 
 impl Default for ImageRendererBuilder {
-    #[expect(clippy::missing_panics_doc, reason = "infallible")]
     fn default() -> Self {
         Self {
             width: 512,
@@ -75,9 +72,6 @@ impl Default for ImageRendererBuilder {
                 .parse()
                 .expect("is a valid url"),
             uri_scheme_alias: "maplibre".to_string(),
-            default_style_url: "https://demotiles.maplibre.org/style.json"
-                .parse()
-                .expect("is a valid url"),
 
             source_template: "/tiles/{domain}.json".to_string(),
             style_template: "{path}.json".to_string(),
@@ -103,6 +97,7 @@ impl ImageRendererBuilder {
     ///
     /// Default: `512` x `512`
     #[must_use]
+    #[allow(clippy::needless_pass_by_value, reason = "false posiitive")]
     pub fn with_size(mut self, width: NonZeroU32, height: NonZeroU32) -> Self {
         self.width = width.get();
         self.height = height.get();
@@ -113,6 +108,7 @@ impl ImageRendererBuilder {
     ///
     /// Default: `1.0`
     #[must_use]
+    #[allow(clippy::needless_pass_by_value, reason = "false posiitive")]
     pub fn with_pixel_ratio(mut self, pixel_ratio: impl Into<f32>) -> Self {
         self.pixel_ratio = pixel_ratio.into();
         self
@@ -122,6 +118,7 @@ impl ImageRendererBuilder {
     ///
     /// Default: no cache
     #[must_use]
+    #[allow(clippy::needless_pass_by_value, reason = "false posiitive")]
     pub fn with_cache_path(mut self, cache_path: impl AsRef<Path>) -> Self {
         self.cache_path = Some(cache_path.as_ref().to_path_buf());
         self
@@ -131,6 +128,7 @@ impl ImageRendererBuilder {
     ///
     /// Default: current working directory
     #[must_use]
+    #[allow(clippy::needless_pass_by_value, reason = "false posiitive")]
     pub fn with_asset_root(mut self, asset_root: impl AsRef<Path>) -> Self {
         self.asset_root = Some(asset_root.as_ref().to_path_buf());
         self
@@ -138,8 +136,9 @@ impl ImageRendererBuilder {
 
     /// Sets tile server base URL
     ///
-    /// Default: "https://demotiles.maplibre.org"
+    /// Default: <https://demotiles.maplibre.org>
     #[must_use]
+    #[allow(clippy::needless_pass_by_value, reason = "false posiitive")]
     pub fn with_base_url(mut self, base_url: url::Url) -> Self {
         self.base_url = base_url;
         self
@@ -149,6 +148,7 @@ impl ImageRendererBuilder {
     ///
     /// Default: "maplibre"
     #[must_use]
+    #[allow(clippy::needless_pass_by_value, reason = "false posiitive")]
     pub fn with_uri_scheme_alias(mut self, uri_scheme_alias: impl ToString) -> Self {
         self.uri_scheme_alias = uri_scheme_alias.to_string();
         self
@@ -158,6 +158,7 @@ impl ImageRendererBuilder {
     ///
     /// Default: "/tiles/{domain}.json"
     #[must_use]
+    #[allow(clippy::needless_pass_by_value, reason = "false posiitive")]
     pub fn with_source_template(mut self, source_template: impl ToString) -> Self {
         self.source_template = source_template.to_string();
         self
@@ -166,6 +167,7 @@ impl ImageRendererBuilder {
     ///
     /// Default: "{path}.json"
     #[must_use]
+    #[allow(clippy::needless_pass_by_value, reason = "false posiitive")]
     pub fn with_style_template(mut self, style_template: impl ToString) -> Self {
         self.style_template = style_template.to_string();
         self
@@ -175,6 +177,7 @@ impl ImageRendererBuilder {
     ///
     /// Default: "/{path}/sprite{scale}.{format}"
     #[must_use]
+    #[allow(clippy::needless_pass_by_value, reason = "false posiitive")]
     pub fn with_sprites_template(mut self, sprites_template: impl ToString) -> Self {
         self.sprites_template = sprites_template.to_string();
         self
@@ -184,6 +187,7 @@ impl ImageRendererBuilder {
     ///
     /// Default: "/font/{fontstack}/{start}-{end}.pbf"
     #[must_use]
+    #[allow(clippy::needless_pass_by_value, reason = "false posiitive")]
     pub fn with_glyphs_template(mut self, glyphs_template: impl ToString) -> Self {
         self.glyphs_template = glyphs_template.to_string();
         self
@@ -193,6 +197,7 @@ impl ImageRendererBuilder {
     ///
     /// Default: "/{path}"
     #[must_use]
+    #[allow(clippy::needless_pass_by_value, reason = "false posiitive")]
     pub fn with_tile_template(mut self, tile_template: impl ToString) -> Self {
         self.tile_template = tile_template.to_string();
         self
@@ -202,6 +207,7 @@ impl ImageRendererBuilder {
     ///
     /// Default: ""
     #[must_use]
+    #[allow(clippy::needless_pass_by_value, reason = "false posiitive")]
     pub fn with_api_key_parameter_name(mut self, api_key_parameter_name: impl ToString) -> Self {
         self.api_key_parameter_name = api_key_parameter_name.to_string();
         self
@@ -211,6 +217,7 @@ impl ImageRendererBuilder {
     ///
     /// Default: ""
     #[must_use]
+    #[allow(clippy::needless_pass_by_value, reason = "false posiitive")]
     pub fn with_api_key(mut self, api_key: impl ToString) -> Self {
         self.api_key = api_key.to_string();
         self
@@ -269,7 +276,6 @@ impl<S> ImageRenderer<S> {
             &opts.sprites_template,
             &opts.glyphs_template,
             &opts.tile_template,
-            opts.default_style_url.as_ref(),
             opts.requires_api_key,
         );
 
