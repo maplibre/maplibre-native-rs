@@ -28,7 +28,7 @@ cxx.workspace = true
 image.workspace = true
 log = { workspace = true, optional = true }
 thiserror.workspace = true
-tokio = { workspace = true, optional = true }
+tokio = { workspace = true, features = ["sync"], optional = true }
 url.workspace = true
 
 [build-dependencies]
@@ -77,7 +77,7 @@ log = "0.4"
 maplibre_native = { path = ".", version = "0.3.1" }
 tar = "0.4.44"
 thiserror = "2.0.16"
-tokio = { version = "1", features = ["sync"], default-features = false }
+tokio = { version = "1", features = [], default-features = false }
 url = "2.5.7"
 walkdir = "2.5.0"
 

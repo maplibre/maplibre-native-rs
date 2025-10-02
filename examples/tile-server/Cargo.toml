@@ -8,4 +8,4 @@ edition.workspace = true
 axum.workspace = true
 image.workspace = true
 maplibre_native = { workspace = true, features = ["pool"] }
-tokio = { workspace = true, features = ["macros"] }
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }

@@ -40,6 +40,7 @@ async fn rendered_style_tile(
     let body = axum::body::Body::from(png_bytes);
     Ok(Response::builder()
         .header(header::CONTENT_TYPE, "image/png")
+        .header(header::CACHE_CONTROL, "max-age=3600")
         .body(body)
         .unwrap())
 }
@@ -55,6 +56,6 @@ async fn main() {
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
     let app = Router::new()
         .route("/", get(index))
-        .route("/:z/:x/:y", get(rendered_style_tile));
+        .route("/{z}/{x}/{y}", get(rendered_style_tile));
     axum::serve(listener, app).await.unwrap();
 }
