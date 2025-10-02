@@ -29,7 +29,7 @@ use std::thread;
 
 use tokio::sync::oneshot;
 
-use crate::renderer::{Image, ImageRendererOptions, RenderingError};
+use crate::renderer::{Image, ImageRendererBuilder, RenderingError};
 
 /// Rendering request sent to the pool.
 struct RenderRequest {
@@ -60,7 +60,7 @@ impl SingleThreadedRenderPool {
         let (tx, rx) = mpsc::channel::<RenderRequest>();
 
         thread::spawn(move || {
-            let mut renderer = ImageRendererOptions::default().build_tile_renderer();
+            let mut renderer = ImageRendererBuilder::default().build_tile_renderer();
             let mut current_style: Option<PathBuf> = None;
 
             while let Ok(request) = rx.recv() {

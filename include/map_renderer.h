@@ -40,8 +40,8 @@ inline std::unique_ptr<MapRenderer> MapRenderer_new(
             uint32_t width,
             uint32_t height,
             float pixelRatio,
-            const rust::Str cachePath,
-            const rust::Str assetRoot,
+            rust::Slice<const uint8_t> cachePath,
+            rust::Slice<const uint8_t> assetRoot,
             const rust::Str apiKey,
             const rust::Str baseUrl,
             const rust::Str uriSchemeAlias,
@@ -51,7 +51,6 @@ inline std::unique_ptr<MapRenderer> MapRenderer_new(
             const rust::Str spritesTemplate,
             const rust::Str glyphsTemplate,
             const rust::Str tileTemplate,
-            const rust::Str defaultStyleUrl,
             bool requiresApiKey
 
 ) {
@@ -60,26 +59,21 @@ inline std::unique_ptr<MapRenderer> MapRenderer_new(
 
     auto frontend = std::make_unique<mbgl::HeadlessFrontend>(size, pixelRatio);
 
-    std::vector<mbgl::util::DefaultStyle> styles{
-         mbgl::util::DefaultStyle((std::string)defaultStyleUrl, "Basic", 1)};
-
     TileServerOptions options = TileServerOptions()
         .withBaseURL((std::string)baseUrl)
         .withUriSchemeAlias((std::string)uriSchemeAlias)
-        .withApiKeyParameterName((std::string)apiKeyParameterName)
         .withSourceTemplate((std::string)sourceTemplate, "", {})
         .withStyleTemplate((std::string)styleTemplate, "maps", {})
         .withSpritesTemplate((std::string)spritesTemplate, "", {})
         .withGlyphsTemplate((std::string)glyphsTemplate, "fonts", {})
         .withTileTemplate((std::string)tileTemplate, "tiles", {})
-        .withDefaultStyles(styles)
-        .withDefaultStyle("Basic")
+        .withApiKeyParameterName((std::string)apiKeyParameterName)
         .setRequiresApiKey(requiresApiKey);
 
     ResourceOptions resourceOptions;
     resourceOptions
-        .withCachePath((std::string)cachePath)
-        .withAssetPath((std::string)assetRoot)
+        .withCachePath(std::string(reinterpret_cast<const char*>(cachePath.data()), cachePath.size()))
+        .withAssetPath(std::string(reinterpret_cast<const char*>(assetRoot.data()), assetRoot.size()))
         .withApiKey((std::string)apiKey)
         .withTileServerOptions(options);
 

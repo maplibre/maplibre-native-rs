@@ -119,8 +119,8 @@ pub mod ffi {
             width: u32,
             height: u32,
             pixelRatio: f32,
-            cachePath: &str,
-            assetRoot: &str,
+            cachePath: &[u8],
+            assetRoot: &[u8],
             apiKey: &str,
             baseUrl: &str,
             uriSchemeAlias: &str,
@@ -130,7 +130,6 @@ pub mod ffi {
             spritesTemplate: &str,
             glyphsTemplate: &str,
             tileTemplate: &str,
-            defaultStyleUrl: &str,
             requiresApiKey: bool,
         ) -> UniquePtr<MapRenderer>;
         fn MapRenderer_render(obj: Pin<&mut MapRenderer>) -> UniquePtr<CxxString>;

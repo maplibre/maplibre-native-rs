@@ -1,9 +1,10 @@
+use std::num::NonZeroU32;
 use std::path::PathBuf;
 use std::time::Instant;
 
 use clap::Parser;
 use env_logger::Env;
-use maplibre_native::{Image, ImageRenderer, ImageRendererOptions, MapDebugOptions, Static, Tile};
+use maplibre_native::{Image, ImageRenderer, ImageRendererBuilder, MapDebugOptions, Static, Tile};
 
 /// Command-line tool to render a map via [`mapLibre-native`](https://github.com/maplibre/maplibre-native)
 #[derive(Parser, Debug)]
@@ -61,12 +62,12 @@ struct Args {
     pitch: f64,
 
     /// Image width
-    #[arg(long = "width", default_value_t = 512)]
-    width: u32,
+    #[arg(long = "width", default_value_t = NonZeroU32::new(512).unwrap())]
+    width: NonZeroU32,
 
     /// Image height
-    #[arg(long = "height", default_value_t = 512)]
-    height: u32,
+    #[arg(long = "height", default_value_t = NonZeroU32::new(512).unwrap())]
+    height: NonZeroU32,
 
     /// Map mode
     #[arg(short = 'm', long = "mode", default_value = "static")]
@@ -127,12 +128,12 @@ impl From<DebugMode> for MapDebugOptions {
 
 impl Args {
     fn load(self) -> Renderer {
-        let mut map = ImageRendererOptions::new();
-        map.with_api_key(self.apikey.unwrap_or_default());
-        map.with_cache_path(self.cache.to_string_lossy().to_string());
-        map.with_asset_root(self.asset_root.to_string_lossy().to_string());
-        map.with_pixel_ratio(self.ratio);
-        map.with_size(self.width, self.height);
+        let map = ImageRendererBuilder::new()
+            .with_api_key(self.apikey.unwrap_or_default())
+            .with_cache_path(self.cache)
+            .with_asset_root(self.asset_root)
+            .with_pixel_ratio(self.ratio)
+            .with_size(self.width, self.height);
 
         match self.mode {
             Mode::Static => {
@@ -254,13 +255,15 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
+    use std::num::NonZero;
+
     use super::*;
 
     #[test]
     fn test_rendering() {
         let args = Args {
-            width: 32,
-            height: 32,
+            width: NonZero::new(32).unwrap(),
+            height: NonZero::new(32).unwrap(),
             mode: Mode::Static,
             ..Args::parse()
         };
@@ -276,8 +279,8 @@ mod tests {
         assert_eq!(img_buffer.as_raw().len(), 32 * 32 * 4); // RGBA
 
         let args = Args {
-            width: 64,
-            height: 64,
+            width: NonZero::new(64).unwrap(),
+            height: NonZero::new(64).unwrap(),
             mode: Mode::Tile,
             ..Args::parse()
         };
