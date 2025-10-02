@@ -45,8 +45,7 @@ println!("Image dimensions: {}x{}", img_buffer.width(), img_buffer.height());
 img_buffer.save("map.png").unwrap();
 ```
 
-> [!TIP]
-> Next to the static rendering map mode, we also have continous and a tile based one.
+> ***TIP:*** Next to the static rendering map mode, we also have continous and a tile based one.
 > Continous is desiged to be interactive, while the tile based one is primarily for tile servers
 
 ### Platform Support
