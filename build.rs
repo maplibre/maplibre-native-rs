@@ -1,4 +1,4 @@
-//! File for defining how we download and link against MapLibre Native.
+//! File for defining how we download and link against `MapLibre Native`.
 
 use std::path::{Path, PathBuf};
 use std::{env, fs};
