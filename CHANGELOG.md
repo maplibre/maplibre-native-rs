@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0](https://github.com/maplibre/maplibre-native-rs/compare/v0.3.1...v0.4.0) - 2025-10-02
+
+### Added
+
+- *(pool)* add an example how to use the pool ([#88](https://github.com/maplibre/maplibre-native-rs/pull/88))
+- *(renderer)* [**breaking**] Rework the builder interface and document it ([#85](https://github.com/maplibre/maplibre-native-rs/pull/85))
+- *(renderer)* Rework the image rendering API ([#82](https://github.com/maplibre/maplibre-native-rs/pull/82))
+
+### Other
+
+- *(lints)* Remove unused variables ([#84](https://github.com/maplibre/maplibre-native-rs/pull/84))
+- *(deps)* update image requirement from 0.24 to 0.25 in the all-cargo-version-updates group ([#86](https://github.com/maplibre/maplibre-native-rs/pull/86))
+- add MapLibre Contributors to the authors ([#81](https://github.com/maplibre/maplibre-native-rs/pull/81))
+- *(deps)* bump taiki-e/install-action from 2.62.0 to 2.62.11 in the all-actions-version-updates group ([#79](https://github.com/maplibre/maplibre-native-rs/pull/79))
+- *(ci)* trigger PR title workflow on synchronize event ([#77](https://github.com/maplibre/maplibre-native-rs/pull/77))
+
 ## [0.3.1](https://github.com/maplibre/maplibre-native-rs/compare/v0.3.0...v0.3.1) - 2025-09-26
 
 ### Added
