@@ -257,10 +257,10 @@ impl<S> ImageRenderer<S> {
             opts.pixel_ratio,
             // cxx.rs does not support OsString, but going via &[u8] is close enough
             opts.cache_path
-                .map_or(OsString::new(), |path| path.into_os_string())
+                .map_or(OsString::new(), PathBuf::into_os_string)
                 .as_encoded_bytes(),
             opts.asset_root
-                .map_or(OsString::new(), |path| path.into_os_string())
+                .map_or(OsString::new(), PathBuf::into_os_string)
                 .as_encoded_bytes(),
             &opts.api_key,
             opts.base_url.as_ref(),
