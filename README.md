@@ -67,7 +67,7 @@ The following platform and rendering-API combinations are supported and tested i
 ❌ = Not possible
 </sub>
 
-[^1]: Vulcan support on macos is provided via MoltenVK. There is a slight performance overhead for this with little upsides. Both Metal and Vulcan run through the same extensive test suite upstream. You can use Vulcan if you find a bug in the Metal implementation until we have fixed it upstream.
+[^1]: Vulcan support on macos is provided via `MoltenVK`. There is a slight performance overhead for this with little upsides. Both Metal and Vulcan run through the same extensive test suite upstream. You can use Vulcan if you find a bug in the Metal implementation until we have fixed it upstream.
 
 ### Dependencies
 
@@ -79,7 +79,7 @@ It is OK to run this command multiple times for each backend.
 just install-dependencies vulkan
 ```
 
-### Gettting MapLibre Native Core
+### Getting the core library
 
 Since we wrap the [Maplibre native library](https://maplibre.org/projects/native/), we need this and its headers to be included.
 
@@ -124,6 +124,8 @@ submitted for inclusion in the work by you, as defined in the
 Apache-2.0 license, shall be dual-licensed as above, without any
 additional terms or conditions.
 
-### MapLibre Native Licence
+### `MapLibre Native` Licence
 
-This crate incorporates MapLibre Native assets during compilation by downloading and statically linking them. As a result, any project using this crate must comply with the [MapLibre Native License](https://github.com/maplibre/maplibre-native/blob/main/LICENSE.md) (BSD 2-Clause) requirements for binary distribution. This includes providing proper attribution and including the license text with your distributed binaries or source code.
+This crate incorporates [MapLibre Native assets](https://github.com/maplibre/maplibre-native/releases) during compilation by downloading and statically linking them.
+As a result, any project using this crate must comply with the [MapLibre Native License](https://github.com/maplibre/maplibre-native/blob/main/LICENSE.md) (BSD 2-Clause) requirements for binary distribution.
+This includes providing proper attribution and including the license text with your distributed binaries or source code.
