@@ -128,17 +128,22 @@ impl SingleThreadedRenderPool {
     }
 }
 
+/// Errors that can occur in the single-threaded render pool.
 #[derive(thiserror::Error, Debug)]
 pub enum SingleThreadedRenderPoolError {
+    /// An I/O error occurred during rendering operations.
     #[error(transparent)]
     IOError(#[from] std::io::Error),
 
+    /// A rendering error occurred during map rendering.
     #[error(transparent)]
     RenderingError(#[from] RenderingError),
 
+    /// Failed to send a rendering request to the worker thread.
     #[error("Failed to send request to rendering thread")]
     FailedToSendRequest,
 
+    /// Failed to receive a response from the worker thread.
     #[error("Failed to receive response from rendering thread")]
     FailedToReceiveResponse,
 }

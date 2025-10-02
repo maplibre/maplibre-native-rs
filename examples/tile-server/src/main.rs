@@ -1,3 +1,7 @@
+//! tile rendering server example
+//!
+//! It serves rendered tiles from a MapLibre style file via our pooling.
+
 use axum::{
     extract::Path,
     http::{header, StatusCode},
