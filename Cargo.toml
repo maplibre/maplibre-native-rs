@@ -82,8 +82,8 @@ walkdir = "2.5.0"
 
 [workspace.lints.rust]
 missing_debug_implementations = "warn"
-unused_qualifications = "warn"
 missing_docs = "warn"
+unused_qualifications = "warn"
 
 [workspace.lints.clippy]
 pedantic = { level = "warn", priority = -1 }
