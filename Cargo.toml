@@ -81,6 +81,7 @@ url = "2.5.7"
 walkdir = "2.5.0"
 
 [workspace.lints.rust]
+missing_debug_implementations = "warn"
 unused_qualifications = "warn"
 
 [workspace.lints.clippy]
