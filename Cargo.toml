@@ -28,7 +28,7 @@ cxx.workspace = true
 image.workspace = true
 log = { workspace = true, optional = true }
 thiserror.workspace = true
-tokio = { workspace = true, optional = true }
+tokio = { workspace = true, features = ["sync"], optional = true }
 url.workspace = true
 
 [build-dependencies]
@@ -62,6 +62,7 @@ edition = "2021"
 license = "MIT OR Apache-2.0"
 
 [workspace.dependencies]
+axum = "0.8"
 clap = { version = "4.5.27", features = ["derive", "env", "unstable-markdown"] }
 cmake = "0.1"
 cxx = "1.0.138"
@@ -76,7 +77,7 @@ log = "0.4"
 maplibre_native = { path = ".", version = "0.3.1" }
 tar = "0.4.44"
 thiserror = "2.0.16"
-tokio = { version = "1", features = ["sync"], default-features = false }
+tokio = { version = "1", features = [], default-features = false }
 url = "2.5.7"
 walkdir = "2.5.0"
 
