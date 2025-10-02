@@ -1,3 +1,8 @@
+//! Command-line tool for rendering map tiles using mapLibre Native.
+//!
+//! This example demonstrates how to use the different rendering options
+//! including different map styles, zoom levels, and output formats.
+
 use std::num::NonZeroU32;
 use std::path::PathBuf;
 use std::time::Instant;
