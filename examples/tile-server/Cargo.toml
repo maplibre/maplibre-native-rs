@@ -1,0 +1,11 @@
+[package]
+name = "tile-server"
+version = "0.0.0"
+publish = false
+edition.workspace = true
+
+[dependencies]
+axum.workspace = true
+image.workspace = true
+maplibre_native = { workspace = true, features = ["pool"] }
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
