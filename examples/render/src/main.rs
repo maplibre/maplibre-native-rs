@@ -2,6 +2,10 @@
 //!
 //! This example demonstrates how to use the different rendering options
 //! including different map styles, zoom levels, and output formats.
+//! including different map styles, zoom levels, and output formats.
+//!
+//! For exapmle create a image of a specific tile with `cargo run -- -m tile -z 3 -x 4 -y 2`
+//! or of a specific area (uses lat,lon and zoom) `cargo run -- --zoom 3.9 --lat 17.209 --lon -87.41`
 
 use std::num::NonZeroU32;
 use std::path::PathBuf;
@@ -46,17 +50,29 @@ struct Args {
     #[arg(short = 'r', long = "ratio", default_value_t = 1.0)]
     ratio: f32,
 
-    /// Zoom level
-    #[arg(short = 'z', long = "zoom", default_value_t = 0)]
-    zoom: u8,
+    /// Zoom level (distinct)
+    #[arg(short = 'z', long = "z", default_value_t = 0)]
+    z: u8,
 
-    /// Longitude
+    /// x coordinate
     #[arg(short = 'x', long = "x", default_value_t = 0)]
     x: u32,
 
-    /// Latitude
+    /// y coordiante
     #[arg(short = 'y', long = "y", default_value_t = 0)]
     y: u32,
+
+    /// Latitude in degrees [-90..90]
+    #[arg(long, value_parser = clap::value_parser!(f64), default_value_t = 0.0)]
+    lat: f64,
+
+    /// Longitude in degrees [-90..90]
+    #[arg(long, value_parser = clap::value_parser!(f64), allow_hyphen_values(true), default_value_t = 0.0)]
+    lon: f64,
+
+    /// Zoom level
+    #[arg(long, value_parser = clap::value_parser!(f64), default_value_t = 0.0)]
+    zoom: f64,
 
     /// Bearing
     #[arg(short = 'b', long = "bearing", default_value_t = 0.0)]
@@ -142,6 +158,13 @@ impl Args {
 
         match self.mode {
             Mode::Static => {
+                if !(-90.0..=90.0).contains(&self.lat) {
+                    panic!("lat must be between -90 and 90")
+                }
+                if !(-180.0..=180.0).contains(&self.lon) {
+                    panic!("lon must be between -180 and 180")
+                }
+
                 let mut map = map.build_static_renderer();
                 if let Some(debug) = self.debug {
                     map.set_debug_flags(debug.into());
@@ -154,9 +177,9 @@ impl Args {
                 }
                 Renderer::Static {
                     map,
-                    x: f64::from(self.x),
-                    y: f64::from(self.y),
-                    zoom: f64::from(self.zoom),
+                    lat: self.lat,
+                    lon: self.lon,
+                    zoom: self.zoom,
                     bearing: self.bearing,
                     pitch: self.pitch,
                 }
@@ -182,7 +205,7 @@ impl Args {
                     map,
                     x: self.x,
                     y: self.y,
-                    zoom: self.zoom,
+                    z: self.z,
                 }
             }
             Mode::Continuous => {
@@ -195,8 +218,8 @@ impl Args {
 enum Renderer {
     Static {
         map: ImageRenderer<Static>,
-        x: f64,
-        y: f64,
+        lat: f64,
+        lon: f64,
         zoom: f64,
         bearing: f64,
         pitch: f64,
@@ -205,7 +228,7 @@ enum Renderer {
         map: ImageRenderer<Tile>,
         x: u32,
         y: u32,
-        zoom: u8,
+        z: u8,
     },
 }
 impl Renderer {
@@ -213,17 +236,17 @@ impl Renderer {
         match self {
             Renderer::Static {
                 map,
-                x,
-                y,
+                lat,
+                lon,
                 zoom,
                 bearing,
                 pitch,
             } => map
-                .render_static(*x, *y, *zoom, *bearing, *pitch)
+                .render_static(*lat, *lon, *zoom, *bearing, *pitch)
                 .expect("could not render image"),
-            Renderer::Tiled { map, x, y, zoom } => map
-                .render_tile(*zoom, *x, *y)
-                .expect("could not render image"),
+            Renderer::Tiled { map, x, y, z } => {
+                map.render_tile(*z, *x, *y).expect("could not render image")
+            }
         }
     }
 }
