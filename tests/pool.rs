@@ -1,9 +1,24 @@
+//! Integration tests that the `SingleThreadedRenderPool` can correctly render
+//! map tiles and produce the expected output images.
+
 #![cfg(feature = "pool")]
 
 use std::path::PathBuf;
 
 use insta::{assert_binary_snapshot, assert_debug_snapshot};
-use maplibre_native::SingleThreadedRenderPool;
+use maplibre_native::{Image, SingleThreadedRenderPool};
+
+fn image_to_png_bytes(image: &Image) -> Vec<u8> {
+    let mut png_bytes = Vec::new();
+    image
+        .as_image()
+        .write_to(
+            &mut std::io::Cursor::new(&mut png_bytes),
+            image::ImageFormat::Png,
+        )
+        .unwrap();
+    png_bytes
+}
 
 fn fixture_path(name: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -26,7 +41,7 @@ async fn sequential_errors_dont_break_pool() {
         .render_tile(working_style.clone(), 1, 0, 0)
         .await
         .unwrap();
-    assert_binary_snapshot!(".png", result.as_bytes().to_vec());
+    assert_binary_snapshot!(".png", image_to_png_bytes(&result));
 }
 
 #[tokio::test]
@@ -35,7 +50,7 @@ async fn large_coordinates_handled() {
     let style = fixture_path("test-style.json");
 
     let result = pool.render_tile(style, 1, 32767, 32767).await.unwrap();
-    assert_binary_snapshot!(".png", result.as_bytes().to_vec());
+    assert_binary_snapshot!(".png", image_to_png_bytes(&result));
 }
 
 #[tokio::test]
@@ -89,11 +104,11 @@ async fn style_switching_() {
     let style2 = fixture_path("test-style-alt.json");
 
     let result = pool.render_tile(style1.clone(), 1, 0, 0).await.unwrap();
-    assert_binary_snapshot!(".png", result.as_bytes().to_vec());
+    assert_binary_snapshot!(".png", image_to_png_bytes(&result));
     let result = pool.render_tile(style1.clone(), 1, 0, 1).await.unwrap();
-    assert_binary_snapshot!(".png", result.as_bytes().to_vec());
+    assert_binary_snapshot!(".png", image_to_png_bytes(&result));
     let result = pool.render_tile(style2.clone(), 1, 0, 0).await.unwrap();
-    assert_binary_snapshot!(".png", result.as_bytes().to_vec());
+    assert_binary_snapshot!(".png", image_to_png_bytes(&result));
 }
 
 #[tokio::test(flavor = "multi_thread")]

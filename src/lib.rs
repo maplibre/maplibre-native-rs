@@ -1,5 +1,4 @@
-// FIXME: Remove this before merging
-#![allow(unused)]
+#![doc = include_str!("../README.md")]
 
 mod renderer;
 pub use renderer::*;

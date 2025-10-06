@@ -6,6 +6,7 @@
 #include <mbgl/style/style.hpp>
 #include <mbgl/util/image.hpp>
 #include <mbgl/util/run_loop.hpp>
+#include <mbgl/util/premultiply.hpp>
 #include <mbgl/util/tile_server_options.hpp>
 #include <memory>
 #include <vector>
@@ -39,8 +40,8 @@ inline std::unique_ptr<MapRenderer> MapRenderer_new(
             uint32_t width,
             uint32_t height,
             float pixelRatio,
-            const rust::Str cachePath,
-            const rust::Str assetRoot,
+            rust::Slice<const uint8_t> cachePath,
+            rust::Slice<const uint8_t> assetRoot,
             const rust::Str apiKey,
             const rust::Str baseUrl,
             const rust::Str uriSchemeAlias,
@@ -50,7 +51,6 @@ inline std::unique_ptr<MapRenderer> MapRenderer_new(
             const rust::Str spritesTemplate,
             const rust::Str glyphsTemplate,
             const rust::Str tileTemplate,
-            const rust::Str defaultStyleUrl,
             bool requiresApiKey
 
 ) {
@@ -59,26 +59,21 @@ inline std::unique_ptr<MapRenderer> MapRenderer_new(
 
     auto frontend = std::make_unique<mbgl::HeadlessFrontend>(size, pixelRatio);
 
-    std::vector<mbgl::util::DefaultStyle> styles{
-         mbgl::util::DefaultStyle((std::string)defaultStyleUrl, "Basic", 1)};
-
     TileServerOptions options = TileServerOptions()
         .withBaseURL((std::string)baseUrl)
         .withUriSchemeAlias((std::string)uriSchemeAlias)
-        .withApiKeyParameterName((std::string)apiKeyParameterName)
         .withSourceTemplate((std::string)sourceTemplate, "", {})
         .withStyleTemplate((std::string)styleTemplate, "maps", {})
         .withSpritesTemplate((std::string)spritesTemplate, "", {})
         .withGlyphsTemplate((std::string)glyphsTemplate, "fonts", {})
         .withTileTemplate((std::string)tileTemplate, "tiles", {})
-        .withDefaultStyles(styles)
-        .withDefaultStyle("Basic")
+        .withApiKeyParameterName((std::string)apiKeyParameterName)
         .setRequiresApiKey(requiresApiKey);
 
     ResourceOptions resourceOptions;
     resourceOptions
-        .withCachePath((std::string)cachePath)
-        .withAssetPath((std::string)assetRoot)
+        .withCachePath(std::string(reinterpret_cast<const char*>(cachePath.data()), cachePath.size()))
+        .withAssetPath(std::string(reinterpret_cast<const char*>(assetRoot.data()), assetRoot.size()))
         .withApiKey((std::string)apiKey)
         .withTileServerOptions(options);
 
@@ -95,8 +90,25 @@ inline std::unique_ptr<MapRenderer> MapRenderer_new(
 }
 
 inline std::unique_ptr<std::string> MapRenderer_render(MapRenderer& self) {
-    auto image = encodePNG(self.frontend->render(*self.map).image);
-    return std::make_unique<std::string>(image);
+    auto result = self.frontend->render(*self.map);
+    auto unpremultipliedImage = mbgl::util::unpremultiply(std::move(result.image));
+
+    // Prepare string with dimensions and pixel data
+    const size_t pixelCount = unpremultipliedImage.size.width * unpremultipliedImage.size.height;
+    std::string data;
+    data.reserve(sizeof(uint32_t) * 2 + pixelCount * 4);
+
+    // First 8 bytes: width and height as uint32_t (little-endian)
+    uint32_t width = unpremultipliedImage.size.width;
+    uint32_t height = unpremultipliedImage.size.height;
+    data.append(reinterpret_cast<const char*>(&width), sizeof(uint32_t));
+    data.append(reinterpret_cast<const char*>(&height), sizeof(uint32_t));
+
+    // Append the unpremultiplied RGBA pixel data directly
+    const char* pixelData = reinterpret_cast<const char*>(unpremultipliedImage.data.get());
+    data.append(pixelData, pixelCount * 4);
+
+    return std::make_unique<std::string>(std::move(data));
 }
 
 inline void MapRenderer_setDebugFlags(MapRenderer& self, mbgl::MapDebugOptions debugFlags) {

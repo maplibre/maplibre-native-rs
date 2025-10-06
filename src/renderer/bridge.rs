@@ -1,14 +1,9 @@
-use cxx::{CxxString, UniquePtr};
-
 /// Enable or disable the internal logging thread
 ///
 /// By default, logs are generated asynchronously except for Error level messages.
 /// In crash scenarios, pending async log entries may be lost.
 pub fn set_log_thread_enabled(enable: bool) {
-    // This will be called through FFI to mbgl::Log::useLogThread
-    unsafe {
-        ffi::Log_useLogThread(enable);
-    }
+    ffi::Log_useLogThread(enable);
 }
 
 fn log_from_cpp(severity: ffi::EventSeverity, event: ffi::Event, code: i64, message: &str) {
@@ -31,6 +26,7 @@ pub mod ffi {
 
     #[repr(u32)]
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    /// Map rendering mode configuration.
     enum MapMode {
         /// Continually updating map
         Continuous,
@@ -42,12 +38,15 @@ pub mod ffi {
 
     #[repr(u32)]
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    /// Debug visualization options for map rendering.
     enum MapDebugOptions {
+        /// No debug visualization.
         NoDebug = 0,
         /// Edges of tile boundaries are shown as thick, red lines.
         ///
         /// Can help diagnose tile clipping issues.
         TileBorders = 0b0000_0010, // 1 << 1
+        /// Shows tile parsing status information.
         ParseStatus = 0b0000_0100, // 1 << 2
         /// Each tile shows a timestamp indicating when it was loaded.
         Timestamps = 0b0000_1000, // 1 << 3
@@ -124,8 +123,8 @@ pub mod ffi {
             width: u32,
             height: u32,
             pixelRatio: f32,
-            cachePath: &str,
-            assetRoot: &str,
+            cachePath: &[u8],
+            assetRoot: &[u8],
             apiKey: &str,
             baseUrl: &str,
             uriSchemeAlias: &str,
@@ -135,7 +134,6 @@ pub mod ffi {
             spritesTemplate: &str,
             glyphsTemplate: &str,
             tileTemplate: &str,
-            defaultStyleUrl: &str,
             requiresApiKey: bool,
         ) -> UniquePtr<MapRenderer>;
         fn MapRenderer_render(obj: Pin<&mut MapRenderer>) -> UniquePtr<CxxString>;

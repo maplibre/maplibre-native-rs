@@ -7,7 +7,7 @@
 //!
 //! ```no_run
 //! # async fn example() {
-//! use maplibre_native::pool::SingleThreadedRenderPool;
+//! use maplibre_native::SingleThreadedRenderPool;
 //! use std::path::PathBuf;
 //!
 //! // Get the global pool instance
@@ -29,7 +29,7 @@ use std::thread;
 
 use tokio::sync::oneshot;
 
-use crate::renderer::{Image, ImageRenderer, ImageRendererOptions, RenderingError, Tile};
+use crate::renderer::{Image, ImageRendererBuilder, RenderingError};
 
 /// Rendering request sent to the pool.
 struct RenderRequest {
@@ -60,7 +60,7 @@ impl SingleThreadedRenderPool {
         let (tx, rx) = mpsc::channel::<RenderRequest>();
 
         thread::spawn(move || {
-            let mut renderer = ImageRendererOptions::default().build_tile_renderer();
+            let mut renderer = ImageRendererBuilder::default().build_tile_renderer();
             let mut current_style: Option<PathBuf> = None;
 
             while let Ok(request) = rx.recv() {
@@ -128,17 +128,22 @@ impl SingleThreadedRenderPool {
     }
 }
 
+/// Errors that can occur in the single-threaded render pool.
 #[derive(thiserror::Error, Debug)]
 pub enum SingleThreadedRenderPoolError {
+    /// An I/O error occurred during rendering operations.
     #[error(transparent)]
     IOError(#[from] std::io::Error),
 
+    /// A rendering error occurred during map rendering.
     #[error(transparent)]
     RenderingError(#[from] RenderingError),
 
+    /// Failed to send a rendering request to the worker thread.
     #[error("Failed to send request to rendering thread")]
     FailedToSendRequest,
 
+    /// Failed to receive a response from the worker thread.
     #[error("Failed to receive response from rendering thread")]
     FailedToReceiveResponse,
 }

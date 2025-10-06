@@ -3,36 +3,66 @@ use std::fmt::Debug;
 use std::marker::PhantomData;
 use std::path::Path;
 
-use cxx::{CxxString, UniquePtr};
+use cxx::UniquePtr;
+use image::{ImageBuffer, Rgba};
 
 use crate::renderer::bridge::ffi;
-use crate::renderer::{ImageRendererOptions, MapDebugOptions, MapMode};
+use crate::renderer::MapDebugOptions;
 
 /// A rendered map image.
 ///
-/// The image is stored as a PNG byte array in a buffer allocated by the C++ code.
-#[derive(PartialEq, Eq, Hash)]
-pub struct Image(UniquePtr<CxxString>);
-
-impl Debug for Image {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Image")
-            .field("size_bytes", &self.0.as_bytes().len())
-            .finish()
-    }
-}
+/// The image is stored as RGBA pixel data using the `image` crate.
+/// Use [`as_image`](Image::as_image) to access the underlying `ImageBuffer` for all image operations.
+///
+/// # Example
+///
+/// ```no_run
+/// # fn foo() {
+/// use maplibre_native::{ImageRendererBuilder, Image};
+///
+/// let renderer = ImageRendererBuilder::new()
+///     .with_size(512, 512)
+///     .build_static_renderer();
+///
+/// renderer.load_style_from_url(&"https://demotiles.maplibre.org/style.json".parse().unwrap());
+/// let image: Image = renderer.render_static(0.0, 0.0, 0.0, 0.0, 0.0).unwrap();
+///
+/// // Access the underlying ImageBuffer for all operations
+/// let img_buffer = image.as_image();
+/// println!("Image dimensions: {}x{}", img_buffer.width(), img_buffer.height());
+/// img_buffer.save("map.png").unwrap();
+/// # }
+/// ```
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+pub struct Image(ImageBuffer<Rgba<u8>, Vec<u8>>);
 
 impl Image {
-    /// Convert the image to a byte slice.
+    /// Create an Image from raw RGBA data
+    pub(crate) fn from_raw(bytes: &[u8]) -> Option<Self> {
+        // Parse dimensions from first 8 bytes
+        if bytes.len() < 8 {
+            return None;
+        }
+
+        let width = u32::from_ne_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]);
+        let height = u32::from_ne_bytes([bytes[4], bytes[5], bytes[6], bytes[7]]);
+        let data = bytes[8..].to_vec();
+        ImageBuffer::from_vec(width, height, data).map(Image)
+    }
+
+    /// Get access to the underlying image buffer.
+    /// Use this to perform any image operations using the `image` crate.
     #[must_use]
-    pub fn as_bytes(&self) -> &[u8] {
-        self.0.as_bytes()
+    pub fn as_image(&self) -> &ImageBuffer<Rgba<u8>, Vec<u8>> {
+        &self.0
     }
 }
 
 /// Internal state type to render a static map image.
+#[derive(Debug)]
 pub struct Static;
 /// Internal state type to render a map tile.
+#[derive(Debug)]
 pub struct Tile;
 
 /// Configuration options for a tile server.
@@ -40,6 +70,14 @@ pub struct ImageRenderer<S> {
     pub(crate) instance: UniquePtr<ffi::MapRenderer>,
     pub(crate) _marker: PhantomData<S>,
     pub(crate) style_specified: bool,
+}
+
+impl<S> Debug for ImageRenderer<S> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ImageRenderer")
+            .field("style_specified", &self.style_specified)
+            .finish_non_exhaustive()
+    }
 }
 
 impl<S> ImageRenderer<S> {
@@ -78,6 +116,7 @@ impl<S> ImageRenderer<S> {
         Ok(self)
     }
 
+    /// Set debug visualization flags for the map renderer.
     pub fn set_debug_flags(&mut self, flags: MapDebugOptions) -> &mut Self {
         ffi::MapRenderer_setDebugFlags(self.instance.pin_mut(), flags);
         self
@@ -103,8 +142,11 @@ impl ImageRenderer<Static> {
         }
 
         ffi::MapRenderer_setCamera(self.instance.pin_mut(), lat, lon, zoom, bearing, pitch);
-        let img = ffi::MapRenderer_render(self.instance.pin_mut());
-        Ok(Image(img))
+        let data = ffi::MapRenderer_render(self.instance.pin_mut());
+        let bytes = data.as_bytes();
+
+        let image = Image::from_raw(bytes).ok_or(RenderingError::InvalidImageData)?;
+        Ok(image)
     }
 }
 
@@ -122,8 +164,10 @@ impl ImageRenderer<Tile> {
         let (lat, lon) = coords_to_lat_lon(f64::from(zoom), x, y);
         ffi::MapRenderer_setCamera(self.instance.pin_mut(), lat, lon, f64::from(zoom), 0.0, 0.0);
 
-        let img = ffi::MapRenderer_render(self.instance.pin_mut());
-        Ok(Image(img))
+        let data = ffi::MapRenderer_render(self.instance.pin_mut());
+        let bytes = data.as_bytes();
+        let image = Image::from_raw(bytes).ok_or(RenderingError::InvalidImageData)?;
+        Ok(image)
     }
 }
 
@@ -138,8 +182,13 @@ fn coords_to_lat_lon(zoom: f64, x: u32, y: u32) -> (f64, f64) {
     (lat, lng)
 }
 
+/// Errors that can occur during map rendering operations.
 #[derive(thiserror::Error, Debug)]
 pub enum RenderingError {
+    /// Style must be specified before rendering can occur.
     #[error("Style must be specified to render a tile")]
     StyleNotSpecified,
+    /// The renderer returned invalid or corrupted image data.
+    #[error("Invalid image data received from renderer")]
+    InvalidImageData,
 }
