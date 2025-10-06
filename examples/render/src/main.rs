@@ -2,7 +2,6 @@
 //!
 //! This example demonstrates how to use the different rendering options
 //! including different map styles, zoom levels, and output formats.
-//! including different map styles, zoom levels, and output formats.
 //!
 //! For exapmle create a image of a specific tile with `cargo run -- -m tile -z 3 -x 4 -y 2`
 //! or of a specific area (uses lat,lon and zoom) `cargo run -- --zoom 3.9 --lat 17.209 --lon -87.41`
