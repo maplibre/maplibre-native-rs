@@ -90,7 +90,7 @@ We can get the library and headers from two places:
   A pull request is created if an update is available.
 
   </details>
-- <details><summary>if the env vars cMLN_CORE_LIBRARY_PATH</code> and <code>MLN_CORE_HEADERS_PATH</code> are set: from local disk via the environment variables</summary>
+- <details><summary>if the env vars <code>MLN_CORE_LIBRARY_PATH</code> and <code>MLN_CORE_HEADERS_PATH</code> are set: from local disk via the environment variables</summary>
 
   If you don't want to allow network access during buildscript execution, we allow you to download the release and tell us where you have downloaded the contents.
   You can also build from source by following the steps that maplibre-native does in CI to produce the artefacts.
