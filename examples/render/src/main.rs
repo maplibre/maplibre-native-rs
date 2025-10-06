@@ -157,12 +157,8 @@ impl Args {
 
         match self.mode {
             Mode::Static => {
-                if !(-90.0..=90.0).contains(&self.lat) {
-                    panic!("lat must be between -90 and 90")
-                }
-                if !(-180.0..=180.0).contains(&self.lon) {
-                    panic!("lon must be between -180 and 180")
-                }
+                assert!((-90.0..=90.0).contains(&self.lat), "lat must be between -90 and 90");
+                assert!((-180.0..=180.0).contains(&self.lon), "lon must be between -180 and 180");
 
                 let mut map = map.build_static_renderer();
                 if let Some(debug) = self.debug {
