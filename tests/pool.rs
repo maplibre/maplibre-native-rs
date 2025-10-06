@@ -1,3 +1,6 @@
+//! Integration tests that the `SingleThreadedRenderPool` can correctly render
+//! map tiles and produce the expected output images.
+
 #![cfg(feature = "pool")]
 
 use std::path::PathBuf;

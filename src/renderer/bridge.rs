@@ -26,6 +26,7 @@ pub mod ffi {
 
     #[repr(u32)]
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    /// Map rendering mode configuration.
     enum MapMode {
         /// Continually updating map
         Continuous,
@@ -37,12 +38,15 @@ pub mod ffi {
 
     #[repr(u32)]
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    /// Debug visualization options for map rendering.
     enum MapDebugOptions {
+        /// No debug visualization.
         NoDebug = 0,
         /// Edges of tile boundaries are shown as thick, red lines.
         ///
         /// Can help diagnose tile clipping issues.
         TileBorders = 0b0000_0010, // 1 << 1
+        /// Shows tile parsing status information.
         ParseStatus = 0b0000_0100, // 1 << 2
         /// Each tile shows a timestamp indicating when it was loaded.
         Timestamps = 0b0000_1000, // 1 << 3
