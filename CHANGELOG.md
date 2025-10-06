@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.2](https://github.com/maplibre/maplibre-native-rs/compare/v0.4.1...v0.4.2) - 2025-10-06
+
+### Other
+
+- *(renderer)* Support floating-point lat/lon values in renderer example ([#92](https://github.com/maplibre/maplibre-native-rs/pull/92))
+
 ## [0.4.1](https://github.com/maplibre/maplibre-native-rs/compare/v0.4.0...v0.4.1) - 2025-10-06
 
 ### Other
