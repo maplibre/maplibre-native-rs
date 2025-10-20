@@ -8,7 +8,7 @@ edition.workspace = true
 license.workspace = true
 keywords = ["maplibre", "rendering", "gis", "tiles"]
 categories = ["external-ffi-bindings", "science::geo", "rendering"]
-rust-version = "1.85" # due to image
+rust-version = "1.87" # due to cxx
 exclude = []
 
 [package.metadata.mln]
