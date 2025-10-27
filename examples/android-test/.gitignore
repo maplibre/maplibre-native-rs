@@ -1,0 +1,32 @@
+# Rust
+target/
+Cargo.lock
+
+# Android/Gradle
+.gradle/
+build/
+local.properties
+
+# Android Studio
+.idea/
+*.iml
+.navigation/
+captures/
+output.json
+
+# NDK
+obj/
+.externalNativeBuild/
+.cxx/
+
+# Native libraries (built artifacts - should be rebuilt from source)
+app/src/main/jniLibs/
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# Signing
+*.jks
+*.keystore
+keystore.properties

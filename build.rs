@@ -73,17 +73,19 @@ impl std::fmt::Display for GraphicsRenderingAPI {
 fn download_static(out_dir: &Path, revision: &str) -> (PathBuf, PathBuf) {
     let graphics_api = GraphicsRenderingAPI::from_selected_features();
 
-    let target = if cfg!(all(target_os = "linux", target_arch = "aarch64")) {
+    // Use TARGET environment variable for cross-compilation support
+    let target_triple = env::var("TARGET").expect("TARGET not set");
+    let target = if target_triple.contains("aarch64-unknown-linux") {
         "amalgam-linux-arm64"
-    } else if cfg!(all(target_os = "linux", target_arch = "x86_64")) {
+    } else if target_triple.contains("x86_64-unknown-linux") {
         "amalgam-linux-x64"
-    } else if cfg!(all(target_os = "macos", target_arch = "aarch64")) {
+    } else if target_triple.contains("aarch64-apple-darwin") {
         "amalgam-macos-arm64"
-    } else if cfg!(all(target_os = "android", target_arch = "aarch64")) {
+    } else if target_triple.contains("aarch64-linux-android") {
         "amalgam-android-arm64-v8a"
     } else {
         panic!(
-            "unsupported target: only linux, macos, and android (arm64-v8a) are currently supported by maplibre-native"
+            "unsupported target: only linux, macos, and android (arm64-v8a) are currently supported by maplibre-native (got: {target_triple})"
         );
     };
 

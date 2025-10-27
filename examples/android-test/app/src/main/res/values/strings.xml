@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">MapLibre Test</string>
+    <string name="loading">Loading MapLibre Native…</string>
+    <string name="success">✓ MapLibre Native loaded successfully!</string>
+    <string name="version_label">Version:</string>
+</resources>
