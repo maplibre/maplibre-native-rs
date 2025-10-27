@@ -223,7 +223,7 @@ fn build_mln() {
     );
 
     // Add system library search paths for macOS
-    let target_os = env::var("CARGO_CFG_TARGET_OS").expect("CARGO_CFG_TARGET_OS not set");
+    let target_os = env!("CARGO_CFG_TARGET_OS");
     if target_os == "macos" {
         // Check for Homebrew installation paths
         if let Ok(homebrew_prefix) = env::var("HOMEBREW_PREFIX") {
