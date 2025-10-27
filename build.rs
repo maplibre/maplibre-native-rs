@@ -79,9 +79,11 @@ fn download_static(out_dir: &Path, revision: &str) -> (PathBuf, PathBuf) {
         "amalgam-linux-x64"
     } else if cfg!(all(target_os = "macos", target_arch = "aarch64")) {
         "amalgam-macos-arm64"
+    } else if cfg!(all(target_os = "android", target_arch = "aarch64")) {
+        "amalgam-android-arm64-v8a"
     } else {
         panic!(
-            "unsupported target: only linux and macos are currently supported by maplibre-native"
+            "unsupported target: only linux, macos, and android (arm64-v8a) are currently supported by maplibre-native"
         );
     };
 
@@ -260,13 +262,31 @@ fn build_mln() {
         .replace(".a", "");
     build_bridge(&lib_name, &include_dirs);
 
-    println!("cargo:rustc-link-lib=curl");
+    // Android doesn't need curl (uses Android's HTTP stack)
+    if !cfg!(target_os = "android") {
+        println!("cargo:rustc-link-lib=curl");
+    }
     println!("cargo:rustc-link-lib=z");
+
     match GraphicsRenderingAPI::from_selected_features() {
-        GraphicsRenderingAPI::Vulkan => {}
+        GraphicsRenderingAPI::Vulkan => {
+            if cfg!(target_os = "android") {
+                // Android system libraries for Vulkan
+                println!("cargo:rustc-link-lib=android");
+                println!("cargo:rustc-link-lib=log");
+            }
+        }
         GraphicsRenderingAPI::OpenGL => {
-            println!("cargo:rustc-link-lib=GL");
-            println!("cargo:rustc-link-lib=EGL");
+            if cfg!(target_os = "android") {
+                // Android system libraries for OpenGL ES
+                println!("cargo:rustc-link-lib=android");
+                println!("cargo:rustc-link-lib=log");
+                println!("cargo:rustc-link-lib=EGL");
+                println!("cargo:rustc-link-lib=GLESv3");
+            } else {
+                println!("cargo:rustc-link-lib=GL");
+                println!("cargo:rustc-link-lib=EGL");
+            }
         }
         GraphicsRenderingAPI::Metal => {
             // macOS Metal framework dependencies
