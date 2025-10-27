@@ -264,8 +264,10 @@ fn build_mln() {
         .replace(".a", "");
     build_bridge(&lib_name, &include_dirs);
 
-    let target = env::var("TARGET").expect("TARGET not set");
-    let is_android = target.contains("android");
+    // Check target OS using CARGO_CFG_TARGET_OS environment variable
+    // This is set by Cargo and correctly reflects the target platform during cross-compilation
+    let target_os = env::var("CARGO_CFG_TARGET_OS").expect("CARGO_CFG_TARGET_OS not set");
+    let is_android = target_os == "android";
 
     // Android doesn't need curl (uses Android's HTTP stack)
     if !is_android {
