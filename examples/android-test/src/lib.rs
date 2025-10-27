@@ -2,32 +2,13 @@
 //!
 //! This library provides a simple JNI interface to verify that:
 //! 1. The Rust library builds correctly as a cdylib for Android
-//! 2. The MapLibre Native core library links properly
+//! 2. The MapLibre Native core library links properly via maplibre_native crate
 //! 3. Basic functionality is accessible from Java/Kotlin
-//! 4. MapLibre Native C++ functions can be called successfully
+//! 4. MapLibre Native C++ functions can be called successfully through the Rust bindings
 
 use jni::objects::JClass;
 use jni::sys::jstring;
 use jni::JNIEnv;
-
-// Direct FFI bindings to MapLibre Native C++ MapOptions class
-// These symbols exist in the MapLibre Native core library
-extern "C" {
-    // Constructor: mbgl::MapOptions::MapOptions()
-    #[link_name = "_ZN4mbgl10MapOptionsC1Ev"]
-    fn mbgl_MapOptions_new(this: *mut MapOptionsOpaque);
-
-    // Destructor: mbgl::MapOptions::~MapOptions()
-    #[link_name = "_ZN4mbgl10MapOptionsD1Ev"]
-    fn mbgl_MapOptions_delete(this: *mut MapOptionsOpaque);
-}
-
-// Opaque type representing mbgl::MapOptions
-// The actual size is larger, but we allocate enough space
-#[repr(C)]
-struct MapOptionsOpaque {
-    _data: [u8; 16], // std::unique_ptr<Impl> is 8 bytes on 64-bit, add padding
-}
 
 /// JNI entry point to get the MapLibre version string.
 ///
@@ -58,22 +39,16 @@ pub extern "system" fn Java_org_maplibre_test_MapLibreNative_testCore(
     _env: JNIEnv,
     _class: JClass,
 ) -> bool {
-    // Call actual MapLibre Native C++ functions to verify:
+    // Call MapLibre Native function through the Rust bindings to verify:
     // 1. The Rust cdylib compiled correctly
-    // 2. The MapLibre Native static library linked successfully
-    // 3. All required Android system libraries (libandroid, liblog, libEGL, libGLESv3, libc++_shared) are found
-    // 4. C++ FFI calls work at runtime
-    // 5. C++ constructors and destructors execute properly
+    // 2. The maplibre_native crate links successfully
+    // 3. All required Android system libraries are found
+    // 4. C++ FFI calls work at runtime through the cxx bridge
 
-    unsafe {
-        // Create a MapOptions object (calls C++ constructor)
-        let mut map_options = std::mem::MaybeUninit::<MapOptionsOpaque>::uninit();
-        mbgl_MapOptions_new(map_options.as_mut_ptr());
+    // Call a simple MapLibre Native function that toggles a global setting
+    maplibre_native::set_log_thread_enabled(true);
+    maplibre_native::set_log_thread_enabled(false);
 
-        // Destroy the MapOptions object (calls C++ destructor)
-        mbgl_MapOptions_delete(map_options.as_mut_ptr());
-    }
-
-    // If we got here without crashing, the C++ library is working correctly
+    // If we got here without crashing, the C++ library is working correctly through the Rust bindings
     true
 }

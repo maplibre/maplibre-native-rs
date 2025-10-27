@@ -10,5 +10,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 jni = "0.21"
+maplibre_native = { workspace = true, features = ["opengl"] }
 
-[build-dependencies]
+[lints]
+workspace = true

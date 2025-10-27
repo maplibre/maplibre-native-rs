@@ -264,22 +264,25 @@ fn build_mln() {
         .replace(".a", "");
     build_bridge(&lib_name, &include_dirs);
 
+    let target = env::var("TARGET").expect("TARGET not set");
+    let is_android = target.contains("android");
+
     // Android doesn't need curl (uses Android's HTTP stack)
-    if !cfg!(target_os = "android") {
+    if !is_android {
         println!("cargo:rustc-link-lib=curl");
     }
     println!("cargo:rustc-link-lib=z");
 
     match GraphicsRenderingAPI::from_selected_features() {
         GraphicsRenderingAPI::Vulkan => {
-            if cfg!(target_os = "android") {
+            if is_android {
                 // Android system libraries for Vulkan
                 println!("cargo:rustc-link-lib=android");
                 println!("cargo:rustc-link-lib=log");
             }
         }
         GraphicsRenderingAPI::OpenGL => {
-            if cfg!(target_os = "android") {
+            if is_android {
                 // Android system libraries for OpenGL ES
                 println!("cargo:rustc-link-lib=android");
                 println!("cargo:rustc-link-lib=log");
