@@ -1,6 +1,6 @@
 [package]
 name = "maplibre_native"
-version = "0.4.1"
+version = "0.4.2"
 description = "Rust bindings to the MapLibre Native map rendering engine"
 authors = ["Yuri Astrakhan <YuriAstrakhan@gmail.com>", "MapLibre contributors"]
 repository = "https://github.com/maplibre/maplibre-native-rs"
@@ -74,7 +74,7 @@ futures = "0.3"
 image = "0.25"
 insta = "1.43.2"
 log = "0.4"
-maplibre_native = { path = ".", version = "0.4.1" }
+maplibre_native = { path = ".", version = "0.4.2" }
 tar = "0.4.44"
 thiserror = "2.0.16"
 tokio = { version = "1", features = [], default-features = false }
