@@ -28,7 +28,8 @@ impl GraphicsRenderingAPI {
         let with_metal = env::var("CARGO_FEATURE_METAL").is_ok();
         let with_vulkan = env::var("CARGO_FEATURE_VULKAN").is_ok();
 
-        let is_macos = cfg!(any(target_os = "ios", target_os = "macos"));
+        let target_os = env::var("CARGO_CFG_TARGET_OS").expect("CARGO_CFG_TARGET_OS not set");
+        let is_macos = target_os == "ios" || target_os == "macos";
 
         match (with_metal, with_vulkan, with_opengl) {
             (true, false, false) => Self::Metal,
@@ -222,7 +223,8 @@ fn build_mln() {
     );
 
     // Add system library search paths for macOS
-    if cfg!(target_os = "macos") {
+    let target_os = env::var("CARGO_CFG_TARGET_OS").expect("CARGO_CFG_TARGET_OS not set");
+    if target_os == "macos" {
         // Check for Homebrew installation paths
         if let Ok(homebrew_prefix) = env::var("HOMEBREW_PREFIX") {
             println!("cargo:rustc-link-search=native={homebrew_prefix}/lib");
