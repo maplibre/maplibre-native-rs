@@ -28,7 +28,7 @@ impl GraphicsRenderingAPI {
         let with_metal = env::var("CARGO_FEATURE_METAL").is_ok();
         let with_vulkan = env::var("CARGO_FEATURE_VULKAN").is_ok();
 
-        let target_os = env!("CARGO_CFG_TARGET_OS");
+        let target_os = env::var("CARGO_CFG_TARGET_OS").expect("CARGO_CFG_TARGET_OS not set");
         let is_macos = target_os == "ios" || target_os == "macos";
 
         match (with_metal, with_vulkan, with_opengl) {
