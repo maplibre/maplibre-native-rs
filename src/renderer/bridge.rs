@@ -104,18 +104,21 @@ pub mod ffi {
     #[namespace = "mbgl"]
     unsafe extern "C++" {
         include!("mbgl/map/mode.hpp");
+        include!("mbgl/renderer/renderer_observer.hpp");
 
         type MapMode;
         type MapDebugOptions;
         pub type EventSeverity;
         pub type Event;
+        type RendererObserver;
     }
 
     unsafe extern "C++" {
         include!("map_renderer.h");
-        // include!("maplibre-native/src/map_renderer/map_renderer.h");
+        include!("renderer_observer.h");
 
         type MapRenderer;
+        type RendererObserverMy;
 
         #[allow(clippy::too_many_arguments)]
         fn MapRenderer_new(
@@ -136,6 +139,27 @@ pub mod ffi {
             tileTemplate: &str,
             requiresApiKey: bool,
         ) -> UniquePtr<MapRenderer>;
+
+        #[allow(clippy::too_many_arguments)]
+        fn MapRenderer_new_with_observer(
+            mapMode: MapMode,
+            width: u32,
+            height: u32,
+            pixelRatio: f32,
+            cachePath: &[u8],
+            assetRoot: &[u8],
+            apiKey: &str,
+            baseUrl: &str,
+            uriSchemeAlias: &str,
+            apiKeyParameterName: &str,
+            sourceTemplate: &str,
+            styleTemplate: &str,
+            spritesTemplate: &str,
+            glyphsTemplate: &str,
+            tileTemplate: &str,
+            requiresApiKey: bool,
+            observer: UniquePtr<RendererObserver>,
+        ) -> UniquePtr<MapRenderer>;
         fn MapRenderer_render(obj: Pin<&mut MapRenderer>) -> UniquePtr<CxxString>;
         fn MapRenderer_setDebugFlags(obj: Pin<&mut MapRenderer>, flags: MapDebugOptions);
         fn MapRenderer_setCamera(
@@ -147,6 +171,8 @@ pub mod ffi {
             pitch: f64,
         );
         fn MapRenderer_getStyle_loadURL(obj: Pin<&mut MapRenderer>, url: &str);
+
+        fn RendererObserver_create_observer() -> UniquePtr<RendererObserver>;
     }
 
     extern "Rust" {

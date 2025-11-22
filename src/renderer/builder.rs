@@ -1,12 +1,13 @@
 //! Image renderer configuration and builder
 
+use cxx::UniquePtr;
 use std::ffi::OsString;
 use std::marker::PhantomData;
 use std::num::NonZeroU32;
 use std::path::PathBuf;
 
-use crate::renderer::bridge::ffi;
-use crate::renderer::{ImageRenderer, MapMode, Static, Tile};
+use crate::renderer::bridge::ffi::{self, RendererObserver};
+use crate::renderer::{Continuous, ImageRenderer, MapMode, Static, Tile};
 
 /// Builder for configuring [`ImageRenderer`] instances
 ///
@@ -68,9 +69,7 @@ impl Default for ImageRendererBuilder {
             cache_path: None,
             asset_root: std::env::current_dir().ok(),
 
-            base_url: "https://demotiles.maplibre.org"
-                .parse()
-                .expect("is a valid url"),
+            base_url: "https://demotiles.maplibre.org".parse().expect("is a valid url"),
             uri_scheme_alias: "maplibre".to_string(),
 
             source_template: "/tiles/{domain}.json".to_string(),
@@ -236,48 +235,77 @@ impl ImageRendererBuilder {
     #[must_use]
     pub fn build_static_renderer(self) -> ImageRenderer<Static> {
         // TODO: Should the width/height be passed in here, or have another `build_static_with_size` method?
-        ImageRenderer::new(MapMode::Static, self)
+        ImageRenderer::new(MapMode::Static, self, None)
     }
 
     /// Builds a tile renderer
     #[must_use]
     pub fn build_tile_renderer(self) -> ImageRenderer<Tile> {
         // TODO: Is the width/height used for this mode?
-        ImageRenderer::new(MapMode::Tile, self)
+        ImageRenderer::new(MapMode::Tile, self, None)
+    }
+
+    /// Builds a continuous renderer
+    /// A callback object can be specified to react on events from maplibre
+    #[must_use]
+    pub fn build_continuous_renderer(
+        self,
+        observer: Option<UniquePtr<RendererObserver>>,
+    ) -> ImageRenderer<Continuous> {
+        ImageRenderer::new(MapMode::Continuous, self, observer)
     }
 }
 
 impl<S> ImageRenderer<S> {
     /// Creates a new renderer instance
-    fn new(map_mode: MapMode, opts: ImageRendererBuilder) -> Self {
-        let map = ffi::MapRenderer_new(
-            map_mode,
-            opts.width,
-            opts.height,
-            opts.pixel_ratio,
-            // cxx.rs does not support OsString, but going via &[u8] is close enough
-            opts.cache_path
-                .map_or(OsString::new(), PathBuf::into_os_string)
-                .as_encoded_bytes(),
-            opts.asset_root
-                .map_or(OsString::new(), PathBuf::into_os_string)
-                .as_encoded_bytes(),
-            &opts.api_key,
-            opts.base_url.as_ref(),
-            &opts.uri_scheme_alias,
-            &opts.api_key_parameter_name,
-            &opts.source_template,
-            &opts.style_template,
-            &opts.sprites_template,
-            &opts.glyphs_template,
-            &opts.tile_template,
-            opts.requires_api_key,
-        );
+    fn new(
+        map_mode: MapMode,
+        opts: ImageRendererBuilder,
+        observer: Option<UniquePtr<RendererObserver>>,
+    ) -> Self {
+        let map = if let Some(observer) = observer {
+            ffi::MapRenderer_new_with_observer(
+                map_mode,
+                opts.width,
+                opts.height,
+                opts.pixel_ratio,
+                // cxx.rs does not support OsString, but going via &[u8] is close enough
+                opts.cache_path.map_or(OsString::new(), PathBuf::into_os_string).as_encoded_bytes(),
+                opts.asset_root.map_or(OsString::new(), PathBuf::into_os_string).as_encoded_bytes(),
+                &opts.api_key,
+                opts.base_url.as_ref(),
+                &opts.uri_scheme_alias,
+                &opts.api_key_parameter_name,
+                &opts.source_template,
+                &opts.style_template,
+                &opts.sprites_template,
+                &opts.glyphs_template,
+                &opts.tile_template,
+                opts.requires_api_key,
+                observer,
+            )
+        } else {
+            ffi::MapRenderer_new(
+                map_mode,
+                opts.width,
+                opts.height,
+                opts.pixel_ratio,
+                // cxx.rs does not support OsString, but going via &[u8] is close enough
+                opts.cache_path.map_or(OsString::new(), PathBuf::into_os_string).as_encoded_bytes(),
+                opts.asset_root.map_or(OsString::new(), PathBuf::into_os_string).as_encoded_bytes(),
+                &opts.api_key,
+                opts.base_url.as_ref(),
+                &opts.uri_scheme_alias,
+                &opts.api_key_parameter_name,
+                &opts.source_template,
+                &opts.style_template,
+                &opts.sprites_template,
+                &opts.glyphs_template,
+                &opts.tile_template,
+                opts.requires_api_key,
+            )
+        };
 
-        Self {
-            instance: map,
-            style_specified: false,
-            _marker: PhantomData,
-        }
+        Self { instance: map, style_specified: false, _marker: PhantomData }
     }
 }

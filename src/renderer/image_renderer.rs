@@ -6,8 +6,8 @@ use std::path::Path;
 use cxx::UniquePtr;
 use image::{ImageBuffer, Rgba};
 
-use crate::renderer::bridge::ffi;
 use crate::renderer::MapDebugOptions;
+use crate::renderer::bridge::ffi;
 
 /// A rendered map image.
 ///
@@ -64,6 +64,10 @@ pub struct Static;
 /// Internal state type to render a map tile.
 #[derive(Debug)]
 pub struct Tile;
+
+/// Internal state type to render continuously
+#[derive(Debug)]
+pub struct Continuous;
 
 /// Configuration options for a tile server.
 pub struct ImageRenderer<S> {
@@ -176,9 +180,7 @@ fn coords_to_lat_lon(zoom: f64, x: u32, y: u32) -> (f64, f64) {
     // https://github.com/oldmammuth/slippy_map_tilenames/blob/058678480f4b50b622cda7a48b98647292272346/src/lib.rs#L114
     let zz = 2_f64.powf(zoom);
     let lng = (f64::from(x) + 0.5) / zz * 360_f64 - 180_f64;
-    let lat = ((PI * (1_f64 - 2_f64 * (f64::from(y) + 0.5) / zz)).sinh())
-        .atan()
-        .to_degrees();
+    let lat = ((PI * (1_f64 - 2_f64 * (f64::from(y) + 0.5) / zz)).sinh()).atan().to_degrees();
     (lat, lng)
 }
 
