@@ -1,3 +1,5 @@
+use cxx::{type_id, ExternType};
+
 /// Enable or disable the internal logging thread
 ///
 /// By default, logs are generated asynchronously except for Error level messages.
@@ -18,6 +20,16 @@ fn log_from_cpp(severity: ffi::EventSeverity, event: ffi::Event, code: i64, mess
         }
     }
 }
+
+fn render_observer_notification(/*callback: &ffi::Callback*/) {
+    //callback.call();
+}
+
+/// Callback object for the renderer observer
+/// The function passed to this object is called by
+/// the RendererObserver once a frame is finished rendered
+#[repr(transparent)]
+pub struct RendererObserverCallback(pub extern "C" fn());
 
 #[allow(clippy::borrow_as_ptr)]
 #[cxx::bridge(namespace = "mln::bridge")]
@@ -113,12 +125,13 @@ pub mod ffi {
         type RendererObserver;
     }
 
+    // Declarations for Rust with implementations in C++
     unsafe extern "C++" {
         include!("map_renderer.h");
         include!("renderer_observer.h");
 
         type MapRenderer;
-        type RendererObserverMy;
+        type RendererObserverCallback = super::RendererObserverCallback;
 
         #[allow(clippy::too_many_arguments)]
         fn MapRenderer_new(
@@ -172,12 +185,18 @@ pub mod ffi {
         );
         fn MapRenderer_getStyle_loadURL(obj: Pin<&mut MapRenderer>, url: &str);
 
-        fn RendererObserver_create_observer() -> UniquePtr<RendererObserver>;
+        fn RendererObserver_create_observer(
+            callback: RendererObserverCallback,
+        ) -> UniquePtr<RendererObserver>;
     }
 
-    extern "Rust" {
+    // Declarations for C++ with implementations in Rust
+    extern "Rust" {        
         /// Bridge logging from C++ to Rust log crate
         fn log_from_cpp(severity: EventSeverity, event: Event, code: i64, message: &str);
+
+        fn render_observer_notification(/*callback: &Callback*/);
+
     }
 
     unsafe extern "C++" {
@@ -185,4 +204,9 @@ pub mod ffi {
 
         fn Log_useLogThread(enable: bool);
     }
+}
+
+unsafe impl ExternType for RendererObserverCallback {
+    type Id = type_id!("mln::bridge::RendererObserverCallback");
+    type Kind = cxx::kind::Trivial;
 }

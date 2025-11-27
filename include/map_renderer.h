@@ -19,7 +19,7 @@
 namespace mln {
 namespace bridge {
 
-using namespace mbgl; // TODO: why is this required
+using namespace mbgl; // TODO: why is this required?
 
 class MapRenderer {
 public:

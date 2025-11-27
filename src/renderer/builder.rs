@@ -7,7 +7,7 @@ use std::num::NonZeroU32;
 use std::path::PathBuf;
 
 use crate::renderer::bridge::ffi::{self, RendererObserver};
-use crate::renderer::{Continuous, ImageRenderer, MapMode, Static, Tile};
+use crate::renderer::{Continuous, ImageRenderer, MapMode, Static, Tile, bridge};
 
 /// Builder for configuring [`ImageRenderer`] instances
 ///
@@ -56,6 +56,13 @@ pub struct ImageRendererBuilder {
     api_key_parameter_name: String,
     /// Whether API key is required
     requires_api_key: bool,
+}
+
+/// Create a new renderer observer with a callback
+/// The callback is called from the renderer observer whenever a frame is finished rendered
+/// Pass this renderer to the ImageRendererBuilder
+pub fn create_renderer_observer(callback: bridge::RendererObserverCallback) -> UniquePtr<RendererObserver> {
+    ffi::RendererObserver_create_observer(callback)
 }
 
 impl Default for ImageRendererBuilder {
