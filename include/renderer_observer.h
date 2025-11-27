@@ -10,9 +10,6 @@ namespace bridge {
 
 using RendererObserverCallback = void(*)();
 
-// TODO: why those 2 are required?
-extern void render_observer_notification() noexcept;
-
 class CustomRendererObserver: public mbgl::RendererObserver {
 public:
     explicit CustomRendererObserver(RendererObserverCallback callback)
@@ -20,7 +17,7 @@ public:
 
     void onInvalidate() override {
         if (m_callback)
-            render_observer_notification();
+            m_callback();
     }
 
     void onDidFinishRenderingFrame(mbgl::RendererObserver::RenderMode /*mode*/, bool needsRepaint,

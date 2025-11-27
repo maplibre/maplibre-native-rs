@@ -21,10 +21,6 @@ fn log_from_cpp(severity: ffi::EventSeverity, event: ffi::Event, code: i64, mess
     }
 }
 
-fn render_observer_notification(/*callback: &ffi::Callback*/) {
-    //callback.call();
-}
-
 /// Callback object for the renderer observer
 /// The function passed to this object is called by
 /// the RendererObserver once a frame is finished rendered
@@ -194,9 +190,6 @@ pub mod ffi {
     extern "Rust" {        
         /// Bridge logging from C++ to Rust log crate
         fn log_from_cpp(severity: EventSeverity, event: Event, code: i64, message: &str);
-
-        fn render_observer_notification(/*callback: &Callback*/);
-
     }
 
     unsafe extern "C++" {
