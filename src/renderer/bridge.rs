@@ -32,6 +32,7 @@ pub struct RendererObserverCallback(pub extern "C" fn());
 pub mod ffi {
     // CXX validates enum types against the C++ definition during compilation
 
+    #[namespace = "mbgl"]
     #[repr(u32)]
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     /// Map rendering mode configuration.
@@ -44,6 +45,7 @@ pub mod ffi {
         Tile,
     }
 
+    #[namespace = "mbgl"]
     #[repr(u32)]
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     /// Debug visualization options for map rendering.
@@ -77,6 +79,7 @@ pub mod ffi {
     }
 
     /// MapLibre Native Event Severity levels
+    #[namespace = "mbgl"]
     #[repr(u8)]
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
     pub enum EventSeverity {
@@ -87,6 +90,7 @@ pub mod ffi {
     }
 
     /// MapLibre Native Event types
+    #[namespace = "mbgl"]
     #[repr(u8)]
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
     pub enum Event {

@@ -19,8 +19,6 @@
 namespace mln {
 namespace bridge {
 
-using namespace mbgl; // TODO: why is this required?
-
 class MapRenderer {
 public:
     explicit MapRenderer(std::unique_ptr<mbgl::HeadlessFrontend> frontendInstance,
