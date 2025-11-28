@@ -32,6 +32,7 @@ pub struct RendererObserverCallback(pub extern "C" fn());
 pub mod ffi {
     // CXX validates enum types against the C++ definition during compilation
 
+    // The mbgl enums must be defined in the same namespace than on the C++ side
     #[namespace = "mbgl"]
     #[repr(u32)]
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
