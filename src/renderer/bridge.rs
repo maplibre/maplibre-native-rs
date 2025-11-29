@@ -1,4 +1,6 @@
-use cxx::{type_id, ExternType};
+use cxx::{ExternType, type_id};
+
+// https://maplibre.org/maplibre-native/docs/book/design/ten-thousand-foot-view.html
 
 /// Enable or disable the internal logging thread
 ///
@@ -21,11 +23,30 @@ fn log_from_cpp(severity: ffi::EventSeverity, event: ffi::Event, code: i64, mess
     }
 }
 
-/// Callback object for the renderer observer
-/// The function passed to this object is called by
-/// the RendererObserver once a frame is finished rendered
-#[repr(transparent)]
-pub struct RendererObserverCallback(pub extern "C" fn());
+macro_rules! bridge_callback {
+    ($callback_name:ident, $callback_f:ty) => {
+        #[derive(Debug)]
+        #[repr(transparent)]
+        pub struct $callback_name(pub $callback_f);
+
+        unsafe impl ExternType for $callback_name {
+            type Id = type_id!(mln::bridge::$callback_name); // Name must match!
+            type Kind = cxx::kind::Trivial;
+        }
+    };
+}
+
+// Callback object for the renderer observer
+// The function passed to this object is called by
+// the RendererObserver once a frame is finished rendered
+bridge_callback!(RendererObserverCallback, extern "C" fn());
+bridge_callback!(EmptyCallback, extern "C" fn());
+bridge_callback!(FailingLoadingMapCallback, extern "C" fn(error: ffi::MapLoadError, message: &str));
+
+bridge_callback!(
+    DidFinishRenderingFrameCallback,
+    extern "C" fn(needs_repaint: bool, placement_changed: bool)
+);
 
 #[allow(clippy::borrow_as_ptr)]
 #[cxx::bridge(namespace = "mln::bridge")]
@@ -44,6 +65,26 @@ pub mod ffi {
         Static,
         /// Once-off still image of a single tile
         Tile,
+    }
+
+    #[namespace = "mln::bridge"]
+    #[repr(u32)]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    // Map Load error
+    enum MapObserverCameraChangeMode {
+        Immediate,
+        Animated,
+    }
+
+    #[namespace = "mbgl"]
+    #[repr(u32)]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    // Map Load error
+    enum MapLoadError {
+        StyleParseError,
+        StyleLoadError,
+        NotFoundError,
+        UnknownError,
     }
 
     #[namespace = "mbgl"]
@@ -117,12 +158,18 @@ pub mod ffi {
     #[namespace = "mbgl"]
     unsafe extern "C++" {
         include!("mbgl/map/mode.hpp");
-        include!("mbgl/renderer/renderer_observer.hpp");
+        include!("mbgl/map/map_observer.hpp");
 
         type MapMode;
         type MapDebugOptions;
         pub type EventSeverity;
         pub type Event;
+        type MapLoadError;
+    }
+
+    #[namespace = "mbgl"]
+    unsafe extern "C++" {
+        include!("mbgl/renderer/renderer_observer.hpp");
         type RendererObserver;
     }
 
@@ -130,9 +177,17 @@ pub mod ffi {
     unsafe extern "C++" {
         include!("map_renderer.h");
         include!("renderer_observer.h");
+        include!("map_observer.h"); // Required to find functions below
 
+        type MapObserverCameraChangeMode;
+
+        type MapObserver; // Created custom map observer
         type MapRenderer;
+        // Left side must match a type in C++! Right side must be defined in Rust
         type RendererObserverCallback = super::RendererObserverCallback;
+        type EmptyCallback = super::EmptyCallback;
+        type FailingLoadingMapCallback = super::FailingLoadingMapCallback;
+        type DidFinishRenderingFrameCallback = super::DidFinishRenderingFrameCallback;
 
         #[allow(clippy::too_many_arguments)]
         fn MapRenderer_new(
@@ -172,8 +227,10 @@ pub mod ffi {
             glyphsTemplate: &str,
             tileTemplate: &str,
             requiresApiKey: bool,
-            observer: UniquePtr<RendererObserver>,
+            rendererObserver: UniquePtr<RendererObserver>,
+            mapObserver: UniquePtr<MapObserver>,
         ) -> UniquePtr<MapRenderer>;
+        fn MapRenderer_render_once(obj: Pin<&mut MapRenderer>);
         fn MapRenderer_render(obj: Pin<&mut MapRenderer>) -> UniquePtr<CxxString>;
         fn MapRenderer_setDebugFlags(obj: Pin<&mut MapRenderer>, flags: MapDebugOptions);
         fn MapRenderer_setCamera(
@@ -189,10 +246,22 @@ pub mod ffi {
         fn RendererObserver_create_observer(
             callback: RendererObserverCallback,
         ) -> UniquePtr<RendererObserver>;
+
+        // MapObserver related
+        fn MapObserver_create_observer() -> UniquePtr<MapObserver>;
+        // With `self: Pin<&mut MapObserver>` as first argument, it is a non static method of that object.
+        // cxx searches for such a method
+        fn setOnWillStartLoadingMapCallback(self: Pin<&mut MapObserver>, callback: EmptyCallback);
+        fn setOnDidFinishLoadingStyleCallback(self: Pin<&mut MapObserver>, callback: EmptyCallback);
+        fn setOnDidBecomeIdleCallback(self: Pin<&mut MapObserver>, callback: EmptyCallback);
+        fn setOnDidFailLoadingMapCallback(
+            self: Pin<&mut MapObserver>,
+            callback: FailingLoadingMapCallback,
+        );
     }
 
     // Declarations for C++ with implementations in Rust
-    extern "Rust" {        
+    extern "Rust" {
         /// Bridge logging from C++ to Rust log crate
         fn log_from_cpp(severity: EventSeverity, event: Event, code: i64, message: &str);
     }
@@ -202,9 +271,4 @@ pub mod ffi {
 
         fn Log_useLogThread(enable: bool);
     }
-}
-
-unsafe impl ExternType for RendererObserverCallback {
-    type Id = type_id!("mln::bridge::RendererObserverCallback");
-    type Kind = cxx::kind::Trivial;
 }

@@ -30,7 +30,7 @@ public:
     
 
 private:
-   RendererObserverCallback m_callback; 
+   RendererObserverCallback m_callback{nullptr}; 
 };
 
 inline std::unique_ptr<mbgl::RendererObserver> RendererObserver_create_observer(RendererObserverCallback callback) {

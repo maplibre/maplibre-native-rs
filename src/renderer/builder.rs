@@ -6,8 +6,64 @@ use std::marker::PhantomData;
 use std::num::NonZeroU32;
 use std::path::PathBuf;
 
-use crate::renderer::bridge::ffi::{self, RendererObserver};
+use crate::renderer::bridge::ffi;
 use crate::renderer::{Continuous, ImageRenderer, MapMode, Static, Tile, bridge};
+
+pub use bridge::DidFinishRenderingFrameCallback;
+pub use bridge::EmptyCallback;
+pub use bridge::FailingLoadingMapCallback;
+pub use bridge::RendererObserverCallback;
+
+/// Renderer observer
+#[derive(Debug)]
+pub struct RendererObserver(RendererObserverCallback);
+
+impl RendererObserver {
+    /// Create a new renderer observer with a callback
+    /// The callback is called from the renderer observer whenever a frame is finished rendered
+    /// Pass this renderer to the ImageRendererBuilder
+    pub fn new(callback: RendererObserverCallback) -> Self {
+        Self(callback)
+    }
+}
+
+/// Map Observer
+#[derive(Debug)]
+pub struct MapObserver {
+    on_will_start_loading_map_callback: Option<EmptyCallback>,
+    on_did_finish_loading_style_callback: Option<EmptyCallback>,
+    on_did_become_idle_callback: Option<EmptyCallback>,
+    on_did_fail_loading_map_callback: Option<FailingLoadingMapCallback>,
+}
+
+impl MapObserver {
+    /// Creates a new map observer
+    /// Any callback is activated and must be done by using the corresponding setter functions
+    pub fn new() -> Self {
+        Self {
+            on_did_become_idle_callback: None,
+            on_did_fail_loading_map_callback: None,
+            on_did_finish_loading_style_callback: None,
+            on_will_start_loading_map_callback: None,
+        }
+    }
+
+    pub fn set_on_will_start_loading_map_callback(&mut self, callback: EmptyCallback) {
+        self.on_will_start_loading_map_callback = Some(callback);
+    }
+
+    pub fn set_on_did_finish_loading_style_callback(&mut self, callback: EmptyCallback) {
+        self.on_did_finish_loading_style_callback = Some(callback);
+    }
+
+    pub fn set_on_did_become_idle_callback(&mut self, callback: EmptyCallback) {
+        self.on_did_become_idle_callback = Some(callback);
+    }
+
+    pub fn set_on_did_fail_loading_map_callback(&mut self, callback: FailingLoadingMapCallback) {
+        self.on_did_fail_loading_map_callback = Some(callback);
+    }
+}
 
 /// Builder for configuring [`ImageRenderer`] instances
 ///
@@ -56,13 +112,6 @@ pub struct ImageRendererBuilder {
     api_key_parameter_name: String,
     /// Whether API key is required
     requires_api_key: bool,
-}
-
-/// Create a new renderer observer with a callback
-/// The callback is called from the renderer observer whenever a frame is finished rendered
-/// Pass this renderer to the ImageRendererBuilder
-pub fn create_renderer_observer(callback: bridge::RendererObserverCallback) -> UniquePtr<RendererObserver> {
-    ffi::RendererObserver_create_observer(callback)
 }
 
 impl Default for ImageRendererBuilder {
@@ -242,14 +291,14 @@ impl ImageRendererBuilder {
     #[must_use]
     pub fn build_static_renderer(self) -> ImageRenderer<Static> {
         // TODO: Should the width/height be passed in here, or have another `build_static_with_size` method?
-        ImageRenderer::new(MapMode::Static, self, None)
+        ImageRenderer::new(MapMode::Static, self)
     }
 
     /// Builds a tile renderer
     #[must_use]
     pub fn build_tile_renderer(self) -> ImageRenderer<Tile> {
         // TODO: Is the width/height used for this mode?
-        ImageRenderer::new(MapMode::Tile, self, None)
+        ImageRenderer::new(MapMode::Tile, self)
     }
 
     /// Builds a continuous renderer
@@ -257,62 +306,90 @@ impl ImageRendererBuilder {
     #[must_use]
     pub fn build_continuous_renderer(
         self,
-        observer: Option<UniquePtr<RendererObserver>>,
+        renderer_observer: RendererObserver,
+        map_observer: MapObserver,
     ) -> ImageRenderer<Continuous> {
-        ImageRenderer::new(MapMode::Continuous, self, observer)
+        ImageRenderer::new_with_observers(
+            MapMode::Continuous,
+            self,
+            renderer_observer,
+            map_observer,
+        )
     }
 }
 
 impl<S> ImageRenderer<S> {
     /// Creates a new renderer instance
-    fn new(
+    fn new(map_mode: MapMode, opts: ImageRendererBuilder) -> Self {
+        let map = ffi::MapRenderer_new(
+            map_mode,
+            opts.width,
+            opts.height,
+            opts.pixel_ratio,
+            // cxx.rs does not support OsString, but going via &[u8] is close enough
+            opts.cache_path.map_or(OsString::new(), PathBuf::into_os_string).as_encoded_bytes(),
+            opts.asset_root.map_or(OsString::new(), PathBuf::into_os_string).as_encoded_bytes(),
+            &opts.api_key,
+            opts.base_url.as_ref(),
+            &opts.uri_scheme_alias,
+            &opts.api_key_parameter_name,
+            &opts.source_template,
+            &opts.style_template,
+            &opts.sprites_template,
+            &opts.glyphs_template,
+            &opts.tile_template,
+            opts.requires_api_key,
+        );
+
+        Self { instance: map, style_specified: false, _marker: PhantomData }
+    }
+
+    fn new_with_observers(
         map_mode: MapMode,
         opts: ImageRendererBuilder,
-        observer: Option<UniquePtr<RendererObserver>>,
+        renderer_observer: RendererObserver,
+        map_observer: MapObserver,
     ) -> Self {
-        let map = if let Some(observer) = observer {
-            ffi::MapRenderer_new_with_observer(
-                map_mode,
-                opts.width,
-                opts.height,
-                opts.pixel_ratio,
-                // cxx.rs does not support OsString, but going via &[u8] is close enough
-                opts.cache_path.map_or(OsString::new(), PathBuf::into_os_string).as_encoded_bytes(),
-                opts.asset_root.map_or(OsString::new(), PathBuf::into_os_string).as_encoded_bytes(),
-                &opts.api_key,
-                opts.base_url.as_ref(),
-                &opts.uri_scheme_alias,
-                &opts.api_key_parameter_name,
-                &opts.source_template,
-                &opts.style_template,
-                &opts.sprites_template,
-                &opts.glyphs_template,
-                &opts.tile_template,
-                opts.requires_api_key,
-                observer,
-            )
-        } else {
-            ffi::MapRenderer_new(
-                map_mode,
-                opts.width,
-                opts.height,
-                opts.pixel_ratio,
-                // cxx.rs does not support OsString, but going via &[u8] is close enough
-                opts.cache_path.map_or(OsString::new(), PathBuf::into_os_string).as_encoded_bytes(),
-                opts.asset_root.map_or(OsString::new(), PathBuf::into_os_string).as_encoded_bytes(),
-                &opts.api_key,
-                opts.base_url.as_ref(),
-                &opts.uri_scheme_alias,
-                &opts.api_key_parameter_name,
-                &opts.source_template,
-                &opts.style_template,
-                &opts.sprites_template,
-                &opts.glyphs_template,
-                &opts.tile_template,
-                opts.requires_api_key,
-            )
-        };
+        let renderer_observer = ffi::RendererObserver_create_observer(renderer_observer.0);
+        let mut mo = ffi::MapObserver_create_observer();
 
+        if let Some(callback) = map_observer.on_will_start_loading_map_callback {
+            mo.pin_mut().setOnWillStartLoadingMapCallback(callback);
+        }
+
+        if let Some(callback) = map_observer.on_did_finish_loading_style_callback {
+            mo.pin_mut().setOnDidFinishLoadingStyleCallback(callback);
+        }
+
+        if let Some(callback) = map_observer.on_did_become_idle_callback {
+            mo.pin_mut().setOnDidBecomeIdleCallback(callback);
+        }
+
+        if let Some(callback) = map_observer.on_did_fail_loading_map_callback {
+            mo.pin_mut().setOnDidFailLoadingMapCallback(callback);
+        }
+
+        let map = ffi::MapRenderer_new_with_observer(
+            map_mode,
+            opts.width,
+            opts.height,
+            opts.pixel_ratio,
+            // cxx.rs does not support OsString, but going via &[u8] is close enough
+            opts.cache_path.map_or(OsString::new(), PathBuf::into_os_string).as_encoded_bytes(),
+            opts.asset_root.map_or(OsString::new(), PathBuf::into_os_string).as_encoded_bytes(),
+            &opts.api_key,
+            opts.base_url.as_ref(),
+            &opts.uri_scheme_alias,
+            &opts.api_key_parameter_name,
+            &opts.source_template,
+            &opts.style_template,
+            &opts.sprites_template,
+            &opts.glyphs_template,
+            &opts.tile_template,
+            opts.requires_api_key,
+            renderer_observer,
+            mo,
+        );
         Self { instance: map, style_specified: false, _marker: PhantomData }
     }
 }

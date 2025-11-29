@@ -15,6 +15,7 @@
 #include "rust_log_observer.h"
 #include <mbgl/map/map_observer.hpp>
 #include <mbgl/renderer/renderer_observer.hpp>
+#include "map_observer.h"
 
 namespace mln {
 namespace bridge {
@@ -54,13 +55,14 @@ inline std::unique_ptr<MapRenderer> MapRenderer_new_with_observer(
             const rust::Str glyphsTemplate,
             const rust::Str tileTemplate,
             bool requiresApiKey,
-            std::unique_ptr<mbgl::RendererObserver> observer
+            std::unique_ptr<mbgl::RendererObserver> rendererObserver,
+            std::unique_ptr<MapObserver> mapObserver
 ) {
 
     mbgl::Size size = {width, height};
 
     auto frontend = std::make_unique<mbgl::HeadlessFrontend>(size, pixelRatio);
-    frontend->setObserver(*observer);
+    frontend->setObserver(*rendererObserver);
 
     mbgl::TileServerOptions options = mbgl::TileServerOptions()
         .withBaseURL((std::string)baseUrl)
@@ -87,9 +89,9 @@ inline std::unique_ptr<MapRenderer> MapRenderer_new_with_observer(
     auto logObserver = std::make_unique<mln::bridge::RustLogObserver>();
     mbgl::Log::setObserver(std::move(logObserver));
 
-    auto map = std::make_unique<mbgl::Map>(*frontend, mbgl::MapObserver::nullObserver(), mapOptions, resourceOptions);
+    auto map = std::make_unique<mbgl::Map>(*frontend, *mapObserver, mapOptions, resourceOptions);
 
-    return std::make_unique<MapRenderer>(std::move(frontend), std::move(observer), std::move(map));
+    return std::make_unique<MapRenderer>(std::move(frontend), std::move(rendererObserver), std::move(map));
 }
 
 inline std::unique_ptr<MapRenderer> MapRenderer_new(
@@ -128,9 +130,18 @@ inline std::unique_ptr<MapRenderer> MapRenderer_new(
         glyphsTemplate, 
         tileTemplate, 
         requiresApiKey,
-        nullptr);
+        nullptr,
+        std::make_unique<MapObserver>()
+    );
 }
 
+inline void MapRenderer_render_once(MapRenderer& self) {
+    self.frontend->renderOnce(*self.map);
+}
+
+/*!
+ * Blocking method for rendering the map
+ */
 inline std::unique_ptr<std::string> MapRenderer_render(MapRenderer& self) {
     auto result = self.frontend->render(*self.map);
     auto unpremultipliedImage = mbgl::util::unpremultiply(std::move(result.image));
