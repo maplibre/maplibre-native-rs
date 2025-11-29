@@ -65,7 +65,9 @@ inline std::unique_ptr<MapRenderer> MapRenderer_new_with_observer(
     mbgl::Size size = {width, height};
 
     auto frontend = std::make_unique<mbgl::HeadlessFrontend>(size, pixelRatio);
-    frontend->setObserver(*rendererObserver);
+    if (rendererObserver) {
+        frontend->setObserver(*rendererObserver);
+    }
 
     mbgl::TileServerOptions options = mbgl::TileServerOptions()
         .withBaseURL((std::string)baseUrl)
