@@ -175,6 +175,12 @@ impl ImageRenderer<Tile> {
     }
 }
 
+impl ImageRenderer<Continuous> {
+    pub fn render_once(&mut self) {
+        ffi::MapRenderer_render_once(self.instance.pin_mut());
+    }
+}
+
 #[allow(clippy::cast_precision_loss)]
 fn coords_to_lat_lon(zoom: f64, x: u32, y: u32) -> (f64, f64) {
     // https://github.com/oldmammuth/slippy_map_tilenames/blob/058678480f4b50b622cda7a48b98647292272346/src/lib.rs#L114
