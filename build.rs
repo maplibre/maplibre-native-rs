@@ -202,6 +202,7 @@ fn build_bridge(lib_name: &str, include_dirs: &[PathBuf]) {
     println!("cargo:rerun-if-changed=include/renderer_observer.h");
     println!("cargo:rerun-if-changed=include/map_observer.h");
     println!("cargo:rerun-if-changed=include/rust_log_observer.h");
+    println!("cargo:rerun-if-changed=include/bridge.h");
     cxx_build::bridge("src/renderer/bridge.rs")
         .includes(include_dirs)
         .file("src/renderer/bridge.cpp")

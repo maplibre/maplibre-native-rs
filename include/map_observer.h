@@ -3,81 +3,99 @@
 #include "rust/cxx.h"
 #include <mbgl/map/map_observer.hpp>
 #include <memory>
+#include "bridge.h"
 
 namespace mln {
 namespace bridge {
 
     using MapObserverCameraChangeMode = mbgl::MapObserver::CameraChangeMode; // Required, because enum nested in class is not supported by cxx
-    using EmptyCallback = void(*)();
-    using FailingLoadingMapCallback = void(*)(mbgl::MapLoadError, const std::string&);
-    using CameraDidChangeCallback = void(*)(MapObserverCameraChangeMode mode);
-    using DidFinishRenderingFrameCallback = void(*)(bool needsRepaint, bool placementChanged);
+
+    struct FailingLoadingMapTrampoline {
+        void call(mbgl::MapLoadError error, const std::string& what) {
+            if (trampoline_function) {
+                trampoline_function(function_pointer, error, what);
+            }
+        }
+        private:
+            void(*trampoline_function)(std::int8_t* function_pointer, mbgl::MapLoadError, const std::string&){nullptr};
+            std::int8_t* function_pointer{nullptr};
+    };
+
+    struct CameraDidChangeTrampoline {
+        void call(MapObserverCameraChangeMode mode) {
+            if (trampoline_function) {
+                trampoline_function(function_pointer, mode);
+            }
+        }
+        private:
+            void(*trampoline_function)(std::int8_t* function_pointer, MapObserverCameraChangeMode mode) {nullptr};
+            std::int8_t* function_pointer{nullptr};
+    };
+
+    struct DidFinishRenderingFrameTrampoline {
+        void call(bool needsRepaint, bool placementChanged) {
+            if (trampoline_function) {
+                trampoline_function(function_pointer, needsRepaint, placementChanged);
+            }
+        }
+        private:
+            void(*trampoline_function)(std::int8_t* function_pointer, bool needsRepaint, bool placementChanged) {nullptr};
+            std::int8_t* function_pointer{nullptr};
+    };
 
     class MapObserver: public mbgl::MapObserver {
         public:
-            void setOnWillStartLoadingMapCallback(EmptyCallback callback) {
+            void setOnWillStartLoadingMapCallback(VoidTrampoline callback) {
                 onWillStartLoadingMapCallback = callback;
             }
 
-            void setOnDidFinishLoadingStyleCallback(EmptyCallback callback) {
+            void setOnDidFinishLoadingStyleCallback(VoidTrampoline callback) {
                 onWillStartLoadingMapCallback = callback;
             }
 
-            void setOnDidBecomeIdleCallback(EmptyCallback callback) {
+            void setOnDidBecomeIdleCallback(VoidTrampoline callback) {
                 onWillStartLoadingMapCallback = callback;
             }
 
-            void setOnDidFailLoadingMapCallback(FailingLoadingMapCallback callback) {
+            void setOnDidFailLoadingMapCallback(FailingLoadingMapTrampoline callback) {
                 onDidFailLoadingMapCallback = callback;
             }
 
-            void setDidFinishRenderingFrameCallback(DidFinishRenderingFrameCallback callback) {
+            void setDidFinishRenderingFrameCallback(DidFinishRenderingFrameTrampoline callback) {
                 onDidFinishRenderingFrameCallback = callback;
             }
 
         private:
             void onWillStartLoadingMap() override {
-                if (onWillStartLoadingMapCallback) {
-                    onWillStartLoadingMapCallback();
-                }
+                onWillStartLoadingMapCallback.call();
             }
             void onDidFinishLoadingStyle() override {
-                if (onDidFinishLoadingStyleCallback) {
-                    onDidFinishLoadingStyleCallback();
-                }
+                onDidFinishLoadingStyleCallback.call();
             }
             void onDidBecomeIdle() override {
-                if (onDidBecomeIdleCallback) {
-                    onDidBecomeIdleCallback();
-                }
+                onDidBecomeIdleCallback.call();
             }
 
             void onDidFailLoadingMap(mbgl::MapLoadError error, const std::string& what) override {
-                if (onDidFailLoadingMapCallback) {
-                    onDidFailLoadingMapCallback(error, what);
-                }
+                onDidFailLoadingMapCallback.call(error, what);
             }
 
             void onCameraDidChange(MapObserverCameraChangeMode mode) override {
-                if (onCameraDidChangeCallback) {
-                    onCameraDidChangeCallback(mode);
-                }
+                onCameraDidChangeCallback.call(mode);
             }
             // void onSourceChanged(mbgl::style::Source&) override;
 
             void onDidFinishRenderingFrame(const mbgl::MapObserver::RenderFrameStatus& status) override {
-                if (onDidFinishRenderingFrameCallback) {
-                    onDidFinishRenderingFrameCallback(status.needsRepaint, status.placementChanged);
-                }
+                onDidFinishRenderingFrameCallback.call(status.needsRepaint, status.placementChanged);
             }
 
         private:
-            EmptyCallback onWillStartLoadingMapCallback{nullptr};
-            EmptyCallback onDidFinishLoadingStyleCallback{nullptr};
-            EmptyCallback onDidBecomeIdleCallback{nullptr};
-            FailingLoadingMapCallback onDidFailLoadingMapCallback{nullptr};
-            CameraDidChangeCallback onCameraDidChangeCallback{nullptr};
-            DidFinishRenderingFrameCallback onDidFinishRenderingFrameCallback{nullptr};
+            VoidTrampoline onWillStartLoadingMapCallback;
+            VoidTrampoline onDidFinishLoadingStyleCallback;
+            VoidTrampoline onDidBecomeIdleCallback;
+            FailingLoadingMapTrampoline onDidFailLoadingMapCallback;
+            CameraDidChangeTrampoline onCameraDidChangeCallback;
+            DidFinishRenderingFrameTrampoline onDidFinishRenderingFrameCallback;
     };
 
     inline std::unique_ptr<MapObserver> MapObserver_create_observer() {

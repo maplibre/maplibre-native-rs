@@ -9,20 +9,19 @@ use std::path::PathBuf;
 use crate::renderer::bridge::ffi;
 use crate::renderer::{Continuous, ImageRenderer, MapMode, Static, Tile, bridge};
 
-pub use bridge::DidFinishRenderingFrameCallback;
-pub use bridge::EmptyCallback;
-pub use bridge::FailingLoadingMapCallback;
-pub use bridge::RendererObserverCallback;
+pub use super::trampoline::DidFinishRenderingFrameTrampoline;
+pub use super::trampoline::VoidTrampoline;
+pub use super::trampoline::FailingLoadingMapTrampoline;
 
 /// Renderer observer
 #[derive(Debug)]
-pub struct RendererObserver(RendererObserverCallback);
+pub struct RendererObserver<T: Fn() -> ()>(T);
 
-impl RendererObserver {
+impl<T: Fn() -> ()> RendererObserver<T> {
     /// Create a new renderer observer with a callback
     /// The callback is called from the renderer observer whenever a frame is finished rendered
     /// Pass this renderer to the ImageRendererBuilder
-    pub fn new(callback: RendererObserverCallback) -> Self {
+    pub fn new(callback: T) -> Self {
         Self(callback)
     }
 }
@@ -30,10 +29,10 @@ impl RendererObserver {
 /// Map Observer
 #[derive(Debug)]
 pub struct MapObserver {
-    on_will_start_loading_map_callback: Option<EmptyCallback>,
-    on_did_finish_loading_style_callback: Option<EmptyCallback>,
-    on_did_become_idle_callback: Option<EmptyCallback>,
-    on_did_fail_loading_map_callback: Option<FailingLoadingMapCallback>,
+    on_will_start_loading_map_callback: Option<VoidTrampoline>,
+    on_did_finish_loading_style_callback: Option<VoidTrampoline>,
+    on_did_become_idle_callback: Option<VoidTrampoline>,
+    on_did_fail_loading_map_callback: Option<FailingLoadingMapTrampoline>,
 }
 
 impl MapObserver {
@@ -48,19 +47,19 @@ impl MapObserver {
         }
     }
 
-    pub fn set_on_will_start_loading_map_callback(&mut self, callback: EmptyCallback) {
+    pub fn set_on_will_start_loading_map_callback(&mut self, callback: VoidTrampoline) {
         self.on_will_start_loading_map_callback = Some(callback);
     }
 
-    pub fn set_on_did_finish_loading_style_callback(&mut self, callback: EmptyCallback) {
+    pub fn set_on_did_finish_loading_style_callback(&mut self, callback: VoidTrampoline) {
         self.on_did_finish_loading_style_callback = Some(callback);
     }
 
-    pub fn set_on_did_become_idle_callback(&mut self, callback: EmptyCallback) {
+    pub fn set_on_did_become_idle_callback(&mut self, callback: VoidTrampoline) {
         self.on_did_become_idle_callback = Some(callback);
     }
 
-    pub fn set_on_did_fail_loading_map_callback(&mut self, callback: FailingLoadingMapCallback) {
+    pub fn set_on_did_fail_loading_map_callback(&mut self, callback: FailingLoadingMapTrampoline) {
         self.on_did_fail_loading_map_callback = Some(callback);
     }
 }
@@ -304,9 +303,9 @@ impl ImageRendererBuilder {
     /// Builds a continuous renderer
     /// A callback object can be specified to react on events from maplibre
     #[must_use]
-    pub fn build_continuous_renderer(
+    pub fn build_continuous_renderer<T: Fn() -> ()>(
         self,
-        renderer_observer: RendererObserver,
+        renderer_observer: RendererObserver<T>,
         map_observer: MapObserver,
     ) -> ImageRenderer<Continuous> {
         ImageRenderer::new_with_observers(
@@ -344,13 +343,15 @@ impl<S> ImageRenderer<S> {
         Self { instance: map, style_specified: false, _marker: PhantomData }
     }
 
-    fn new_with_observers(
+    fn new_with_observers<T: Fn() -> ()>(
         map_mode: MapMode,
         opts: ImageRendererBuilder,
-        renderer_observer: RendererObserver,
+        renderer_observer: RendererObserver<T>,
         map_observer: MapObserver,
     ) -> Self {
-        let renderer_observer = ffi::RendererObserver_create_observer(renderer_observer.0);
+        let renderer_observer = unsafe {
+            ffi::RendererObserver_create_observer(VoidTrampoline::new(renderer_observer.0))
+        };
         let mut mo = ffi::MapObserver_create_observer();
 
         if let Some(callback) = map_observer.on_will_start_loading_map_callback {

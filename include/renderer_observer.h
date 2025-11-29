@@ -4,20 +4,19 @@
 #include <functional>
 #include <mbgl/renderer/renderer_observer.hpp>
 #include "maplibre_native/src/renderer/bridge.rs.h"
+#include "bridge.h"
 
 namespace mln {
 namespace bridge {
 
-using RendererObserverCallback = void(*)();
-
 class CustomRendererObserver: public mbgl::RendererObserver {
 public:
-    explicit CustomRendererObserver(RendererObserverCallback callback)
+    explicit CustomRendererObserver(VoidTrampoline callback)
         : m_callback(callback) {}
+    CustomRendererObserver() = delete;
 
     void onInvalidate() override {
-        if (m_callback)
-            m_callback();
+        m_callback.call();
     }
 
     void onDidFinishRenderingFrame(mbgl::RendererObserver::RenderMode /*mode*/, bool needsRepaint,
@@ -26,15 +25,12 @@ public:
             onInvalidate();
         }
     }
-
-    
-
 private:
-   RendererObserverCallback m_callback{nullptr}; 
+   VoidTrampoline m_callback;
 };
 
-inline std::unique_ptr<mbgl::RendererObserver> RendererObserver_create_observer(RendererObserverCallback callback) {
-    return std::unique_ptr<mbgl::RendererObserver>(new CustomRendererObserver(callback));
+inline std::unique_ptr<mbgl::RendererObserver> RendererObserver_create_observer(VoidTrampoline trampoline) {
+    return std::unique_ptr<mbgl::RendererObserver>(new CustomRendererObserver(trampoline));
 }
 
 } // namespace bridge

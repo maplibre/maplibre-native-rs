@@ -1,4 +1,6 @@
 use cxx::{ExternType, type_id};
+use std::{marker::PhantomData, os::raw::{c_char, c_void}};
+use crate::renderer::trampoline::{self, FailingLoadingMapTrampoline, VoidTrampoline, DidFinishRenderingFrameTrampoline};
 
 // https://maplibre.org/maplibre-native/docs/book/design/ten-thousand-foot-view.html
 
@@ -22,31 +24,6 @@ fn log_from_cpp(severity: ffi::EventSeverity, event: ffi::Event, code: i64, mess
         }
     }
 }
-
-macro_rules! bridge_callback {
-    ($callback_name:ident, $callback_f:ty) => {
-        #[derive(Debug)]
-        #[repr(transparent)]
-        pub struct $callback_name(pub $callback_f);
-
-        unsafe impl ExternType for $callback_name {
-            type Id = type_id!(mln::bridge::$callback_name); // Name must match!
-            type Kind = cxx::kind::Trivial;
-        }
-    };
-}
-
-// Callback object for the renderer observer
-// The function passed to this object is called by
-// the RendererObserver once a frame is finished rendered
-bridge_callback!(RendererObserverCallback, extern "C" fn());
-bridge_callback!(EmptyCallback, extern "C" fn());
-bridge_callback!(FailingLoadingMapCallback, extern "C" fn(error: ffi::MapLoadError, message: &str));
-
-bridge_callback!(
-    DidFinishRenderingFrameCallback,
-    extern "C" fn(needs_repaint: bool, placement_changed: bool)
-);
 
 #[allow(clippy::borrow_as_ptr)]
 #[cxx::bridge(namespace = "mln::bridge")]
@@ -184,10 +161,9 @@ pub mod ffi {
         type MapObserver; // Created custom map observer
         type MapRenderer;
         // Left side must match a type in C++! Right side must be defined in Rust
-        type RendererObserverCallback = super::RendererObserverCallback;
-        type EmptyCallback = super::EmptyCallback;
-        type FailingLoadingMapCallback = super::FailingLoadingMapCallback;
-        type DidFinishRenderingFrameCallback = super::DidFinishRenderingFrameCallback;
+        type VoidTrampoline = super::VoidTrampoline;
+        type FailingLoadingMapTrampoline = super::FailingLoadingMapTrampoline;
+        type DidFinishRenderingFrameTrampoline = super::DidFinishRenderingFrameTrampoline;
 
         #[allow(clippy::too_many_arguments)]
         fn MapRenderer_new(
@@ -230,6 +206,7 @@ pub mod ffi {
             rendererObserver: UniquePtr<RendererObserver>,
             mapObserver: UniquePtr<MapObserver>,
         ) -> UniquePtr<MapRenderer>;
+        fn MapRenderer_readStillImage(obj: Pin<&mut MapRenderer>) -> UniquePtr<CxxString>;
         fn MapRenderer_render_once(obj: Pin<&mut MapRenderer>);
         fn MapRenderer_render(obj: Pin<&mut MapRenderer>) -> UniquePtr<CxxString>;
         fn MapRenderer_setDebugFlags(obj: Pin<&mut MapRenderer>, flags: MapDebugOptions);
@@ -243,20 +220,22 @@ pub mod ffi {
         );
         fn MapRenderer_getStyle_loadURL(obj: Pin<&mut MapRenderer>, url: &str);
 
-        fn RendererObserver_create_observer(
-            callback: RendererObserverCallback,
+        // RendererObserver: once a frame is finished rendered, the function/ closure passed to
+        // the VoidTrampoline is called
+        unsafe fn RendererObserver_create_observer(
+            callback: VoidTrampoline,
         ) -> UniquePtr<RendererObserver>;
 
         // MapObserver related
         fn MapObserver_create_observer() -> UniquePtr<MapObserver>;
         // With `self: Pin<&mut MapObserver>` as first argument, it is a non static method of that object.
         // cxx searches for such a method
-        fn setOnWillStartLoadingMapCallback(self: Pin<&mut MapObserver>, callback: EmptyCallback);
-        fn setOnDidFinishLoadingStyleCallback(self: Pin<&mut MapObserver>, callback: EmptyCallback);
-        fn setOnDidBecomeIdleCallback(self: Pin<&mut MapObserver>, callback: EmptyCallback);
+        fn setOnWillStartLoadingMapCallback(self: Pin<&mut MapObserver>, callback: VoidTrampoline);
+        fn setOnDidFinishLoadingStyleCallback(self: Pin<&mut MapObserver>, callback: VoidTrampoline);
+        fn setOnDidBecomeIdleCallback(self: Pin<&mut MapObserver>, callback: VoidTrampoline);
         fn setOnDidFailLoadingMapCallback(
             self: Pin<&mut MapObserver>,
-            callback: FailingLoadingMapCallback,
+            callback: FailingLoadingMapTrampoline,
         );
     }
 
