@@ -24,9 +24,11 @@ class MapRenderer {
 public:
     explicit MapRenderer(std::unique_ptr<mbgl::HeadlessFrontend> frontendInstance,
                          std::unique_ptr<mbgl::RendererObserver> observerInstance,
+                         std::unique_ptr<MapObserver> mapObserverInstance,
                          std::unique_ptr<mbgl::Map> mapInstance)
         : frontend(std::move(frontendInstance)),
           observer(std::move(observerInstance)),
+          m_mapObserverInstance(std::move(mapObserverInstance)),
           map(std::move(mapInstance)) {}
     ~MapRenderer() {}
 
@@ -35,6 +37,7 @@ public:
     // Due to CXX limitations, make all these public and access them from the regular functions below
     std::unique_ptr<mbgl::HeadlessFrontend> frontend;
     std::unique_ptr<mbgl::RendererObserver> observer;
+    std::unique_ptr<MapObserver> m_mapObserverInstance;
     std::unique_ptr<mbgl::Map> map;
 };
 
@@ -91,7 +94,7 @@ inline std::unique_ptr<MapRenderer> MapRenderer_new_with_observer(
 
     auto map = std::make_unique<mbgl::Map>(*frontend, *mapObserver, mapOptions, resourceOptions);
 
-    return std::make_unique<MapRenderer>(std::move(frontend), std::move(rendererObserver), std::move(map));
+    return std::make_unique<MapRenderer>(std::move(frontend), std::move(rendererObserver), std::move(mapObserver), std::move(map));
 }
 
 inline std::unique_ptr<MapRenderer> MapRenderer_new(
@@ -131,7 +134,7 @@ inline std::unique_ptr<MapRenderer> MapRenderer_new(
         tileTemplate, 
         requiresApiKey,
         nullptr,
-        std::make_unique<MapObserver>()
+        std::move(std::make_unique<MapObserver>())
     );
 }
 
