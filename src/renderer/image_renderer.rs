@@ -176,8 +176,27 @@ impl ImageRenderer<Tile> {
 }
 
 impl ImageRenderer<Continuous> {
+    pub fn set_camera(&mut self, x: u32, y: u32, zoom: u8, bearing: f64, pitch: f64) {
+        let (lat, lon) = coords_to_lat_lon(f64::from(zoom), x, y);
+        ffi::MapRenderer_setCamera(
+            self.instance.pin_mut(),
+            lat,
+            lon,
+            f64::from(zoom),
+            bearing,
+            pitch,
+        );
+    }
+
     pub fn render_once(&mut self) {
         ffi::MapRenderer_render_once(self.instance.pin_mut());
+    }
+
+    pub fn read_still_image(&mut self) -> Result<Image, RenderingError> {
+        let data = ffi::MapRenderer_readStillImage(self.instance.pin_mut());
+        let bytes = data.as_bytes();
+        let image = Image::from_raw(bytes).ok_or(RenderingError::InvalidImageData)?;
+        Ok(image)
     }
 }
 
