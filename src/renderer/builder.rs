@@ -10,14 +10,14 @@ use crate::renderer::bridge::ffi;
 use crate::renderer::{Continuous, ImageRenderer, MapMode, Static, Tile, bridge};
 
 pub use super::trampoline::DidFinishRenderingFrameTrampoline;
-pub use super::trampoline::VoidTrampoline;
 pub use super::trampoline::FailingLoadingMapTrampoline;
+pub use super::trampoline::VoidTrampoline;
 
 /// Renderer observer
 #[derive(Debug)]
-pub struct RendererObserver<T: Fn() -> ()>(T);
+pub struct RendererObserver<T: Fn() + 'static>(T);
 
-impl<T: Fn() -> ()> RendererObserver<T> {
+impl<T: Fn() + 'static> RendererObserver<T> {
     /// Create a new renderer observer with a callback
     /// The callback is called from the renderer observer whenever a frame is finished rendered
     /// Pass this renderer to the ImageRendererBuilder
@@ -343,7 +343,7 @@ impl<S> ImageRenderer<S> {
         Self { instance: map, style_specified: false, _marker: PhantomData }
     }
 
-    fn new_with_observers<T: Fn() -> ()>(
+    fn new_with_observers<T: Fn() + 'static>(
         map_mode: MapMode,
         opts: ImageRendererBuilder,
         renderer_observer: RendererObserver<T>,

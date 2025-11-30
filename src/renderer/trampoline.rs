@@ -18,7 +18,7 @@ pub struct VoidTrampoline {
 }
 
 impl VoidTrampoline {
-    pub fn new<F: Fn()>(f: F) -> Self {
+    pub fn new<F: Fn() + 'static>(f: F) -> Self {
         // Due to dyn Fn(), the Box `boxed` is a fatpointer (ptr + vtable)
         // We have to convert first to a light pointer because otherwise
         // we are not able to store all data in a raw pointer
@@ -56,7 +56,7 @@ pub struct FailingLoadingMapTrampoline {
 }
 
 impl FailingLoadingMapTrampoline {
-    pub fn new<F: Fn(ffi::MapLoadError, &str)>(f: F) -> Self {
+    pub fn new<F: Fn(ffi::MapLoadError, &str) + 'static>(f: F) -> Self {
         let boxed: Box<F> = Box::new(f);
         let data = Box::into_raw(Box::new(boxed)) as *mut i8;
         Self { f: failingLoadingMapTrampolineFunction, data }
@@ -86,7 +86,7 @@ pub struct DidFinishRenderingFrameTrampoline {
 }
 
 impl DidFinishRenderingFrameTrampoline {
-    pub fn new<F: Fn(bool, bool)>(f: F) -> Self {
+    pub fn new<F: Fn(bool, bool) + 'static>(f: F) -> Self {
         let boxed: Box<F> = Box::new(f);
         let data = Box::into_raw(Box::new(boxed)) as *mut i8;
         Self { f: didFinishRenderingFrameTrampolineFunction, data }
