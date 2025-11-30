@@ -140,6 +140,28 @@ inline std::unique_ptr<MapRenderer> MapRenderer_new(
     );
 }
 
+inline std::unique_ptr<std::string> MapRenderer_readStillImage(MapRenderer& self) {
+    auto image = self.frontend->readStillImage();
+    auto unpremultipliedImage = mbgl::util::unpremultiply(std::move(image));
+
+    // Prepare string with dimensions and pixel data
+    const size_t pixelCount = unpremultipliedImage.size.width * unpremultipliedImage.size.height;
+    std::string data;
+    data.reserve(sizeof(uint32_t) * 2 + pixelCount * 4);
+
+    // First 8 bytes: width and height as uint32_t (little-endian)
+    uint32_t width = unpremultipliedImage.size.width;
+    uint32_t height = unpremultipliedImage.size.height;
+    data.append(reinterpret_cast<const char*>(&width), sizeof(uint32_t));
+    data.append(reinterpret_cast<const char*>(&height), sizeof(uint32_t));
+
+    // Append the unpremultiplied RGBA pixel data directly
+    const char* pixelData = reinterpret_cast<const char*>(unpremultipliedImage.data.get());
+    data.append(pixelData, pixelCount * 4);
+
+    return std::make_unique<std::string>(std::move(data));
+}
+
 inline void MapRenderer_render_once(MapRenderer& self) {
     self.frontend->renderOnce(*self.map);
 }
