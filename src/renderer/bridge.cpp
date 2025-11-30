@@ -7,6 +7,7 @@ namespace mln {
 namespace bridge {
 
 // Wrapper function for MapLibre's Log::useLogThread which takes optional parameters
+// All severities are enabled
 void Log_useLogThread(bool enable) {
     mbgl::Log::useLogThread(enable);
 }
