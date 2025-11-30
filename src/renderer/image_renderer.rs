@@ -176,6 +176,8 @@ impl ImageRenderer<Tile> {
 }
 
 impl ImageRenderer<Continuous> {
+    /// Set the camera
+    /// Important: Without setting the camera initially no image will be generated!
     pub fn set_camera(&mut self, x: u32, y: u32, zoom: u8, bearing: f64, pitch: f64) {
         let (lat, lon) = coords_to_lat_lon(f64::from(zoom), x, y);
         ffi::MapRenderer_setCamera(
