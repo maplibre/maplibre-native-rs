@@ -1,6 +1,12 @@
+use crate::renderer::trampoline::{
+    self, DidFinishRenderingFrameTrampoline, FailingLoadingMapTrampoline, VoidTrampoline,
+};
 use cxx::{ExternType, type_id};
-use std::{marker::PhantomData, os::raw::{c_char, c_void}};
-use crate::renderer::trampoline::{self, FailingLoadingMapTrampoline, VoidTrampoline, DidFinishRenderingFrameTrampoline};
+use std::{
+    marker::PhantomData,
+    ops::Sub,
+    os::raw::{c_char, c_void},
+};
 
 // https://maplibre.org/maplibre-native/docs/book/design/ten-thousand-foot-view.html
 
@@ -22,6 +28,30 @@ fn log_from_cpp(severity: ffi::EventSeverity, event: ffi::Event, code: i64, mess
         ffi::EventSeverity { repr } => {
             log::error!("{event:?} (severity={repr}, code={code}) {message}");
         }
+    }
+}
+
+pub struct X(pub f64);
+pub struct Y(pub f64);
+pub struct Width(pub u32);
+pub struct Height(pub u32);
+
+impl ffi::ScreenCoordinate {
+    pub fn new(x: X, y: Y) -> Self {
+        Self { x: x.0, y: y.0 }
+    }
+}
+
+impl Sub for ffi::ScreenCoordinate {
+    type Output = Self;
+    fn sub(self, rhs: Self) -> Self::Output {
+        Self { x: self.x - rhs.x, y: self.y - rhs.y }
+    }
+}
+
+impl ffi::Size {
+    pub fn new(width: Width, height: Height) -> Self {
+        Self { width: width.0, heigth: height.0 }
     }
 }
 
@@ -132,16 +162,31 @@ pub mod ffi {
         Timing = 16,
     }
 
+    #[derive(Debug, Clone, Copy)]
+    pub struct ScreenCoordinate {
+        x: f64,
+        y: f64,
+    }
+
+    #[derive(Debug, Clone, Copy)]
+    pub struct Size {
+        width: u32,
+        heigth: u32,
+    }
+
     #[namespace = "mbgl"]
     unsafe extern "C++" {
         include!("mbgl/map/mode.hpp");
         include!("mbgl/map/map_observer.hpp");
+        include!("mbgl/util/geo.hpp");
 
         type MapMode;
         type MapDebugOptions;
         pub type EventSeverity;
         pub type Event;
         type MapLoadError;
+        type ScreenCoordinate;
+        type Size;
     }
 
     #[namespace = "mbgl"]
@@ -218,7 +263,10 @@ pub mod ffi {
             bearing: f64,
             pitch: f64,
         );
+        fn MapRenderer_moveBy(obj: Pin<&mut MapRenderer>, delta: &ScreenCoordinate);
+        fn MapRenderer_scaleBy(obj: Pin<&mut MapRenderer>, scale: f64, pos: &ScreenCoordinate);
         fn MapRenderer_getStyle_loadURL(obj: Pin<&mut MapRenderer>, url: &str);
+        fn MapRenderer_setSize(obj: Pin<&mut MapRenderer>, size: &Size);
 
         // RendererObserver: once a frame is finished rendered, the function/ closure passed to
         // the VoidTrampoline is called
@@ -231,7 +279,10 @@ pub mod ffi {
         // With `self: Pin<&mut MapObserver>` as first argument, it is a non static method of that object.
         // cxx searches for such a method
         fn setOnWillStartLoadingMapCallback(self: Pin<&mut MapObserver>, callback: VoidTrampoline);
-        fn setOnDidFinishLoadingStyleCallback(self: Pin<&mut MapObserver>, callback: VoidTrampoline);
+        fn setOnDidFinishLoadingStyleCallback(
+            self: Pin<&mut MapObserver>,
+            callback: VoidTrampoline,
+        );
         fn setOnDidBecomeIdleCallback(self: Pin<&mut MapObserver>, callback: VoidTrampoline);
         fn setOnDidFailLoadingMapCallback(
             self: Pin<&mut MapObserver>,
@@ -249,5 +300,20 @@ pub mod ffi {
         include!("rust_log_observer.h");
 
         fn Log_useLogThread(enable: bool);
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::{ScreenCoordinate, X, Y};
+
+    #[test]
+    fn screen_corrdinate_diff() {
+        let s1 = ScreenCoordinate::new(X(5.), Y(-1.));
+        let s2 = ScreenCoordinate::new(X(3.), Y(-10.));
+
+        let res = s1 - s2;
+        assert_eq!(res.x, 2.);
+        assert_eq!(res.y, 9.);
     }
 }

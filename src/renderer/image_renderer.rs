@@ -8,6 +8,7 @@ use image::{ImageBuffer, Rgba};
 
 use crate::renderer::MapDebugOptions;
 use crate::renderer::bridge::ffi;
+use crate::{ScreenCoordinate, Size};
 
 /// A rendered map image.
 ///
@@ -188,6 +189,18 @@ impl ImageRenderer<Continuous> {
             bearing,
             pitch,
         );
+    }
+
+    pub fn move_by(&mut self, delta: ScreenCoordinate) {
+        ffi::MapRenderer_moveBy(self.instance.pin_mut(), &delta);
+    }
+
+    pub fn scale_by(&mut self, scale: f64, pos: ScreenCoordinate) {
+        ffi::MapRenderer_scaleBy(self.instance.pin_mut(), scale, &pos);
+    }
+
+    pub fn set_map_size(&mut self, size: Size) {
+        ffi::MapRenderer_setSize(self.instance.pin_mut(), &size);
     }
 
     pub fn render_once(&mut self) {

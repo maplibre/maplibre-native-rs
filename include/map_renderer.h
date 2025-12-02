@@ -30,7 +30,10 @@ public:
           observer(std::move(observerInstance)),
           m_mapObserverInstance(std::move(mapObserverInstance)),
           map(std::move(mapInstance)) {}
-    ~MapRenderer() {}
+    ~MapRenderer() {
+        if (frontend)
+            frontend->reset();
+    }
 
 public:
     mbgl::util::RunLoop runLoop;
@@ -136,7 +139,7 @@ inline std::unique_ptr<MapRenderer> MapRenderer_new(
         tileTemplate, 
         requiresApiKey,
         nullptr,
-        std::move(std::make_unique<MapObserver>())
+        std::make_unique<MapObserver>()
     );
 }
 
@@ -191,6 +194,12 @@ inline std::unique_ptr<std::string> MapRenderer_render(MapRenderer& self) {
     return std::make_unique<std::string>(std::move(data));
 }
 
+inline void MapRenderer_setSize(MapRenderer& self, const mbgl::Size& size) {
+    if (size.width == 0 || size.height == 0)
+        return; // Otherwise we run into an exception
+    self.frontend->setSize(size);
+}
+
 inline void MapRenderer_setDebugFlags(MapRenderer& self, mbgl::MapDebugOptions debugFlags) {
     self.map->setDebug(debugFlags);
 }
@@ -203,6 +212,14 @@ inline void MapRenderer_setCamera(
     mbgl::CameraOptions cameraOptions;
     cameraOptions.withCenter(mbgl::LatLng{lat, lon}).withZoom(zoom).withBearing(bearing).withPitch(pitch);
     self.map->jumpTo(cameraOptions);
+}
+
+inline void MapRenderer_moveBy(MapRenderer& self, const mbgl::ScreenCoordinate& delta) {
+    self.map->moveBy(delta);
+}
+
+inline void MapRenderer_scaleBy(MapRenderer& self, double scale, const mbgl::ScreenCoordinate& pos) {
+    self.map->scaleBy(scale, pos);
 }
 
 inline void MapRenderer_getStyle_loadURL(MapRenderer& self, const rust::Str styleUrl) {
