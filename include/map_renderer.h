@@ -32,7 +32,7 @@ public:
           map(std::move(mapInstance)) {}
     ~MapRenderer() {
         if (frontend)
-            frontend->reset();
+            frontend->reset(); // Reset renderer and therefore detach renderer observer
     }
 
 public:

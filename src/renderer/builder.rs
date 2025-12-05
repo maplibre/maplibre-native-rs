@@ -21,8 +21,8 @@ impl<T: Fn() + 'static> RendererObserver<T> {
     /// Create a new renderer observer with a callback
     /// The callback is called from the renderer observer whenever a frame is finished rendered
     /// Pass this renderer to the ImageRendererBuilder
-    pub fn new(callback: T) -> Self {
-        Self(callback)
+    pub fn new(finish_rendering_frame_callback: T) -> Self {
+        Self(finish_rendering_frame_callback)
     }
 }
 
