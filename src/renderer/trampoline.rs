@@ -1,6 +1,6 @@
 use crate::renderer::bridge::ffi;
-use cxx::ExternType;
 use cxx::type_id;
+use cxx::ExternType;
 
 // Generic Callback objects
 // The function passed to this object is called by the corresponding object
@@ -24,7 +24,10 @@ impl VoidTrampoline {
         // we are not able to store all data in a raw pointer
         let boxed: Box<dyn Fn()> = Box::new(f);
         let data = Box::into_raw(Box::new(boxed)) as *mut i8;
-        Self { f: voidTrampolineFunction, data }
+        Self {
+            f: voidTrampolineFunction,
+            data,
+        }
     }
 }
 
@@ -59,7 +62,10 @@ impl FailingLoadingMapTrampoline {
     pub fn new<F: Fn(ffi::MapLoadError, &str) + 'static>(f: F) -> Self {
         let boxed: Box<F> = Box::new(f);
         let data = Box::into_raw(Box::new(boxed)) as *mut i8;
-        Self { f: failingLoadingMapTrampolineFunction, data }
+        Self {
+            f: failingLoadingMapTrampolineFunction,
+            data,
+        }
     }
 }
 
@@ -89,7 +95,10 @@ impl DidFinishRenderingFrameTrampoline {
     pub fn new<F: Fn(bool, bool) + 'static>(f: F) -> Self {
         let boxed: Box<F> = Box::new(f);
         let data = Box::into_raw(Box::new(boxed)) as *mut i8;
-        Self { f: didFinishRenderingFrameTrampolineFunction, data }
+        Self {
+            f: didFinishRenderingFrameTrampolineFunction,
+            data,
+        }
     }
 }
 
