@@ -1,66 +1,80 @@
 //! Image renderer configuration and builder
 
+use crate::renderer::bridge::ffi;
+use crate::renderer::bridge::ffi::{MapLoadError, MapObserverCameraChangeMode};
+pub use crate::renderer::callbacks::{
+    CameraDidChangeCallback, FailingLoadingMapCallback, FinishRenderingFrameCallback, VoidCallback,
+};
+use crate::renderer::{Continuous, ImageRenderer, MapMode, Static, Tile, bridge};
 use cxx::UniquePtr;
 use std::ffi::OsString;
 use std::marker::PhantomData;
 use std::num::NonZeroU32;
 use std::path::PathBuf;
 
-use crate::renderer::bridge::ffi;
-use crate::renderer::trampoline::VoidCallback;
-use crate::renderer::{Continuous, ImageRenderer, MapMode, Static, Tile, bridge};
-
-pub use super::trampoline::DidFinishRenderingFrameTrampoline;
-pub use super::trampoline::FailingLoadingMapTrampoline;
-pub use super::trampoline::VoidTrampoline;
-
 /// Renderer observer
-pub struct RendererObserver(Box<VoidCallback>);
+pub struct RendererObserver(Box<FinishRenderingFrameCallback>);
 
 impl RendererObserver {
     /// Create a new renderer observer with a callback
     /// The callback is called from the renderer observer whenever a frame is finished rendered
     /// Pass this renderer to the ImageRendererBuilder
-    pub fn new<T: Fn() + 'static>(finish_rendering_frame_callback: T) -> Self {
-        Self(Box::new(VoidCallback::new(finish_rendering_frame_callback)))
+    pub fn new<T: Fn(bool, bool) + 'static>(finish_rendering_frame_callback: T) -> Self {
+        Self(Box::new(FinishRenderingFrameCallback::new(finish_rendering_frame_callback)))
     }
 }
 
 /// Map Observer
-#[derive(Debug)]
+#[derive(Default)]
 pub struct MapObserver {
-    on_will_start_loading_map_callback: Option<VoidTrampoline>,
-    on_did_finish_loading_style_callback: Option<VoidTrampoline>,
-    on_did_become_idle_callback: Option<VoidTrampoline>,
-    on_did_fail_loading_map_callback: Option<FailingLoadingMapTrampoline>,
+    will_start_loading_map_callback: Option<Box<VoidCallback>>,
+    did_finish_loading_style_callback: Option<Box<VoidCallback>>,
+    did_become_idle_callback: Option<Box<VoidCallback>>,
+    did_fail_loading_map_callback: Option<Box<FailingLoadingMapCallback>>,
+    camera_changed_callback: Option<Box<CameraDidChangeCallback>>,
+    finished_rendering_frame_callback: Option<Box<FinishRenderingFrameCallback>>,
 }
 
 impl MapObserver {
     /// Creates a new map observer
     /// Any callback is activated and must be done by using the corresponding setter functions
     pub fn new() -> Self {
-        Self {
-            on_did_become_idle_callback: None,
-            on_did_fail_loading_map_callback: None,
-            on_did_finish_loading_style_callback: None,
-            on_will_start_loading_map_callback: None,
-        }
+        Self::default()
     }
 
-    pub fn set_on_will_start_loading_map_callback(&mut self, callback: VoidTrampoline) {
-        self.on_will_start_loading_map_callback = Some(callback);
+    pub fn set_will_start_loading_map_callback<F: Fn() + 'static>(&mut self, callback: F) {
+        self.will_start_loading_map_callback = Some(Box::new(VoidCallback::new(callback)));
     }
 
-    pub fn set_on_did_finish_loading_style_callback(&mut self, callback: VoidTrampoline) {
-        self.on_did_finish_loading_style_callback = Some(callback);
+    pub fn set_did_finish_loading_style_callback<F: Fn() + 'static>(&mut self, callback: F) {
+        self.did_finish_loading_style_callback = Some(Box::new(VoidCallback::new(callback)));
     }
 
-    pub fn set_on_did_become_idle_callback(&mut self, callback: VoidTrampoline) {
-        self.on_did_become_idle_callback = Some(callback);
+    pub fn set_did_become_idle_callback<F: Fn() + 'static>(&mut self, callback: F) {
+        self.did_become_idle_callback = Some(Box::new(VoidCallback::new(callback)));
     }
 
-    pub fn set_on_did_fail_loading_map_callback(&mut self, callback: FailingLoadingMapTrampoline) {
-        self.on_did_fail_loading_map_callback = Some(callback);
+    pub fn set_did_fail_loading_map_callback<F: Fn(MapLoadError, &str) + 'static>(
+        &mut self,
+        callback: F,
+    ) {
+        self.did_fail_loading_map_callback =
+            Some(Box::new(FailingLoadingMapCallback::new(callback)));
+    }
+
+    pub fn set_camera_changed_callback<F: Fn(MapObserverCameraChangeMode) + 'static>(
+        &mut self,
+        callback: F,
+    ) {
+        self.camera_changed_callback = Some(Box::new(CameraDidChangeCallback::new(callback)));
+    }
+
+    pub fn set_finish_rendering_frame_callback<F: Fn(bool, bool) + 'static>(
+        &mut self,
+        callback: F,
+    ) {
+        self.finished_rendering_frame_callback =
+            Some(Box::new(FinishRenderingFrameCallback::new(callback)));
     }
 }
 
@@ -350,30 +364,28 @@ impl<S> ImageRenderer<S> {
         map_observer: MapObserver,
     ) -> Self {
         let a = 5;
-        let renderer_observer = unsafe {
-            ffi::RendererObserver_create_observer(
-                // voidTrampolineFunctionNew,
-                Box::new(VoidCallback::new(move || {
-                    println!("Hello world: {a}");
-                })),
-            )
-        };
+        let renderer_observer =
+            unsafe { ffi::RendererObserver_create_observer(renderer_observer.0) };
         let mut mo = ffi::MapObserver_create_observer();
 
-        if let Some(callback) = map_observer.on_will_start_loading_map_callback {
-            mo.pin_mut().setOnWillStartLoadingMapCallback(callback);
+        if let Some(callback) = map_observer.will_start_loading_map_callback {
+            mo.pin_mut().setWillStartLoadingMapCallback(callback);
         }
 
-        if let Some(callback) = map_observer.on_did_finish_loading_style_callback {
-            mo.pin_mut().setOnDidFinishLoadingStyleCallback(callback);
+        if let Some(callback) = map_observer.did_finish_loading_style_callback {
+            mo.pin_mut().setFinishLoadingStyleCallback(callback);
         }
 
-        if let Some(callback) = map_observer.on_did_become_idle_callback {
-            mo.pin_mut().setOnDidBecomeIdleCallback(callback);
+        if let Some(callback) = map_observer.did_become_idle_callback {
+            mo.pin_mut().setBecomeIdleCallback(callback);
         }
 
-        if let Some(callback) = map_observer.on_did_fail_loading_map_callback {
-            mo.pin_mut().setOnDidFailLoadingMapCallback(callback);
+        if let Some(callback) = map_observer.did_fail_loading_map_callback {
+            mo.pin_mut().setFailLoadingMapCallback(callback);
+        }
+
+        if let Some(callback) = map_observer.camera_changed_callback {
+            mo.pin_mut().setCameraDidChangeCallback(callback);
         }
 
         let map = ffi::MapRenderer_new_with_observer(

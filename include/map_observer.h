@@ -3,99 +3,96 @@
 #include "rust/cxx.h"
 #include <mbgl/map/map_observer.hpp>
 #include <memory>
+#include <optional>
 #include "bridge.h"
 
 namespace mln {
 namespace bridge {
 
+    // Forward declarations
     using MapObserverCameraChangeMode = mbgl::MapObserver::CameraChangeMode; // Required, because enum nested in class is not supported by cxx
 
-    struct FailingLoadingMapTrampoline {
-        void call(mbgl::MapLoadError error, const std::string& what) {
-            if (trampoline_function) {
-                trampoline_function(function_pointer, error, what);
-            }
-        }
-        private:
-            void(*trampoline_function)(std::int8_t* function_pointer, mbgl::MapLoadError, const std::string&){nullptr};
-            std::int8_t* function_pointer{nullptr};
-    };
+    class VoidCallback;
+    void void_callback(VoidCallback const& callback) noexcept;
 
-    struct CameraDidChangeTrampoline {
-        void call(MapObserverCameraChangeMode mode) {
-            if (trampoline_function) {
-                trampoline_function(function_pointer, mode);
-            }
-        }
-        private:
-            void(*trampoline_function)(std::int8_t* function_pointer, MapObserverCameraChangeMode mode) {nullptr};
-            std::int8_t* function_pointer{nullptr};
-    };
+    class FailingLoadingMapCallback;
+    void failing_loading_map_callback(FailingLoadingMapCallback const& callback, mbgl::MapLoadError error, const rust::Str what) noexcept;
 
-    struct DidFinishRenderingFrameTrampoline {
-        void call(bool needsRepaint, bool placementChanged) {
-            if (trampoline_function) {
-                trampoline_function(function_pointer, needsRepaint, placementChanged);
-            }
-        }
-        private:
-            void(*trampoline_function)(std::int8_t* function_pointer, bool needsRepaint, bool placementChanged) {nullptr};
-            std::int8_t* function_pointer{nullptr};
-    };
+    class CameraDidChangeCallback;
+    void camera_did_change_callback(CameraDidChangeCallback const& callback, MapObserverCameraChangeMode mode) noexcept;
+
+    class FinishRenderingFrameCallback;
+    void finish_rendering_frame_callback(FinishRenderingFrameCallback const& callback, bool needsRepaint, bool placementChanged) noexcept;
 
     class MapObserver: public mbgl::MapObserver {
         public:
-            void setOnWillStartLoadingMapCallback(VoidTrampoline callback) {
-                onWillStartLoadingMapCallback = callback;
+            void setWillStartLoadingMapCallback(rust::Box<VoidCallback> callback) {
+                willStartLoadingMapCallback = std::optional<rust::Box<VoidCallback>>{std::move(callback)};
             }
 
-            void setOnDidFinishLoadingStyleCallback(VoidTrampoline callback) {
-                onWillStartLoadingMapCallback = callback;
+            void setFinishLoadingStyleCallback(rust::Box<VoidCallback> callback) {
+                finishLoadingStyleCallback = std::optional<rust::Box<VoidCallback>>{std::move(callback)};
             }
 
-            void setOnDidBecomeIdleCallback(VoidTrampoline callback) {
-                onWillStartLoadingMapCallback = callback;
+            void setBecomeIdleCallback(rust::Box<VoidCallback> callback) {
+                becomeIdleCallback = std::optional<rust::Box<VoidCallback>>{std::move(callback)};
             }
 
-            void setOnDidFailLoadingMapCallback(FailingLoadingMapTrampoline callback) {
-                onDidFailLoadingMapCallback = callback;
+            void setFailLoadingMapCallback(rust::Box<FailingLoadingMapCallback> callback) {
+                failLoadingMapCallback = std::optional<rust::Box<FailingLoadingMapCallback>>{std::move(callback)};
             }
 
-            void setDidFinishRenderingFrameCallback(DidFinishRenderingFrameTrampoline callback) {
-                onDidFinishRenderingFrameCallback = callback;
+            void setFinishRenderingFrameCallback(rust::Box<FinishRenderingFrameCallback> callback) {
+                finishRenderingFrameCallback = std::optional<rust::Box<FinishRenderingFrameCallback>>{std::move(callback)};
+            }
+
+            void setCameraDidChangeCallback(rust::Box<CameraDidChangeCallback> callback) {
+                cameraDidChangeCallback = std::optional<rust::Box<CameraDidChangeCallback>>{std::move(callback)};
             }
 
         private:
             void onWillStartLoadingMap() override {
-                onWillStartLoadingMapCallback.call();
+                try {
+                    void_callback(*willStartLoadingMapCallback.value());
+                } catch (...) {}
             }
             void onDidFinishLoadingStyle() override {
-                onDidFinishLoadingStyleCallback.call();
+                try {
+                    void_callback(*(finishLoadingStyleCallback.value()));
+                } catch (...) {}
             }
             void onDidBecomeIdle() override {
-                onDidBecomeIdleCallback.call();
+                try {
+                    void_callback(*(becomeIdleCallback.value()));
+                } catch (...) {}
             }
 
             void onDidFailLoadingMap(mbgl::MapLoadError error, const std::string& what) override {
-                onDidFailLoadingMapCallback.call(error, what);
+                try {
+                    failing_loading_map_callback(*(failLoadingMapCallback.value()), error, what);
+                } catch (...) {}
             }
 
             void onCameraDidChange(MapObserverCameraChangeMode mode) override {
-                onCameraDidChangeCallback.call(mode);
+                try {
+                    camera_did_change_callback(*(cameraDidChangeCallback.value()), mode);
+                } catch (...) {}
             }
             // void onSourceChanged(mbgl::style::Source&) override;
 
             void onDidFinishRenderingFrame(const mbgl::MapObserver::RenderFrameStatus& status) override {
-                onDidFinishRenderingFrameCallback.call(status.needsRepaint, status.placementChanged);
+                try {
+                    finish_rendering_frame_callback(*(finishRenderingFrameCallback.value()), status.needsRepaint, status.placementChanged);
+                } catch (...) {}
             }
 
         private:
-            VoidTrampoline onWillStartLoadingMapCallback;
-            VoidTrampoline onDidFinishLoadingStyleCallback;
-            VoidTrampoline onDidBecomeIdleCallback;
-            FailingLoadingMapTrampoline onDidFailLoadingMapCallback;
-            CameraDidChangeTrampoline onCameraDidChangeCallback;
-            DidFinishRenderingFrameTrampoline onDidFinishRenderingFrameCallback;
+            std::optional<rust::Box<VoidCallback>> willStartLoadingMapCallback;
+            std::optional<rust::Box<VoidCallback>> finishLoadingStyleCallback;
+            std::optional<rust::Box<VoidCallback>> becomeIdleCallback;
+            std::optional<rust::Box<FailingLoadingMapCallback>> failLoadingMapCallback;
+            std::optional<rust::Box<CameraDidChangeCallback>> cameraDidChangeCallback;
+            std::optional<rust::Box<FinishRenderingFrameCallback>> finishRenderingFrameCallback;
     };
 
     inline std::unique_ptr<MapObserver> MapObserver_create_observer() {

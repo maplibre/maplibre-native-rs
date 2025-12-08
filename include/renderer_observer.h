@@ -8,31 +8,25 @@
 namespace mln {
 namespace bridge {
 
-class VoidCallback; // Required, because this file gets included into the bridge.rs file and therefore added to the mablibre_native/bridige.rs.h
-void void_callback(VoidCallback const &trampoline) noexcept;
+// Forward declarations
+class FinishRenderingFrameCallback; // Required, because this file gets included into the bridge.rs file and therefore added to the mablibre_native/bridige.rs.h
+void finish_rendering_frame_callback(FinishRenderingFrameCallback const &callback, bool, bool) noexcept;
 
 class CustomRendererObserver: public mbgl::RendererObserver {
 public:
-    explicit CustomRendererObserver(rust::Box<VoidCallback> callback)
+    explicit CustomRendererObserver(rust::Box<FinishRenderingFrameCallback> callback)
         : m_callback(std::move(callback)) {}
     CustomRendererObserver() = delete;
 
-    void onInvalidate() override {
-        void_callback(*m_callback);
-    }
-
-    void onDidFinishRenderingFrame(mbgl::RendererObserver::RenderMode /*mode*/, bool needsRepaint,
-                                   bool placementChanged) override {
-        if (needsRepaint || placementChanged) {
-            onInvalidate();
-        }
+    void onDidFinishRenderingFrame(mbgl::RendererObserver::RenderMode /*mode*/, bool needsRepaint, bool placementChanged) override {
+        finish_rendering_frame_callback(*m_callback, needsRepaint, placementChanged);
     }
 private:
-   rust::Box<VoidCallback> m_callback;
+   rust::Box<FinishRenderingFrameCallback> m_callback;
 };
 
-inline std::unique_ptr<mbgl::RendererObserver> RendererObserver_create_observer(rust::Box<VoidCallback> payload) {
-    return std::unique_ptr<mbgl::RendererObserver>(new CustomRendererObserver(std::move(payload)));
+inline std::unique_ptr<mbgl::RendererObserver> RendererObserver_create_observer(rust::Box<FinishRenderingFrameCallback> callback) {
+    return std::unique_ptr<mbgl::RendererObserver>(new CustomRendererObserver(std::move(callback)));
 }
 
 } // namespace bridge

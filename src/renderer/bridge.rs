@@ -1,7 +1,4 @@
-use crate::renderer::trampoline::{
-    self, DidFinishRenderingFrameTrampoline, FailingLoadingMapTrampoline, VoidCallback,
-    VoidTrampoline, void_callback,
-};
+use crate::renderer::callbacks::*;
 use cxx::{ExternType, type_id};
 use std::{
     marker::PhantomData,
@@ -203,13 +200,10 @@ pub mod ffi {
         include!("map_observer.h"); // Required to find functions below
 
         type MapObserverCameraChangeMode;
-
         type MapObserver; // Created custom map observer
         type MapRenderer;
         // Left side must match a type in C++! Right side must be defined in Rust
-        type VoidTrampoline = super::VoidTrampoline;
-        type FailingLoadingMapTrampoline = super::FailingLoadingMapTrampoline;
-        type DidFinishRenderingFrameTrampoline = super::DidFinishRenderingFrameTrampoline;
+        // example: type VoidCallback = super::VoidTrVoidCallbackampoline;
 
         #[allow(clippy::too_many_arguments)]
         fn MapRenderer_new(
@@ -271,31 +265,53 @@ pub mod ffi {
 
         // RendererObserver: once a frame is finished rendered, the function/ closure passed to
         // the VoidTrampoline is called
-        unsafe fn RendererObserver_create_observer(
-            trampoline: Box<VoidCallback>,
+        fn RendererObserver_create_observer(
+            callback: Box<FinishRenderingFrameCallback>,
         ) -> UniquePtr<RendererObserver>;
 
         // MapObserver related
         fn MapObserver_create_observer() -> UniquePtr<MapObserver>;
         // With `self: Pin<&mut MapObserver>` as first argument, it is a non static method of that object.
         // cxx searches for such a method
-        fn setOnWillStartLoadingMapCallback(self: Pin<&mut MapObserver>, callback: VoidTrampoline);
-        fn setOnDidFinishLoadingStyleCallback(
+        fn setWillStartLoadingMapCallback(self: Pin<&mut MapObserver>, callback: Box<VoidCallback>);
+        fn setFinishLoadingStyleCallback(self: Pin<&mut MapObserver>, callback: Box<VoidCallback>);
+        fn setBecomeIdleCallback(self: Pin<&mut MapObserver>, callback: Box<VoidCallback>);
+        fn setFailLoadingMapCallback(
             self: Pin<&mut MapObserver>,
-            callback: VoidTrampoline,
+            callback: Box<FailingLoadingMapCallback>,
         );
-        fn setOnDidBecomeIdleCallback(self: Pin<&mut MapObserver>, callback: VoidTrampoline);
-        fn setOnDidFailLoadingMapCallback(
+        fn setFinishRenderingFrameCallback(
             self: Pin<&mut MapObserver>,
-            callback: FailingLoadingMapTrampoline,
+            callback: Box<FinishRenderingFrameCallback>,
+        );
+        fn setCameraDidChangeCallback(
+            self: Pin<&mut MapObserver>,
+            callback: Box<CameraDidChangeCallback>,
         );
     }
 
     // Declarations for C++ with implementations in Rust
     extern "Rust" {
         type VoidCallback;
+        type FinishRenderingFrameCallback;
+        type CameraDidChangeCallback;
+        type FailingLoadingMapCallback;
 
-        fn void_callback(trampoline: &VoidCallback);
+        fn void_callback(callback: &VoidCallback);
+        fn finish_rendering_frame_callback(
+            callback: &FinishRenderingFrameCallback,
+            needsRepaint: bool,
+            placementChanged: bool,
+        );
+        fn camera_did_change_callback(
+            callback: &CameraDidChangeCallback,
+            mode: MapObserverCameraChangeMode,
+        );
+        fn failing_loading_map_callback(
+            callback: &FailingLoadingMapCallback,
+            error: MapLoadError,
+            what: &str,
+        );
 
         /// Bridge logging from C++ to Rust log crate
         fn log_from_cpp(severity: EventSeverity, event: Event, code: i64, message: &str);
