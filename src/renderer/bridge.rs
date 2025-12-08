@@ -1,5 +1,6 @@
 use crate::renderer::trampoline::{
-    self, DidFinishRenderingFrameTrampoline, FailingLoadingMapTrampoline, VoidTrampoline,
+    self, DidFinishRenderingFrameTrampoline, FailingLoadingMapTrampoline, VoidCallback,
+    VoidTrampoline, void_callback,
 };
 use cxx::{ExternType, type_id};
 use std::{
@@ -271,7 +272,7 @@ pub mod ffi {
         // RendererObserver: once a frame is finished rendered, the function/ closure passed to
         // the VoidTrampoline is called
         unsafe fn RendererObserver_create_observer(
-            callback: VoidTrampoline,
+            trampoline: Box<VoidCallback>,
         ) -> UniquePtr<RendererObserver>;
 
         // MapObserver related
@@ -292,6 +293,10 @@ pub mod ffi {
 
     // Declarations for C++ with implementations in Rust
     extern "Rust" {
+        type VoidCallback;
+
+        fn void_callback(trampoline: &VoidCallback);
+
         /// Bridge logging from C++ to Rust log crate
         fn log_from_cpp(severity: EventSeverity, event: Event, code: i64, message: &str);
     }

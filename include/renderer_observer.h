@@ -4,19 +4,21 @@
 #include <functional>
 #include <mbgl/renderer/renderer_observer.hpp>
 #include "maplibre_native/src/renderer/bridge.rs.h"
-#include "bridge.h"
 
 namespace mln {
 namespace bridge {
 
+class VoidCallback; // Required, because this file gets included into the bridge.rs file and therefore added to the mablibre_native/bridige.rs.h
+void void_callback(VoidCallback const &trampoline) noexcept;
+
 class CustomRendererObserver: public mbgl::RendererObserver {
 public:
-    explicit CustomRendererObserver(VoidTrampoline callback)
-        : m_callback(callback) {}
+    explicit CustomRendererObserver(rust::Box<VoidCallback> callback)
+        : m_callback(std::move(callback)) {}
     CustomRendererObserver() = delete;
 
     void onInvalidate() override {
-        m_callback.call();
+        void_callback(*m_callback);
     }
 
     void onDidFinishRenderingFrame(mbgl::RendererObserver::RenderMode /*mode*/, bool needsRepaint,
@@ -26,11 +28,11 @@ public:
         }
     }
 private:
-   VoidTrampoline m_callback;
+   rust::Box<VoidCallback> m_callback;
 };
 
-inline std::unique_ptr<mbgl::RendererObserver> RendererObserver_create_observer(VoidTrampoline trampoline) {
-    return std::unique_ptr<mbgl::RendererObserver>(new CustomRendererObserver(trampoline));
+inline std::unique_ptr<mbgl::RendererObserver> RendererObserver_create_observer(rust::Box<VoidCallback> payload) {
+    return std::unique_ptr<mbgl::RendererObserver>(new CustomRendererObserver(std::move(payload)));
 }
 
 } // namespace bridge

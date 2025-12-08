@@ -1,6 +1,21 @@
 use crate::renderer::bridge::ffi;
+use crate::renderer::trampoline;
 use cxx::ExternType;
 use cxx::type_id;
+
+pub fn void_callback(trampoline: &VoidCallback) {
+    (trampoline.f)();
+}
+
+pub struct VoidCallback {
+    f: Box<dyn Fn() + 'static>,
+}
+
+impl VoidCallback {
+    pub fn new<F: Fn() + 'static>(callback: F) -> Self {
+        Self { f: Box::new(callback) }
+    }
+}
 
 // Generic Callback objects
 // The function passed to this object is called by the corresponding object
@@ -34,11 +49,6 @@ unsafe impl ExternType for VoidTrampoline {
 }
 
 // #############################################################################
-
-// bridge_callback!(
-//     DidFinishRenderingFrameCallback,
-//     extern "C" fn(needs_repaint: bool, placement_changed: bool)
-// );
 
 extern "C" fn failingLoadingMapTrampolineFunction(
     data: *mut i8,

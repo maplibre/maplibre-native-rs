@@ -7,6 +7,7 @@ use std::num::NonZeroU32;
 use std::path::PathBuf;
 
 use crate::renderer::bridge::ffi;
+use crate::renderer::trampoline::VoidCallback;
 use crate::renderer::{Continuous, ImageRenderer, MapMode, Static, Tile, bridge};
 
 pub use super::trampoline::DidFinishRenderingFrameTrampoline;
@@ -14,15 +15,14 @@ pub use super::trampoline::FailingLoadingMapTrampoline;
 pub use super::trampoline::VoidTrampoline;
 
 /// Renderer observer
-#[derive(Debug)]
-pub struct RendererObserver<T: Fn() + 'static>(T);
+pub struct RendererObserver(Box<VoidCallback>);
 
-impl<T: Fn() + 'static> RendererObserver<T> {
+impl RendererObserver {
     /// Create a new renderer observer with a callback
     /// The callback is called from the renderer observer whenever a frame is finished rendered
     /// Pass this renderer to the ImageRendererBuilder
-    pub fn new(finish_rendering_frame_callback: T) -> Self {
-        Self(finish_rendering_frame_callback)
+    pub fn new<T: Fn() + 'static>(finish_rendering_frame_callback: T) -> Self {
+        Self(Box::new(VoidCallback::new(finish_rendering_frame_callback)))
     }
 }
 
@@ -303,9 +303,9 @@ impl ImageRendererBuilder {
     /// Builds a continuous renderer
     /// A callback object can be specified to react on events from maplibre
     #[must_use]
-    pub fn build_continuous_renderer<T: Fn() -> ()>(
+    pub fn build_continuous_renderer(
         self,
-        renderer_observer: RendererObserver<T>,
+        renderer_observer: RendererObserver,
         map_observer: MapObserver,
     ) -> ImageRenderer<Continuous> {
         ImageRenderer::new_with_observers(
@@ -343,14 +343,20 @@ impl<S> ImageRenderer<S> {
         Self { instance: map, style_specified: false, _marker: PhantomData }
     }
 
-    fn new_with_observers<T: Fn() + 'static>(
+    fn new_with_observers(
         map_mode: MapMode,
         opts: ImageRendererBuilder,
-        renderer_observer: RendererObserver<T>,
+        renderer_observer: RendererObserver,
         map_observer: MapObserver,
     ) -> Self {
+        let a = 5;
         let renderer_observer = unsafe {
-            ffi::RendererObserver_create_observer(VoidTrampoline::new(renderer_observer.0))
+            ffi::RendererObserver_create_observer(
+                // voidTrampolineFunctionNew,
+                Box::new(VoidCallback::new(move || {
+                    println!("Hello world: {a}");
+                })),
+            )
         };
         let mut mo = ffi::MapObserver_create_observer();
 
