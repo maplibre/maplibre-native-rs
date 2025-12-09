@@ -26,7 +26,7 @@ pool = ["dep:tokio"]
 [dependencies]
 cxx.workspace = true
 image.workspace = true
-log = { workspace = true, optional = true, default-features = false, features = ["max_level_trace"]}
+log = { workspace = true, optional = true}
 thiserror.workspace = true
 tokio = { workspace = true, features = ["sync"], optional = true }
 url.workspace = true

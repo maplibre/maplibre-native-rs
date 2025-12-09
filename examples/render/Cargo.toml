@@ -16,10 +16,6 @@ env_logger.workspace = true
 log.workspace = true
 maplibre_native.workspace = true
 url.workspace = true
-slint = { version = "1.14", features = ["backend-android-activity-06"] }
 
 [lints]
 workspace = true
-
-[build-dependencies]
-slint-build = { version = "1.14"  }

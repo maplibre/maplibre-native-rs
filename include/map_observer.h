@@ -4,7 +4,6 @@
 #include <mbgl/map/map_observer.hpp>
 #include <memory>
 #include <optional>
-#include "bridge.h"
 
 namespace mln {
 namespace bridge {
