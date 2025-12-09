@@ -1,5 +1,5 @@
 use crate::renderer::callbacks::*;
-use cxx::{ExternType, type_id};
+use cxx::{type_id, ExternType};
 use std::{
     marker::PhantomData,
     ops::Sub,
@@ -43,13 +43,19 @@ impl ffi::ScreenCoordinate {
 impl Sub for ffi::ScreenCoordinate {
     type Output = Self;
     fn sub(self, rhs: Self) -> Self::Output {
-        Self { x: self.x - rhs.x, y: self.y - rhs.y }
+        Self {
+            x: self.x - rhs.x,
+            y: self.y - rhs.y,
+        }
     }
 }
 
 impl ffi::Size {
     pub fn new(width: Width, height: Height) -> Self {
-        Self { width: width.0, heigth: height.0 }
+        Self {
+            width: width.0,
+            heigth: height.0,
+        }
     }
 }
 
