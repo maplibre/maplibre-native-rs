@@ -69,7 +69,9 @@ impl MapObserver {
         self.camera_changed_callback = Some(Box::new(CameraDidChangeCallback::new(callback)));
     }
 
-    pub fn set_finish_rendering_frame_callback<F: Fn(bool, bool) + 'static>(
+    pub fn set_finish_rendering_frame_callback<
+        F: Fn(/*needs_repaint:*/ bool, /*placement_changed:*/ bool) + 'static,
+    >(
         &mut self,
         callback: F,
     ) {
