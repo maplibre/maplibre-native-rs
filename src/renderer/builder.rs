@@ -5,7 +5,7 @@ use crate::renderer::bridge::ffi::{MapLoadError, MapObserverCameraChangeMode};
 pub use crate::renderer::callbacks::{
     CameraDidChangeCallback, FailingLoadingMapCallback, FinishRenderingFrameCallback, VoidCallback,
 };
-use crate::renderer::{Continuous, ImageRenderer, MapMode, Static, Tile, bridge};
+use crate::renderer::{bridge, Continuous, ImageRenderer, MapMode, Static, Tile};
 use cxx::UniquePtr;
 use std::ffi::OsString;
 use std::marker::PhantomData;
@@ -20,7 +20,9 @@ impl RendererObserver {
     /// The callback is called from the renderer observer whenever a frame is finished rendered
     /// Pass this renderer to the ImageRendererBuilder
     pub fn new<T: Fn(bool, bool) + 'static>(finish_rendering_frame_callback: T) -> Self {
-        Self(Box::new(FinishRenderingFrameCallback::new(finish_rendering_frame_callback)))
+        Self(Box::new(FinishRenderingFrameCallback::new(
+            finish_rendering_frame_callback,
+        )))
     }
 }
 
@@ -140,7 +142,9 @@ impl Default for ImageRendererBuilder {
             cache_path: None,
             asset_root: std::env::current_dir().ok(),
 
-            base_url: "https://demotiles.maplibre.org".parse().expect("is a valid url"),
+            base_url: "https://demotiles.maplibre.org"
+                .parse()
+                .expect("is a valid url"),
             uri_scheme_alias: "maplibre".to_string(),
 
             source_template: "/tiles/{domain}.json".to_string(),
@@ -342,8 +346,12 @@ impl<S> ImageRenderer<S> {
             opts.height,
             opts.pixel_ratio,
             // cxx.rs does not support OsString, but going via &[u8] is close enough
-            opts.cache_path.map_or(OsString::new(), PathBuf::into_os_string).as_encoded_bytes(),
-            opts.asset_root.map_or(OsString::new(), PathBuf::into_os_string).as_encoded_bytes(),
+            opts.cache_path
+                .map_or(OsString::new(), PathBuf::into_os_string)
+                .as_encoded_bytes(),
+            opts.asset_root
+                .map_or(OsString::new(), PathBuf::into_os_string)
+                .as_encoded_bytes(),
             &opts.api_key,
             opts.base_url.as_ref(),
             &opts.uri_scheme_alias,
@@ -356,7 +364,11 @@ impl<S> ImageRenderer<S> {
             opts.requires_api_key,
         );
 
-        Self { instance: map, style_specified: false, _marker: PhantomData }
+        Self {
+            instance: map,
+            style_specified: false,
+            _marker: PhantomData,
+        }
     }
 
     fn new_with_observers(
@@ -396,8 +408,12 @@ impl<S> ImageRenderer<S> {
             opts.height,
             opts.pixel_ratio,
             // cxx.rs does not support OsString, but going via &[u8] is close enough
-            opts.cache_path.map_or(OsString::new(), PathBuf::into_os_string).as_encoded_bytes(),
-            opts.asset_root.map_or(OsString::new(), PathBuf::into_os_string).as_encoded_bytes(),
+            opts.cache_path
+                .map_or(OsString::new(), PathBuf::into_os_string)
+                .as_encoded_bytes(),
+            opts.asset_root
+                .map_or(OsString::new(), PathBuf::into_os_string)
+                .as_encoded_bytes(),
             &opts.api_key,
             opts.base_url.as_ref(),
             &opts.uri_scheme_alias,
@@ -411,6 +427,10 @@ impl<S> ImageRenderer<S> {
             renderer_observer,
             mo,
         );
-        Self { instance: map, style_specified: false, _marker: PhantomData }
+        Self {
+            instance: map,
+            style_specified: false,
+            _marker: PhantomData,
+        }
     }
 }
