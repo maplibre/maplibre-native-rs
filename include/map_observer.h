@@ -94,9 +94,5 @@ namespace bridge {
             std::optional<rust::Box<FinishRenderingFrameCallback>> finishRenderingFrameCallback;
     };
 
-    inline std::unique_ptr<MapObserver> MapObserver_create_observer() {
-        return std::unique_ptr<MapObserver>(new MapObserver());
-    }
-
 } // namespace bridge
 } // namespace mln

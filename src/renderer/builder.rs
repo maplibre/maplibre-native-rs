@@ -12,62 +12,6 @@ use std::marker::PhantomData;
 use std::num::NonZeroU32;
 use std::path::PathBuf;
 
-/// Map Observer
-#[derive(Default)]
-pub struct MapObserver {
-    will_start_loading_map_callback: Option<Box<VoidCallback>>,
-    did_finish_loading_style_callback: Option<Box<VoidCallback>>,
-    did_become_idle_callback: Option<Box<VoidCallback>>,
-    did_fail_loading_map_callback: Option<Box<FailingLoadingMapCallback>>,
-    camera_changed_callback: Option<Box<CameraDidChangeCallback>>,
-    finished_rendering_frame_callback: Option<Box<FinishRenderingFrameCallback>>,
-}
-
-impl MapObserver {
-    /// Creates a new map observer
-    /// Any callback is activated and must be done by using the corresponding setter functions
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    pub fn set_will_start_loading_map_callback<F: Fn() + 'static>(&mut self, callback: F) {
-        self.will_start_loading_map_callback = Some(Box::new(VoidCallback::new(callback)));
-    }
-
-    pub fn set_did_finish_loading_style_callback<F: Fn() + 'static>(&mut self, callback: F) {
-        self.did_finish_loading_style_callback = Some(Box::new(VoidCallback::new(callback)));
-    }
-
-    pub fn set_did_become_idle_callback<F: Fn() + 'static>(&mut self, callback: F) {
-        self.did_become_idle_callback = Some(Box::new(VoidCallback::new(callback)));
-    }
-
-    pub fn set_did_fail_loading_map_callback<F: Fn(MapLoadError, &str) + 'static>(
-        &mut self,
-        callback: F,
-    ) {
-        self.did_fail_loading_map_callback =
-            Some(Box::new(FailingLoadingMapCallback::new(callback)));
-    }
-
-    pub fn set_camera_changed_callback<F: Fn(MapObserverCameraChangeMode) + 'static>(
-        &mut self,
-        callback: F,
-    ) {
-        self.camera_changed_callback = Some(Box::new(CameraDidChangeCallback::new(callback)));
-    }
-
-    pub fn set_finish_rendering_frame_callback<
-        F: Fn(/*needs_repaint:*/ bool, /*placement_changed:*/ bool) + 'static,
-    >(
-        &mut self,
-        callback: F,
-    ) {
-        self.finished_rendering_frame_callback =
-            Some(Box::new(FinishRenderingFrameCallback::new(callback)));
-    }
-}
-
 /// Builder for configuring [`ImageRenderer`] instances
 ///
 /// # Examples
@@ -311,12 +255,10 @@ impl ImageRendererBuilder {
     #[must_use]
     pub fn build_continuous_renderer(
         self,
-        map_observer: MapObserver,
     ) -> ImageRenderer<Continuous> {
-        ImageRenderer::new_with_observers(
+        ImageRenderer::new(
             MapMode::Continuous,
             self,
-            map_observer,
         )
     }
 }
@@ -348,68 +290,6 @@ impl<S> ImageRenderer<S> {
             opts.requires_api_key,
         );
 
-        Self {
-            instance: map,
-            style_specified: false,
-            _marker: PhantomData,
-        }
-    }
-
-    fn new_with_observers(
-        map_mode: MapMode,
-        opts: ImageRendererBuilder,
-        map_observer: MapObserver,
-    ) -> Self {
-        let mut mo = ffi::MapObserver_create_observer();
-
-        if let Some(callback) = map_observer.will_start_loading_map_callback {
-            mo.pin_mut().setWillStartLoadingMapCallback(callback);
-        }
-
-        if let Some(callback) = map_observer.did_finish_loading_style_callback {
-            mo.pin_mut().setFinishLoadingStyleCallback(callback);
-        }
-
-        if let Some(callback) = map_observer.did_become_idle_callback {
-            mo.pin_mut().setBecomeIdleCallback(callback);
-        }
-
-        if let Some(callback) = map_observer.did_fail_loading_map_callback {
-            mo.pin_mut().setFailLoadingMapCallback(callback);
-        }
-
-        if let Some(callback) = map_observer.camera_changed_callback {
-            mo.pin_mut().setCameraDidChangeCallback(callback);
-        }
-
-        if let Some(callback) = map_observer.finished_rendering_frame_callback {
-            mo.pin_mut().setFinishRenderingFrameCallback(callback);
-        }
-
-        let map = ffi::MapRenderer_new_with_observer(
-            map_mode,
-            opts.width,
-            opts.height,
-            opts.pixel_ratio,
-            // cxx.rs does not support OsString, but going via &[u8] is close enough
-            opts.cache_path
-                .map_or(OsString::new(), PathBuf::into_os_string)
-                .as_encoded_bytes(),
-            opts.asset_root
-                .map_or(OsString::new(), PathBuf::into_os_string)
-                .as_encoded_bytes(),
-            &opts.api_key,
-            opts.base_url.as_ref(),
-            &opts.uri_scheme_alias,
-            &opts.api_key_parameter_name,
-            &opts.source_template,
-            &opts.style_template,
-            &opts.sprites_template,
-            &opts.glyphs_template,
-            &opts.tile_template,
-            opts.requires_api_key,
-            mo,
-        );
         Self {
             instance: map,
             style_specified: false,

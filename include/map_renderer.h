@@ -22,14 +22,18 @@ namespace bridge {
 class MapRenderer {
 public:
     explicit MapRenderer(std::unique_ptr<mbgl::HeadlessFrontend> frontendInstance,
-                         std::unique_ptr<MapObserver> mapObserverInstance,
+                         std::shared_ptr<MapObserver> mapObserverInstance,
                          std::unique_ptr<mbgl::Map> mapInstance)
         : frontend(std::move(frontendInstance)),
-          mapObserverInstance(std::move(mapObserverInstance)),
+          mapObserverInstance(mapObserverInstance),
           map(std::move(mapInstance)) {}
     ~MapRenderer() {
         if (frontend)
             frontend->reset(); // Reset renderer and therefore detach renderer observer
+    }
+
+    std::shared_ptr<MapObserver> observer() {
+        return mapObserverInstance;
     }
 
 public:
@@ -37,11 +41,11 @@ public:
     // Due to CXX limitations, make all these public and access them from the regular functions below
     // Hold all objects here, because frontent and the observers are passed by reference to the map
     std::unique_ptr<mbgl::HeadlessFrontend> frontend;
-    std::unique_ptr<MapObserver> mapObserverInstance;
+    std::shared_ptr<MapObserver> mapObserverInstance;
     std::unique_ptr<mbgl::Map> map;
 };
 
-inline std::unique_ptr<MapRenderer> MapRenderer_new_with_observer(
+inline std::unique_ptr<MapRenderer> MapRenderer_new(
             mbgl::MapMode mapMode,
             uint32_t width,
             uint32_t height,
@@ -57,12 +61,10 @@ inline std::unique_ptr<MapRenderer> MapRenderer_new_with_observer(
             const rust::Str spritesTemplate,
             const rust::Str glyphsTemplate,
             const rust::Str tileTemplate,
-            bool requiresApiKey,
-            std::unique_ptr<MapObserver> mapObserver
+            bool requiresApiKey
 ) {
-
     mbgl::Size size = {width, height};
-
+    auto mapObserver = std::make_shared<MapObserver>();
     auto frontend = std::make_unique<mbgl::HeadlessFrontend>(size, pixelRatio);
 
     mbgl::TileServerOptions options = mbgl::TileServerOptions()
@@ -92,47 +94,7 @@ inline std::unique_ptr<MapRenderer> MapRenderer_new_with_observer(
 
     auto map = std::make_unique<mbgl::Map>(*frontend, *mapObserver, mapOptions, resourceOptions);
 
-    return std::make_unique<MapRenderer>(std::move(frontend), std::move(mapObserver), std::move(map));
-}
-
-inline std::unique_ptr<MapRenderer> MapRenderer_new(
-            mbgl::MapMode mapMode,
-            uint32_t width,
-            uint32_t height,
-            float pixelRatio,
-            rust::Slice<const uint8_t> cachePath,
-            rust::Slice<const uint8_t> assetRoot,
-            const rust::Str apiKey,
-            const rust::Str baseUrl,
-            const rust::Str uriSchemeAlias,
-            const rust::Str apiKeyParameterName,
-            const rust::Str sourceTemplate,
-            const rust::Str styleTemplate,
-            const rust::Str spritesTemplate,
-            const rust::Str glyphsTemplate,
-            const rust::Str tileTemplate,
-            bool requiresApiKey
-
-) {
-    return MapRenderer_new_with_observer(
-        mapMode,
-        width,
-        height,
-        pixelRatio,
-        cachePath,
-        assetRoot,
-        apiKey,
-        baseUrl,
-        uriSchemeAlias,
-        apiKeyParameterName,
-        sourceTemplate,
-        styleTemplate,
-        spritesTemplate,
-        glyphsTemplate,
-        tileTemplate,
-        requiresApiKey,
-        std::make_unique<MapObserver>()
-    );
+    return std::make_unique<MapRenderer>(std::move(frontend), mapObserver, std::move(map));
 }
 
 inline std::unique_ptr<std::string> MapRenderer_readStillImage(MapRenderer& self) {

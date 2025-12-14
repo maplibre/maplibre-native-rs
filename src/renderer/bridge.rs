@@ -1,5 +1,6 @@
 use crate::renderer::callbacks::*;
 use cxx::{type_id, ExternType};
+use cxx::SharedPtr;
 use std::{
     marker::PhantomData,
     ops::Sub,
@@ -223,27 +224,6 @@ pub mod ffi {
             tileTemplate: &str,
             requiresApiKey: bool,
         ) -> UniquePtr<MapRenderer>;
-
-        #[allow(clippy::too_many_arguments)]
-        fn MapRenderer_new_with_observer(
-            mapMode: MapMode,
-            width: u32,
-            height: u32,
-            pixelRatio: f32,
-            cachePath: &[u8],
-            assetRoot: &[u8],
-            apiKey: &str,
-            baseUrl: &str,
-            uriSchemeAlias: &str,
-            apiKeyParameterName: &str,
-            sourceTemplate: &str,
-            styleTemplate: &str,
-            spritesTemplate: &str,
-            glyphsTemplate: &str,
-            tileTemplate: &str,
-            requiresApiKey: bool,
-            mapObserver: UniquePtr<MapObserver>,
-        ) -> UniquePtr<MapRenderer>;
         fn MapRenderer_readStillImage(obj: Pin<&mut MapRenderer>) -> UniquePtr<CxxString>;
         fn MapRenderer_render_once(obj: Pin<&mut MapRenderer>);
         fn MapRenderer_render(obj: Pin<&mut MapRenderer>) -> UniquePtr<CxxString>;
@@ -260,9 +240,8 @@ pub mod ffi {
         fn MapRenderer_scaleBy(obj: Pin<&mut MapRenderer>, scale: f64, pos: &ScreenCoordinate);
         fn MapRenderer_getStyle_loadURL(obj: Pin<&mut MapRenderer>, url: &str);
         fn MapRenderer_setSize(obj: Pin<&mut MapRenderer>, size: &Size);
+        fn observer(self: Pin<&mut MapRenderer>) -> SharedPtr<MapObserver>;
 
-        // MapObserver related
-        fn MapObserver_create_observer() -> UniquePtr<MapObserver>;
         // With `self: Pin<&mut MapObserver>` as first argument, it is a non static method of that object.
         // cxx searches for such a method
         fn setWillStartLoadingMapCallback(self: Pin<&mut MapObserver>, callback: Box<VoidCallback>);
