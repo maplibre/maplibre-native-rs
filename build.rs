@@ -1,4 +1,12 @@
 //! File for defining how we download and link against `MapLibre Native`.
+//! Set MLN_CORE_LIBRARY_PATH and MLN_CORE_LIBRARY_HEADERS_PATH environment variables to use a local version of maplibre
+//! 
+//! IMPORTANT: The library path must point to the amalgan library which contains all the dependent libraries!
+//! 
+//! Required libraries:
+//! Fedora:
+//!     - libpng-static
+//!     - zlib-static
 
 use std::path::{Path, PathBuf};
 use std::{env, fs};
@@ -160,14 +168,22 @@ fn resolve_mln_core(root: &Path) -> (PathBuf, Vec<PathBuf>) {
      };
     assert!(
         library_file.is_file(),
-        "The MLN library at {} must be a file",
+        "The MLN library at {} must be a file. When building locally on Linux it is called libmbgl-core.a",
         library_file.display()
     );
-    assert!(
-        headers.is_file(),
-        "The MLN headers at {} must be a zip file containing the headers",
-        headers.display()
-    );
+    if let Some(_) = env::var_os("MLN_CORE_LIBRARY_HEADERS_PATH") {
+        assert!(
+            headers.is_file(),
+            "The MLN headers at {} must be a gzip (tar.gz) file containing the headers. When building locally checkout <maplibre-native repository>/.github/workflows/core-release.yml commands how to create the header archive",
+            headers.display()
+        );
+    } else {
+        assert!(
+            headers.is_file(),
+            "The MLN headers at {} must be a zip file containing the headers.",
+            headers.display()
+        );
+    }
 
     let extracted_path = out_dir.join("headers");
     extract_headers(&headers, &extracted_path);
