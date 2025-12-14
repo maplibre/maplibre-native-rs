@@ -1,8 +1,8 @@
 //! File for defining how we download and link against `MapLibre Native`.
 //! Set MLN_CORE_LIBRARY_PATH and MLN_CORE_LIBRARY_HEADERS_PATH environment variables to use a local version of maplibre
-//! 
+//!
 //! IMPORTANT: The library path must point to the amalgan library which contains all the dependent libraries!
-//! 
+//!
 //! Required libraries:
 //! Fedora:
 //!     - libpng-static
