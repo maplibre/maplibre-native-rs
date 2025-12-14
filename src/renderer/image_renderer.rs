@@ -177,6 +177,8 @@ impl ImageRenderer<Tile> {
     }
 }
 
+
+/// Object to modify the map observer callbacks
 pub struct MapObserver {
     instance: SharedPtr<ffi::MapObserver>
 }
@@ -240,6 +242,7 @@ impl ImageRenderer<Continuous> {
         );
     }
 
+    /// Get access to the map observer to setup callbacks
     pub fn map_observer(&mut self) -> MapObserver {
         MapObserver::new(self.instance.pin_mut().observer())
     }
@@ -288,4 +291,10 @@ pub enum RenderingError {
     /// The renderer returned invalid or corrupted image data.
     #[error("Invalid image data received from renderer")]
     InvalidImageData,
+}
+
+impl Debug for MapObserver {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "MapObserver")
+    }
 }
