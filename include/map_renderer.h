@@ -23,12 +23,12 @@ namespace bridge {
 class MapRenderer {
 public:
     explicit MapRenderer(std::unique_ptr<mbgl::HeadlessFrontend> frontendInstance,
-                         std::unique_ptr<mbgl::RendererObserver> observerInstance,
+                         std::unique_ptr<mbgl::RendererObserver> rendererObserverInstance,
                          std::unique_ptr<MapObserver> mapObserverInstance,
                          std::unique_ptr<mbgl::Map> mapInstance)
         : frontend(std::move(frontendInstance)),
-          observer(std::move(observerInstance)),
-          m_mapObserverInstance(std::move(mapObserverInstance)),
+          rendererObserver(std::move(rendererObserverInstance)),
+          mapObserverInstance(std::move(mapObserverInstance)),
           map(std::move(mapInstance)) {}
     ~MapRenderer() {
         if (frontend)
@@ -38,9 +38,10 @@ public:
 public:
     mbgl::util::RunLoop runLoop;
     // Due to CXX limitations, make all these public and access them from the regular functions below
+    // Hold all objects here, because frontent and the observers are passed by reference to the map
     std::unique_ptr<mbgl::HeadlessFrontend> frontend;
-    std::unique_ptr<mbgl::RendererObserver> observer;
-    std::unique_ptr<MapObserver> m_mapObserverInstance;
+    std::unique_ptr<mbgl::RendererObserver> rendererObserver;
+    std::unique_ptr<MapObserver> mapObserverInstance;
     std::unique_ptr<mbgl::Map> map;
 };
 
