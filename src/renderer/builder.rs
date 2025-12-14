@@ -402,6 +402,10 @@ impl<S> ImageRenderer<S> {
             mo.pin_mut().setCameraDidChangeCallback(callback);
         }
 
+        if let Some(callback) = map_observer.finished_rendering_frame_callback {
+            mo.pin_mut().setFinishRenderingFrameCallback(callback);
+        }
+
         let map = ffi::MapRenderer_new_with_observer(
             map_mode,
             opts.width,
