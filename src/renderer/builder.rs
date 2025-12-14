@@ -12,20 +12,6 @@ use std::marker::PhantomData;
 use std::num::NonZeroU32;
 use std::path::PathBuf;
 
-/// Renderer observer
-pub struct RendererObserver(Box<FinishRenderingFrameCallback>);
-
-impl RendererObserver {
-    /// Create a new renderer observer with a callback
-    /// The callback is called from the renderer observer whenever a frame is finished rendered
-    /// Pass this renderer to the ImageRendererBuilder
-    pub fn new<T: Fn(bool, bool) + 'static>(finish_rendering_frame_callback: T) -> Self {
-        Self(Box::new(FinishRenderingFrameCallback::new(
-            finish_rendering_frame_callback,
-        )))
-    }
-}
-
 /// Map Observer
 #[derive(Default)]
 pub struct MapObserver {
@@ -325,13 +311,11 @@ impl ImageRendererBuilder {
     #[must_use]
     pub fn build_continuous_renderer(
         self,
-        renderer_observer: RendererObserver,
         map_observer: MapObserver,
     ) -> ImageRenderer<Continuous> {
         ImageRenderer::new_with_observers(
             MapMode::Continuous,
             self,
-            renderer_observer,
             map_observer,
         )
     }
@@ -374,12 +358,8 @@ impl<S> ImageRenderer<S> {
     fn new_with_observers(
         map_mode: MapMode,
         opts: ImageRendererBuilder,
-        renderer_observer: RendererObserver,
         map_observer: MapObserver,
     ) -> Self {
-        let a = 5;
-        let renderer_observer =
-            unsafe { ffi::RendererObserver_create_observer(renderer_observer.0) };
         let mut mo = ffi::MapObserver_create_observer();
 
         if let Some(callback) = map_observer.will_start_loading_map_callback {
@@ -428,7 +408,6 @@ impl<S> ImageRenderer<S> {
             &opts.glyphs_template,
             &opts.tile_template,
             opts.requires_api_key,
-            renderer_observer,
             mo,
         );
         Self {

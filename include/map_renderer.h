@@ -14,7 +14,6 @@
 #include "rust/cxx.h"
 #include "rust_log_observer.h"
 #include <mbgl/map/map_observer.hpp>
-#include <mbgl/renderer/renderer_observer.hpp>
 #include "map_observer.h"
 
 namespace mln {
@@ -23,11 +22,9 @@ namespace bridge {
 class MapRenderer {
 public:
     explicit MapRenderer(std::unique_ptr<mbgl::HeadlessFrontend> frontendInstance,
-                         std::unique_ptr<mbgl::RendererObserver> rendererObserverInstance,
                          std::unique_ptr<MapObserver> mapObserverInstance,
                          std::unique_ptr<mbgl::Map> mapInstance)
         : frontend(std::move(frontendInstance)),
-          rendererObserver(std::move(rendererObserverInstance)),
           mapObserverInstance(std::move(mapObserverInstance)),
           map(std::move(mapInstance)) {}
     ~MapRenderer() {
@@ -40,7 +37,6 @@ public:
     // Due to CXX limitations, make all these public and access them from the regular functions below
     // Hold all objects here, because frontent and the observers are passed by reference to the map
     std::unique_ptr<mbgl::HeadlessFrontend> frontend;
-    std::unique_ptr<mbgl::RendererObserver> rendererObserver;
     std::unique_ptr<MapObserver> mapObserverInstance;
     std::unique_ptr<mbgl::Map> map;
 };
@@ -62,16 +58,12 @@ inline std::unique_ptr<MapRenderer> MapRenderer_new_with_observer(
             const rust::Str glyphsTemplate,
             const rust::Str tileTemplate,
             bool requiresApiKey,
-            std::unique_ptr<mbgl::RendererObserver> rendererObserver,
             std::unique_ptr<MapObserver> mapObserver
 ) {
 
     mbgl::Size size = {width, height};
 
     auto frontend = std::make_unique<mbgl::HeadlessFrontend>(size, pixelRatio);
-    if (rendererObserver) {
-        frontend->setObserver(*rendererObserver);
-    }
 
     mbgl::TileServerOptions options = mbgl::TileServerOptions()
         .withBaseURL((std::string)baseUrl)
@@ -100,7 +92,7 @@ inline std::unique_ptr<MapRenderer> MapRenderer_new_with_observer(
 
     auto map = std::make_unique<mbgl::Map>(*frontend, *mapObserver, mapOptions, resourceOptions);
 
-    return std::make_unique<MapRenderer>(std::move(frontend), std::move(rendererObserver), std::move(mapObserver), std::move(map));
+    return std::make_unique<MapRenderer>(std::move(frontend), std::move(mapObserver), std::move(map));
 }
 
 inline std::unique_ptr<MapRenderer> MapRenderer_new(
@@ -139,7 +131,6 @@ inline std::unique_ptr<MapRenderer> MapRenderer_new(
         glyphsTemplate,
         tileTemplate,
         requiresApiKey,
-        nullptr,
         std::make_unique<MapObserver>()
     );
 }

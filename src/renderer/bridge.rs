@@ -193,16 +193,9 @@ pub mod ffi {
         type Size;
     }
 
-    #[namespace = "mbgl"]
-    unsafe extern "C++" {
-        include!("mbgl/renderer/renderer_observer.hpp");
-        type RendererObserver;
-    }
-
     // Declarations for Rust with implementations in C++
     unsafe extern "C++" {
         include!("map_renderer.h");
-        include!("renderer_observer.h");
         include!("map_observer.h"); // Required to find functions below
 
         type MapObserverCameraChangeMode;
@@ -249,7 +242,6 @@ pub mod ffi {
             glyphsTemplate: &str,
             tileTemplate: &str,
             requiresApiKey: bool,
-            rendererObserver: UniquePtr<RendererObserver>,
             mapObserver: UniquePtr<MapObserver>,
         ) -> UniquePtr<MapRenderer>;
         fn MapRenderer_readStillImage(obj: Pin<&mut MapRenderer>) -> UniquePtr<CxxString>;
@@ -268,12 +260,6 @@ pub mod ffi {
         fn MapRenderer_scaleBy(obj: Pin<&mut MapRenderer>, scale: f64, pos: &ScreenCoordinate);
         fn MapRenderer_getStyle_loadURL(obj: Pin<&mut MapRenderer>, url: &str);
         fn MapRenderer_setSize(obj: Pin<&mut MapRenderer>, size: &Size);
-
-        // RendererObserver: once a frame is finished rendered, the function/ closure passed to
-        // the VoidTrampoline is called
-        fn RendererObserver_create_observer(
-            callback: Box<FinishRenderingFrameCallback>,
-        ) -> UniquePtr<RendererObserver>;
 
         // MapObserver related
         fn MapObserver_create_observer() -> UniquePtr<MapObserver>;

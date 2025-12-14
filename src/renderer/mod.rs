@@ -9,7 +9,6 @@ pub use bridge::set_log_thread_enabled;
 pub use bridge::{Height, Width, X, Y};
 pub use builder::ImageRendererBuilder;
 pub use builder::MapObserver;
-pub use builder::RendererObserver;
 pub use callbacks::{
     CameraDidChangeCallback, FailingLoadingMapCallback, FinishRenderingFrameCallback, VoidCallback,
 };
