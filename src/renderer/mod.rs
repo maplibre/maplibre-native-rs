@@ -11,4 +11,6 @@ pub use builder::ImageRendererBuilder;
 pub use callbacks::{
     CameraDidChangeCallback, FailingLoadingMapCallback, FinishRenderingFrameCallback, VoidCallback,
 };
-pub use image_renderer::{Continuous, Image, ImageRenderer, RenderingError, Static, Tile, MapObserver};
+pub use image_renderer::{
+    Continuous, Image, ImageRenderer, MapObserver, RenderingError, Static, Tile,
+};

@@ -7,8 +7,10 @@ use cxx::{SharedPtr, UniquePtr};
 use image::{ImageBuffer, Rgba};
 
 use crate::renderer::bridge::ffi;
+use crate::renderer::callbacks::{
+    CameraDidChangeCallback, FailingLoadingMapCallback, FinishRenderingFrameCallback, VoidCallback,
+};
 use crate::renderer::MapDebugOptions;
-use crate::renderer::callbacks::{CameraDidChangeCallback, FailingLoadingMapCallback, FinishRenderingFrameCallback, VoidCallback};
 use crate::{ScreenCoordinate, Size};
 
 /// A rendered map image.
@@ -177,44 +179,61 @@ impl ImageRenderer<Tile> {
     }
 }
 
-
 /// Object to modify the map observer callbacks
 pub struct MapObserver {
-    instance: SharedPtr<ffi::MapObserver>
+    instance: SharedPtr<ffi::MapObserver>,
 }
 
 impl MapObserver {
     fn new(instance: SharedPtr<ffi::MapObserver>) -> Self {
-        Self {
-            instance
-        }
+        Self { instance }
     }
 
     pub fn set_will_start_loading_map_callback<F: Fn() + 'static>(&mut self, callback: F) {
         // TODO: why is this unsafe and for uniqueptr it is not?
-        unsafe { self.instance.pin_mut_unchecked().setWillStartLoadingMapCallback(Box::new(VoidCallback::new(callback))); }
+        unsafe {
+            self.instance
+                .pin_mut_unchecked()
+                .setWillStartLoadingMapCallback(Box::new(VoidCallback::new(callback)));
+        }
     }
 
     pub fn set_did_finish_loading_style_callback<F: Fn() + 'static>(&mut self, callback: F) {
-        unsafe { self.instance.pin_mut_unchecked().setFinishLoadingStyleCallback(Box::new(VoidCallback::new(callback))); }
+        unsafe {
+            self.instance
+                .pin_mut_unchecked()
+                .setFinishLoadingStyleCallback(Box::new(VoidCallback::new(callback)));
+        }
     }
 
     pub fn set_did_become_idle_callback<F: Fn() + 'static>(&mut self, callback: F) {
-        unsafe { self.instance.pin_mut_unchecked().setBecomeIdleCallback(Box::new(VoidCallback::new(callback))); }
+        unsafe {
+            self.instance
+                .pin_mut_unchecked()
+                .setBecomeIdleCallback(Box::new(VoidCallback::new(callback)));
+        }
     }
 
     pub fn set_did_fail_loading_map_callback<F: Fn(ffi::MapLoadError, &str) + 'static>(
         &mut self,
         callback: F,
     ) {
-        unsafe { self.instance.pin_mut_unchecked().setFailLoadingMapCallback(Box::new(FailingLoadingMapCallback::new(callback))); }
+        unsafe {
+            self.instance
+                .pin_mut_unchecked()
+                .setFailLoadingMapCallback(Box::new(FailingLoadingMapCallback::new(callback)));
+        }
     }
 
     pub fn set_camera_changed_callback<F: Fn(ffi::MapObserverCameraChangeMode) + 'static>(
         &mut self,
         callback: F,
     ) {
-        unsafe { self.instance.pin_mut_unchecked().setCameraDidChangeCallback(Box::new(CameraDidChangeCallback::new(callback))); }
+        unsafe {
+            self.instance
+                .pin_mut_unchecked()
+                .setCameraDidChangeCallback(Box::new(CameraDidChangeCallback::new(callback)));
+        }
     }
 
     pub fn set_finish_rendering_frame_callback<
@@ -223,7 +242,13 @@ impl MapObserver {
         &mut self,
         callback: F,
     ) {
-        unsafe { self.instance.pin_mut_unchecked().setFinishRenderingFrameCallback(Box::new(FinishRenderingFrameCallback::new(callback))); }
+        unsafe {
+            self.instance
+                .pin_mut_unchecked()
+                .setFinishRenderingFrameCallback(Box::new(FinishRenderingFrameCallback::new(
+                    callback,
+                )));
+        }
     }
 }
 
