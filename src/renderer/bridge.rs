@@ -199,6 +199,7 @@ pub mod ffi {
         include!("map_renderer.h");
         include!("map_observer.h"); // Required to find functions below
 
+        type BridgeImage;
         type MapObserverCameraChangeMode;
         type MapObserver; // Created custom map observer
         type MapRenderer;
@@ -224,7 +225,11 @@ pub mod ffi {
             tileTemplate: &str,
             requiresApiKey: bool,
         ) -> UniquePtr<MapRenderer>;
-        fn MapRenderer_readStillImage(obj: Pin<&mut MapRenderer>) -> UniquePtr<CxxString>;
+        fn MapRenderer_readStillImage(obj: Pin<&mut MapRenderer>) -> UniquePtr<BridgeImage>;
+        fn MapRenderer_readStillImage_Old(obj: Pin<&mut MapRenderer>) -> UniquePtr<CxxString>;
+        fn get(self: &BridgeImage) -> *const u8;
+        fn size(self: &BridgeImage) -> Size;
+        fn bufferLength(self: &BridgeImage) -> usize;
         fn MapRenderer_render_once(obj: Pin<&mut MapRenderer>);
         fn MapRenderer_render(obj: Pin<&mut MapRenderer>) -> UniquePtr<CxxString>;
         fn MapRenderer_setDebugFlags(obj: Pin<&mut MapRenderer>, flags: MapDebugOptions);

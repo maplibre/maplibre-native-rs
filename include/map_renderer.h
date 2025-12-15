@@ -8,6 +8,7 @@
 #include <mbgl/util/run_loop.hpp>
 #include <mbgl/util/premultiply.hpp>
 #include <mbgl/util/tile_server_options.hpp>
+#include <mbgl/util/size.hpp>
 #include <memory>
 #include <vector>
 #include <stdexcept>
@@ -97,7 +98,31 @@ inline std::unique_ptr<MapRenderer> MapRenderer_new(
     return std::make_unique<MapRenderer>(std::move(frontend), mapObserver, std::move(map));
 }
 
-inline std::unique_ptr<std::string> MapRenderer_readStillImage(MapRenderer& self) {
+struct BridgeImage {
+    public:
+        BridgeImage(std::unique_ptr<uint8_t[]> data, mbgl::Size size): mSize(size), mData(std::move(data)) {}
+
+        const uint8_t* get() const {
+            return mData.get();
+        }
+
+        size_t bufferLength() const {
+            const size_t pixelCount = mSize.width * mSize.height;
+            constexpr size_t bytes_per_pixel = 4; // rgba
+            // TODO: why *2?
+            return sizeof(uint32_t) * 2 + pixelCount * bytes_per_pixel;
+        }
+
+        mbgl::Size size() const {
+            return mSize;
+        }
+
+    private:
+        mbgl::Size mSize;
+        std::unique_ptr<uint8_t[]> mData;
+};
+
+inline std::unique_ptr<std::string> MapRenderer_readStillImage_Old(MapRenderer& self) {
     auto image = self.frontend->readStillImage();
     auto unpremultipliedImage = mbgl::util::unpremultiply(std::move(image));
 
@@ -117,6 +142,12 @@ inline std::unique_ptr<std::string> MapRenderer_readStillImage(MapRenderer& self
     data.append(pixelData, pixelCount * 4);
 
     return std::make_unique<std::string>(std::move(data));
+}
+
+inline std::unique_ptr<BridgeImage> MapRenderer_readStillImage(MapRenderer& self) {
+    auto image = self.frontend->readStillImage();
+    auto unpremultipliedImage = mbgl::util::unpremultiply(std::move(image));
+    return std::make_unique<BridgeImage>(std::move(unpremultipliedImage.data), unpremultipliedImage.size);
 }
 
 inline void MapRenderer_render_once(MapRenderer& self) {

@@ -3,10 +3,10 @@ use std::fmt::Debug;
 use std::marker::PhantomData;
 use std::path::Path;
 
-use cxx::{SharedPtr, UniquePtr};
+use cxx::{CxxString, SharedPtr, UniquePtr};
 use image::{ImageBuffer, Rgba};
 
-use crate::renderer::bridge::ffi;
+use crate::renderer::bridge::ffi::{self, BridgeImage};
 use crate::renderer::MapDebugOptions;
 use crate::renderer::callbacks::{CameraDidChangeCallback, FailingLoadingMapCallback, FinishRenderingFrameCallback, VoidCallback};
 use crate::{ScreenCoordinate, Size};
@@ -264,10 +264,14 @@ impl ImageRenderer<Continuous> {
     }
 
     pub fn read_still_image(&mut self) -> Result<Image, RenderingError> {
-        let data = ffi::MapRenderer_readStillImage(self.instance.pin_mut());
+        let data = ffi::MapRenderer_readStillImage_Old(self.instance.pin_mut());
         let bytes = data.as_bytes();
         let image = Image::from_raw(bytes).ok_or(RenderingError::InvalidImageData)?;
         Ok(image)
+    }
+    
+    pub fn read_still_image_new(&mut self) -> UniquePtr<BridgeImage> {
+        ffi::MapRenderer_readStillImage(self.instance.pin_mut())
     }
 }
 
