@@ -226,7 +226,6 @@ pub mod ffi {
             requiresApiKey: bool,
         ) -> UniquePtr<MapRenderer>;
         fn MapRenderer_readStillImage(obj: Pin<&mut MapRenderer>) -> UniquePtr<BridgeImage>;
-        fn MapRenderer_readStillImage_Old(obj: Pin<&mut MapRenderer>) -> UniquePtr<CxxString>;
         fn get(self: &BridgeImage) -> *const u8;
         fn size(self: &BridgeImage) -> Size;
         fn bufferLength(self: &BridgeImage) -> usize;

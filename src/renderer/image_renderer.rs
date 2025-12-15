@@ -263,14 +263,7 @@ impl ImageRenderer<Continuous> {
         ffi::MapRenderer_render_once(self.instance.pin_mut());
     }
 
-    pub fn read_still_image(&mut self) -> Result<Image, RenderingError> {
-        let data = ffi::MapRenderer_readStillImage_Old(self.instance.pin_mut());
-        let bytes = data.as_bytes();
-        let image = Image::from_raw(bytes).ok_or(RenderingError::InvalidImageData)?;
-        Ok(image)
-    }
-    
-    pub fn read_still_image_new(&mut self) -> UniquePtr<BridgeImage> {
+    pub fn read_still_image(&mut self) -> UniquePtr<BridgeImage> {
         ffi::MapRenderer_readStillImage(self.instance.pin_mut())
     }
 }
