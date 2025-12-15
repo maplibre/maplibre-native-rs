@@ -6,19 +6,11 @@ use cxx::{CxxString, SharedPtr, UniquePtr};
 use image::{ImageBuffer, Rgba};
 use crate::renderer::bridge::ffi::BridgeImage;
 use crate::renderer::bridge::ffi;
-use crate::renderer::bridge::ffi::{self, BridgeImage};
 use crate::renderer::callbacks::{
     CameraDidChangeCallback, FailingLoadingMapCallback, FinishRenderingFrameCallback, VoidCallback,
 };
 use crate::renderer::MapDebugOptions;
 use crate::{ScreenCoordinate, Size};
-use cxx::{CxxString, SharedPtr, UniquePtr};
-use image::{ImageBuffer, Rgba};
-use std::f64::consts::PI;
-use std::fmt::Debug;
-use std::marker::PhantomData;
-use std::path::Path;
-
 /// A rendered map image.
 ///
 /// The image is stored as RGBA pixel data using the `image` crate.
