@@ -6,11 +6,18 @@ use cxx::{CxxString, SharedPtr, UniquePtr};
 use image::{ImageBuffer, Rgba};
 use crate::renderer::bridge::ffi::BridgeImage;
 use crate::renderer::bridge::ffi;
+use crate::renderer::bridge::ffi::{self, BridgeImage};
 use crate::renderer::callbacks::{
     CameraDidChangeCallback, FailingLoadingMapCallback, FinishRenderingFrameCallback, VoidCallback,
 };
 use crate::renderer::MapDebugOptions;
 use crate::{ScreenCoordinate, Size};
+use cxx::{CxxString, SharedPtr, UniquePtr};
+use image::{ImageBuffer, Rgba};
+use std::f64::consts::PI;
+use std::fmt::Debug;
+use std::marker::PhantomData;
+use std::path::Path;
 
 /// A rendered map image.
 ///
@@ -257,9 +264,7 @@ pub struct ImagePtr {
 
 impl ImagePtr {
     fn new(image: UniquePtr<BridgeImage>) -> Self {
-        Self {
-            instance: image
-        }
+        Self { instance: image }
     }
 
     pub fn size(&self) -> Size {
@@ -267,9 +272,7 @@ impl ImagePtr {
     }
 
     pub fn buffer<'a>(&'a self) -> &'a [u8] {
-        unsafe {
-            std::slice::from_raw_parts(self.instance.get(), self.instance.bufferLength())
-        }
+        unsafe { std::slice::from_raw_parts(self.instance.get(), self.instance.bufferLength()) }
     }
 }
 
