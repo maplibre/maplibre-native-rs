@@ -5,6 +5,13 @@ use crate::renderer::callbacks::{
 };
 use crate::renderer::MapDebugOptions;
 use crate::{ScreenCoordinate, Size};
+use cxx::{SharedPtr, UniquePtr};
+use image::{ImageBuffer, Rgba};
+use std::f64::consts::PI;
+use std::fmt::Debug;
+use std::marker::PhantomData;
+use std::path::Path;
+
 /// A rendered map image.
 ///
 /// The image is stored as RGBA pixel data using the `image` crate.
