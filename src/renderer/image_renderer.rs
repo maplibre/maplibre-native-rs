@@ -4,7 +4,7 @@ use std::marker::PhantomData;
 use std::path::Path;
 use cxx::{CxxString, SharedPtr, UniquePtr};
 use image::{ImageBuffer, Rgba};
-use crate::renderer::bridge::ffi::{self, BridgeImage};
+use crate::renderer::bridge::ffi::BridgeImage;
 use crate::renderer::bridge::ffi;
 use crate::renderer::callbacks::{
     CameraDidChangeCallback, FailingLoadingMapCallback, FinishRenderingFrameCallback, VoidCallback,
