@@ -1,7 +1,7 @@
 use crate::renderer::bridge::ffi::BridgeImage;
 use crate::renderer::callbacks::*;
-use cxx::{type_id, ExternType};
 use cxx::SharedPtr;
+use cxx::{type_id, ExternType};
 use std::{
     marker::PhantomData,
     ops::Sub,

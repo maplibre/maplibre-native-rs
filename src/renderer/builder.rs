@@ -253,13 +253,8 @@ impl ImageRendererBuilder {
     /// Builds a continuous renderer
     /// A callback object can be specified to react on events from maplibre
     #[must_use]
-    pub fn build_continuous_renderer(
-        self,
-    ) -> ImageRenderer<Continuous> {
-        ImageRenderer::new(
-            MapMode::Continuous,
-            self,
-        )
+    pub fn build_continuous_renderer(self) -> ImageRenderer<Continuous> {
+        ImageRenderer::new(MapMode::Continuous, self)
     }
 }
 
