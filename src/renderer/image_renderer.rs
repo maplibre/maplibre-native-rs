@@ -227,6 +227,28 @@ impl MapObserver {
     }
 }
 
+pub struct ImagePtr {
+    instance: UniquePtr<BridgeImage>,
+}
+
+impl ImagePtr {
+    fn new(image: UniquePtr<BridgeImage>) -> Self {
+        Self {
+            instance: image
+        }
+    }
+
+    pub fn size(&self) -> Size {
+        self.instance.size()
+    }
+
+    pub fn buffer<'a>(&'a self) -> &'a [u8] {
+        unsafe {
+            std::slice::from_raw_parts(self.instance.get(), self.instance.bufferLength())
+        }
+    }
+}
+
 impl ImageRenderer<Continuous> {
     /// Set the camera
     /// Important: Without setting the camera initially no image will be generated!
@@ -263,8 +285,8 @@ impl ImageRenderer<Continuous> {
         ffi::MapRenderer_render_once(self.instance.pin_mut());
     }
 
-    pub fn read_still_image(&mut self) -> UniquePtr<BridgeImage> {
-        ffi::MapRenderer_readStillImage(self.instance.pin_mut())
+    pub fn read_still_image(&mut self) -> ImagePtr {
+        ImagePtr::new(ffi::MapRenderer_readStillImage(self.instance.pin_mut()))
     }
 }
 
