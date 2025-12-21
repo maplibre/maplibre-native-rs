@@ -82,10 +82,12 @@ impl Size {
         }
     }
 
+    /// get width
     pub fn width(&self) -> u32 {
         self.width
     }
 
+    /// get height
     pub fn height(&self) -> u32 {
         self.heigth
     }
@@ -199,7 +201,7 @@ pub mod ffi {
     }
 
     #[namespace = "mbgl"]
-    unsafe extern "C++" {
+    extern "C++" {
         include!("mbgl/map/mode.hpp");
         include!("mbgl/map/map_observer.hpp");
         include!("mbgl/util/geo.hpp");
