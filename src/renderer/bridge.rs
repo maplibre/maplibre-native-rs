@@ -1,4 +1,3 @@
-
 use crate::renderer::callbacks::*;
 use std::ops::Sub;
 
@@ -41,7 +40,6 @@ pub struct Width(pub u32);
 #[derive(Debug)]
 pub struct Height(pub u32);
 
-
 /// A position in screen coordinates
 #[derive(Debug, Clone, Copy)]
 pub struct ScreenCoordinate {
@@ -64,7 +62,6 @@ impl Sub for ScreenCoordinate {
         }
     }
 }
-
 
 /// A size
 #[derive(Debug, Clone, Copy)]
