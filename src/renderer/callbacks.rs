@@ -2,13 +2,22 @@
 
 use crate::renderer::bridge::ffi::MapLoadError;
 use crate::renderer::bridge::ffi::MapObserverCameraChangeMode;
+use std::fmt::Debug;
 
 macro_rules! callback {
     ($callback_name:ident, $callback_f:path) => {
+        /// Callback object
         pub struct $callback_name(Box<dyn $callback_f + 'static>);
         impl $callback_name {
+            /// Create a new callback object
             pub fn new<F: $callback_f + 'static>(callback: F) -> Self {
                 Self(Box::new(callback))
+            }
+        }
+
+        impl Debug for $callback_name {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                write!(f, "Callback: {}", stringify!($callback_name))
             }
         }
     };

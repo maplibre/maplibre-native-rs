@@ -1,12 +1,6 @@
-use crate::renderer::bridge::ffi::BridgeImage;
+
 use crate::renderer::callbacks::*;
-use cxx::SharedPtr;
-use cxx::{type_id, ExternType};
-use std::{
-    marker::PhantomData,
-    ops::Sub,
-    os::raw::{c_char, c_void},
-};
+use std::ops::Sub;
 
 // https://maplibre.org/maplibre-native/docs/book/design/ten-thousand-foot-view.html
 
@@ -31,9 +25,16 @@ fn log_from_cpp(severity: ffi::EventSeverity, event: ffi::Event, code: i64, mess
     }
 }
 
+/// An x value
 pub struct X(pub f64);
+
+/// An y value
 pub struct Y(pub f64);
+
+/// A width value
 pub struct Width(pub u32);
+
+/// A height value
 pub struct Height(pub u32);
 
 impl ffi::ScreenCoordinate {
@@ -168,12 +169,14 @@ pub mod ffi {
         Timing = 16,
     }
 
+    /// A position in screen coordinates
     #[derive(Debug, Clone, Copy)]
     pub struct ScreenCoordinate {
         x: f64,
         y: f64,
     }
 
+    /// A size
     #[derive(Debug, Clone, Copy)]
     pub struct Size {
         width: u32,
