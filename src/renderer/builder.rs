@@ -1,12 +1,7 @@
 //! Image renderer configuration and builder
 
 use crate::renderer::bridge::ffi;
-use crate::renderer::bridge::ffi::{MapLoadError, MapObserverCameraChangeMode};
-pub use crate::renderer::callbacks::{
-    CameraDidChangeCallback, FailingLoadingMapCallback, FinishRenderingFrameCallback, VoidCallback,
-};
-use crate::renderer::{bridge, Continuous, ImageRenderer, MapMode, Static, Tile};
-use cxx::UniquePtr;
+use crate::renderer::{Continuous, ImageRenderer, MapMode, Static, Tile};
 use std::ffi::OsString;
 use std::marker::PhantomData;
 use std::num::NonZeroU32;
@@ -251,7 +246,7 @@ impl ImageRendererBuilder {
     }
 
     /// Builds a continuous renderer
-    /// A callback object can be specified to react on events from maplibre
+    /// Using the MapObserver it is possible to react on signals from the Map
     #[must_use]
     pub fn build_continuous_renderer(self) -> ImageRenderer<Continuous> {
         ImageRenderer::new(MapMode::Continuous, self)

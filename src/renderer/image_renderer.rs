@@ -188,8 +188,8 @@ impl MapObserver {
         Self { instance }
     }
 
+    /// React on start loading map
     pub fn set_will_start_loading_map_callback<F: Fn() + 'static>(&mut self, callback: F) {
-        // TODO: why is this unsafe and for uniqueptr it is not?
         unsafe {
             self.instance
                 .pin_mut_unchecked()
@@ -197,6 +197,7 @@ impl MapObserver {
         }
     }
 
+    /// Set a callback to react when style loading finished
     pub fn set_did_finish_loading_style_callback<F: Fn() + 'static>(&mut self, callback: F) {
         unsafe {
             self.instance
@@ -205,6 +206,7 @@ impl MapObserver {
         }
     }
 
+    /// Set a callback when the map gets idle
     pub fn set_did_become_idle_callback<F: Fn() + 'static>(&mut self, callback: F) {
         unsafe {
             self.instance
@@ -213,6 +215,7 @@ impl MapObserver {
         }
     }
 
+    /// Set callback to react on failing loading map
     pub fn set_did_fail_loading_map_callback<F: Fn(ffi::MapLoadError, &str) + 'static>(
         &mut self,
         callback: F,
@@ -224,6 +227,7 @@ impl MapObserver {
         }
     }
 
+    /// Set a callback to react on camera changes
     pub fn set_camera_changed_callback<F: Fn(ffi::MapObserverCameraChangeMode) + 'static>(
         &mut self,
         callback: F,
@@ -235,6 +239,7 @@ impl MapObserver {
         }
     }
 
+    /// Set a callback to react on finished rendering frames
     pub fn set_finish_rendering_frame_callback<
         F: Fn(/*needs_repaint:*/ bool, /*placement_changed:*/ bool) + 'static,
     >(
@@ -251,8 +256,16 @@ impl MapObserver {
     }
 }
 
+/// Keeps information about an image including a buffer
+/// This is used, so no unneccesary copy of the data must be made
 pub struct ImagePtr {
     instance: UniquePtr<BridgeImage>,
+}
+
+impl Debug for ImagePtr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "ImagePtr")
+    }
 }
 
 impl ImagePtr {
@@ -289,22 +302,27 @@ impl ImageRenderer<Continuous> {
         MapObserver::new(self.instance.pin_mut().observer())
     }
 
+    /// Move map by
     pub fn move_by(&mut self, delta: ScreenCoordinate) {
         ffi::MapRenderer_moveBy(self.instance.pin_mut(), &delta);
     }
 
+    /// Scale map (zooming)
     pub fn scale_by(&mut self, scale: f64, pos: ScreenCoordinate) {
         ffi::MapRenderer_scaleBy(self.instance.pin_mut(), scale, &pos);
     }
 
+    /// Set the map size. It determines also the rendered image size
     pub fn set_map_size(&mut self, size: Size) {
         ffi::MapRenderer_setSize(self.instance.pin_mut(), &size);
     }
 
+    /// Trigger render loop once (animations)
     pub fn render_once(&mut self) {
         ffi::MapRenderer_render_once(self.instance.pin_mut());
     }
 
+    /// Reading rendered image
     pub fn read_still_image(&mut self) -> ImagePtr {
         ImagePtr::new(ffi::MapRenderer_readStillImage(self.instance.pin_mut()))
     }

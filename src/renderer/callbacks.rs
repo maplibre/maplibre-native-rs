@@ -1,4 +1,4 @@
-// OnDidFinishRenderingFrameCallback
+// Callback objects used in the bridge
 
 use crate::renderer::bridge::ffi::MapLoadError;
 use crate::renderer::bridge::ffi::MapObserverCameraChangeMode;
@@ -22,10 +22,10 @@ pub fn void_callback(callback: &VoidCallback) {
 callback!(FinishRenderingFrameCallback, Fn(bool, bool));
 pub fn finish_rendering_frame_callback(
     callback: &FinishRenderingFrameCallback,
-    needsRepaint: bool,
-    placementChanged: bool,
+    needs_repaint: bool,
+    placement_changed: bool,
 ) {
-    (callback.0)(needsRepaint, placementChanged);
+    (callback.0)(needs_repaint, placement_changed);
 }
 
 callback!(FailingLoadingMapCallback, Fn(MapLoadError, &str));
