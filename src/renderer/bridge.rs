@@ -26,24 +26,36 @@ fn log_from_cpp(severity: ffi::EventSeverity, event: ffi::Event, code: i64, mess
 }
 
 /// An x value
+#[derive(Debug)]
 pub struct X(pub f64);
 
 /// An y value
+#[derive(Debug)]
 pub struct Y(pub f64);
 
 /// A width value
+#[derive(Debug)]
 pub struct Width(pub u32);
 
 /// A height value
+#[derive(Debug)]
 pub struct Height(pub u32);
 
-impl ffi::ScreenCoordinate {
+
+/// A position in screen coordinates
+#[derive(Debug, Clone, Copy)]
+pub struct ScreenCoordinate {
+    x: f64,
+    y: f64,
+}
+
+impl ScreenCoordinate {
     pub fn new(x: X, y: Y) -> Self {
         Self { x: x.0, y: y.0 }
     }
 }
 
-impl Sub for ffi::ScreenCoordinate {
+impl Sub for ScreenCoordinate {
     type Output = Self;
     fn sub(self, rhs: Self) -> Self::Output {
         Self {
@@ -53,12 +65,29 @@ impl Sub for ffi::ScreenCoordinate {
     }
 }
 
-impl ffi::Size {
+
+/// A size
+#[derive(Debug, Clone, Copy)]
+pub struct Size {
+    width: u32,
+    heigth: u32,
+}
+
+impl Size {
+    /// Create a new size object
     pub fn new(width: Width, height: Height) -> Self {
         Self {
             width: width.0,
             heigth: height.0,
         }
+    }
+
+    pub fn width(&self) -> u32 {
+        self.width
+    }
+
+    pub fn height(&self) -> u32 {
+        self.heigth
     }
 }
 
@@ -169,20 +198,6 @@ pub mod ffi {
         Timing = 16,
     }
 
-    /// A position in screen coordinates
-    #[derive(Debug, Clone, Copy)]
-    pub struct ScreenCoordinate {
-        x: f64,
-        y: f64,
-    }
-
-    /// A size
-    #[derive(Debug, Clone, Copy)]
-    pub struct Size {
-        width: u32,
-        heigth: u32,
-    }
-
     #[namespace = "mbgl"]
     unsafe extern "C++" {
         include!("mbgl/map/mode.hpp");
@@ -194,8 +209,12 @@ pub mod ffi {
         pub type EventSeverity;
         pub type Event;
         type MapLoadError;
-        type ScreenCoordinate;
-        type Size;
+    }
+
+    #[namespace = "mbgl"]
+    extern "C++" {
+        type ScreenCoordinate = super::ScreenCoordinate;
+        type Size = super::Size;
     }
 
     // Declarations for Rust with implementations in C++
@@ -301,6 +320,16 @@ pub mod ffi {
 
         fn Log_useLogThread(enable: bool);
     }
+}
+
+unsafe impl cxx::ExternType for Size {
+    type Id = cxx::type_id!("mbgl::Size");
+    type Kind = cxx::kind::Trivial;
+}
+
+unsafe impl cxx::ExternType for ScreenCoordinate {
+    type Id = cxx::type_id!("mbgl::ScreenCoordinate");
+    type Kind = cxx::kind::Trivial;
 }
 
 #[cfg(test)]
