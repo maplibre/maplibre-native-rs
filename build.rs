@@ -1,14 +1,14 @@
 //! File for defining how we download and link against `MapLibre Native`.
-//! Set MLN_CORE_LIBRARY_PATH and MLN_CORE_LIBRARY_HEADERS_PATH environment variables to use a local version of maplibre
+//! Set `MLN_CORE_LIBRARY_PATH` and `MLN_CORE_LIBRARY_HEADERS_PATH` environment variables to use a local version of maplibre
 //! 
-//! If you don't use the AMALGAM library define the env variable "MLN_CORE_LIBRARY_NO_AMALGAM" (value does not matter).
+//! If you don't use the AMALGAM library define the env variable `MLN_CORE_LIBRARY_NO_AMALGAM` (value does not matter).
 //! In this case all dependend libraries get linked manually
 //!
-//! IMPORTANT: The library path must point to the amalgan library which contains all the dependent libraries if MLN_CORE_LIBRARY_NO_AMALGAM is not set!
+//! IMPORTANT: The library path must point to the amalgan library which contains all the dependent libraries if `MLN_CORE_LIBRARY_NO_AMALGAM` is not set!
 //!
 //! Required libraries:
 //! Fedora:
-//!     - sudo dnf install libicu-devel libglslang-devel spirv-tools-devel libpng-devel libjpeg-turbo-devel libuv-devel libwebp-devel
+//!     - `sudo dnf install libicu-devel libglslang-devel spirv-tools-devel libpng-devel libjpeg-turbo-devel libuv-devel libwebp-devel`
 
 use std::path::{Path, PathBuf};
 use std::{env, fs};
@@ -235,10 +235,7 @@ fn build_mln() {
     let (cpp_root, include_dirs) = resolve_mln_core(&root);
 
     println!("cargo:rerun-if-env-changed=MLN_CORE_LIBRARY_NO_AMALGAM");
-    let no_amalgam_lib = match env::var_os("MLN_CORE_LIBRARY_NO_AMALGAM") {
-        None => false,
-        Some(_) => true,
-    };
+    let no_amalgam_lib = env::var_os("MLN_CORE_LIBRARY_NO_AMALGAM").is_some();
 
     println!(
         "cargo:warning=Using precompiled maplibre-native static library from {}",

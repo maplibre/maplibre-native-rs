@@ -48,6 +48,7 @@ pub struct ScreenCoordinate {
 }
 
 impl ScreenCoordinate {
+    /// Create a new ScreenCoordinate object
     pub fn new(x: X, y: Y) -> Self {
         Self { x: x.0, y: y.0 }
     }
