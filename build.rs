@@ -1,6 +1,6 @@
 //! File for defining how we download and link against `MapLibre Native`.
 //! Set `MLN_CORE_LIBRARY_PATH` and `MLN_CORE_LIBRARY_HEADERS_PATH` environment variables to use a local version of maplibre
-//! 
+//!
 //! If you don't use the AMALGAM library define the env variable `MLN_CORE_LIBRARY_NO_AMALGAM` (value does not matter).
 //! In this case all dependend libraries get linked manually
 //!
@@ -290,7 +290,13 @@ fn build_mln() {
         // Required for mlt-cpp. Cpp root link search was already added above
         println!(
             "cargo:rustc-link-search=native={}",
-            cpp_root.parent().unwrap().join("vendor").join("maplibre-tile-spec").join("cpp").display()
+            cpp_root
+                .parent()
+                .unwrap()
+                .join("vendor")
+                .join("maplibre-tile-spec")
+                .join("cpp")
+                .display()
         );
         println!("cargo:rustc-link-lib=mbgl-harfbuzz");
         println!("cargo:rustc-link-lib=mbgl-freetype");
@@ -299,7 +305,7 @@ fn build_mln() {
         println!("cargo:rustc-link-lib=mbgl-vendor-sqlite");
         println!("cargo:rustc-link-lib=mbgl-vendor-csscolorparser");
         println!("cargo:rustc-link-lib=mlt-cpp"); // provided with matlibre-native
-        // println!("cargo:rustc-link-lib=utf8proc"); // sudo dnf install utf8proc-devel
+                                                  // println!("cargo:rustc-link-lib=utf8proc"); // sudo dnf install utf8proc-devel
         println!("cargo:rustc-link-lib=icuuc"); //sudo dnf install libicu-devel
         println!("cargo:rustc-link-lib=icudata"); //sudo dnf install libicu-devel
         println!("cargo:rustc-link-lib=icui18n"); //sudo dnf install libicu-devel
@@ -308,7 +314,7 @@ fn build_mln() {
         println!("cargo:rustc-link-lib=SPIRV-Tools"); //sudo dnf install  spirv-tools-devel // Required by glslang spirv-tools-devel
         println!("cargo:rustc-link-lib=SPIRV-Tools-opt"); //sudo dnf install  spirv-tools-devel // Required by glslang spirv-tools-devel
         println!("cargo:rustc-link-lib=png"); // sudo dnf install libpng-devel
-        println!("cargo:rustc-link-lib=jpeg");// sudo dnf install libjpeg-turbo-devel
+        println!("cargo:rustc-link-lib=jpeg"); // sudo dnf install libjpeg-turbo-devel
         println!("cargo:rustc-link-lib=uv"); // sudo dnf install libuv-devel
         println!("cargo:rustc-link-lib=webp"); // sudo dnf install libwebp-devel
     }
