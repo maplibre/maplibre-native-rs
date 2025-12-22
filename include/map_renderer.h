@@ -161,6 +161,7 @@ inline void MapRenderer_setSize(MapRenderer& self, const mbgl::Size& size) {
     if (size.width == 0 || size.height == 0)
         return; // Otherwise we run into an exception
     self.frontend->setSize(size);
+    self.map->setSize(size);
 }
 
 inline void MapRenderer_setDebugFlags(MapRenderer& self, mbgl::MapDebugOptions debugFlags) {
