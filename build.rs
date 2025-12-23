@@ -1,11 +1,24 @@
 //! File for defining how we download and link against `MapLibre Native`.
+//! Set `MLN_CORE_LIBRARY_PATH` and `MLN_CORE_LIBRARY_HEADERS_PATH` environment variables to use a local version of maplibre
+//!
+//! If you don't use the AMALGAM library define the env variable `MLN_CORE_LIBRARY_NO_AMALGAM` (value does not matter).
+//! In this case all dependend libraries get linked manually
+//!
+//! IMPORTANT: The library path must point to the amalgan library which contains all the dependent libraries if `MLN_CORE_LIBRARY_NO_AMALGAM` is not set!
+//!
+//! Required libraries:
+//! Fedora:
+//!     - `sudo dnf install libicu-devel libglslang-devel spirv-tools-devel libpng-devel libjpeg-turbo-devel libuv-devel libwebp-devel`
 
 use std::path::{Path, PathBuf};
 use std::{env, fs};
 
 use downloader::{Download, Downloader};
 
-const MLN_REVISION: &str = "core-9b6325a14e2cf1cc29ab28c1855ad376f1ba4903";
+const MLN_REVISION: &str = "core-06a7b9959b8fc24fcce209944a3d3ec2b2a20cf4";
+// const MLN_REVISION: &str = "core-9b6325a14e2cf1cc29ab28c1855ad376f1ba4903";
+const MLN_RELEASE_URL: &str = "https://github.com/Murmele/maplibre-native/releases/download";
+// const MLN_RELEASE_URL: &str = "https://github.com/maplibre/maplibre-native/releases/download";
 
 /// Supported graphics rendering APIs.
 #[derive(PartialEq, Eq, Clone, Copy)]
@@ -28,7 +41,8 @@ impl GraphicsRenderingAPI {
         let with_metal = env::var("CARGO_FEATURE_METAL").is_ok();
         let with_vulkan = env::var("CARGO_FEATURE_VULKAN").is_ok();
 
-        let is_macos = cfg!(any(target_os = "ios", target_os = "macos"));
+        let target_os = env::var("CARGO_CFG_TARGET_OS").expect("CARGO_CFG_TARGET_OS not set");
+        let is_macos = target_os == "ios" || target_os == "macos";
 
         match (with_metal, with_vulkan, with_opengl) {
             (true, false, false) => Self::Metal,
@@ -73,34 +87,31 @@ impl std::fmt::Display for GraphicsRenderingAPI {
 fn download_static(out_dir: &Path, revision: &str) -> (PathBuf, PathBuf) {
     let graphics_api = GraphicsRenderingAPI::from_selected_features();
 
-    // Use TARGET environment variable for cross-compilation support
-    let target_triple = env::var("TARGET").expect("TARGET not set");
-    let target = if target_triple.contains("aarch64-unknown-linux") {
-        "amalgam-linux-arm64"
-    } else if target_triple.contains("x86_64-unknown-linux") {
-        "amalgam-linux-x64"
-    } else if target_triple.contains("aarch64-apple-darwin") {
-        "amalgam-macos-arm64"
-    } else if target_triple.contains("aarch64-linux-android") {
-        "amalgam-android-arm64-v8a"
-    } else {
-        panic!(
-            "unsupported target: only linux, macos, and android (arm64-v8a) are currently supported by maplibre-native (got: {target_triple})"
-        );
+    let target_os = env::var("CARGO_CFG_TARGET_OS").unwrap();
+    let target_arch = env::var("CARGO_CFG_TARGET_ARCH").unwrap();
+    let target = match (target_os.as_str(), target_arch.as_str()) {
+        ("linux", "aarch64") => "amalgam-linux-arm64",
+        ("linux", "x86_64") => "amalgam-linux-x64",
+        ("android", "aarch64") => "amalgam-android-arm64-v8a",
+        ("macos", "aarch64") => "amalgam-macos-arm64",
+        (&_, &_) => {
+            panic!("unsupported target ({},{}): only linux, macos and android (arm64-v8a) are currently supported by maplibre-native",
+                env::var("CARGO_CFG_TARGET_OS").unwrap(), env::var("CARGO_CFG_TARGET_ARCH").unwrap());
+        }
     };
 
     let mut tasks = Vec::new();
     let lib_filename = format!("libmaplibre-native-core-{target}-{graphics_api}.a");
     let library_file = out_dir.join(&lib_filename);
     if !library_file.is_file() {
-        let static_url = format!("https://github.com/maplibre/maplibre-native/releases/download/{revision}/{lib_filename}");
+        let static_url = format!("{MLN_RELEASE_URL}/{revision}/{lib_filename}");
         println!("cargo:warning=Downloading precompiled maplibre-native core library from {static_url} into {}", out_dir.display());
         tasks.push(Download::new(&static_url));
     }
 
     let headers_file = out_dir.join("maplibre-native-headers.tar.gz");
     if !headers_file.is_file() {
-        let headers_url = format!("https://github.com/maplibre/maplibre-native/releases/download/{revision}/maplibre-native-headers.tar.gz");
+        let headers_url = format!("{MLN_RELEASE_URL}/{revision}/maplibre-native-headers.tar.gz");
         println!("cargo:warning=Downloading headers for maplibre-native core library from {headers_url} into {}", out_dir.display());
         tasks.push(Download::new(&headers_url));
     }
@@ -163,14 +174,22 @@ fn resolve_mln_core(root: &Path) -> (PathBuf, Vec<PathBuf>) {
      };
     assert!(
         library_file.is_file(),
-        "The MLN library at {} must be a file",
+        "The MLN library at {} must be a file. When building locally on Linux it is called libmbgl-core.a",
         library_file.display()
     );
-    assert!(
-        headers.is_file(),
-        "The MLN headers at {} must be a zip file containing the headers",
-        headers.display()
-    );
+    if let Some(_) = env::var_os("MLN_CORE_LIBRARY_HEADERS_PATH") {
+        assert!(
+            headers.is_file(),
+            "The MLN headers at {} must be a gzip (tar.gz) file containing the headers. When building locally checkout <maplibre-native repository>/.github/workflows/core-release.yml commands how to create the header archive",
+            headers.display()
+        );
+    } else {
+        assert!(
+            headers.is_file(),
+            "The MLN headers at {} must be a zip file containing the headers.",
+            headers.display()
+        );
+    }
 
     let extracted_path = out_dir.join("headers");
     extract_headers(&headers, &extracted_path);
@@ -202,11 +221,13 @@ fn resolve_mln_core(root: &Path) -> (PathBuf, Vec<PathBuf>) {
 fn build_bridge(lib_name: &str, include_dirs: &[PathBuf]) {
     println!("cargo:rerun-if-changed=src/renderer/bridge.rs");
     println!("cargo:rerun-if-changed=include/map_renderer.h");
+    println!("cargo:rerun-if-changed=include/renderer_observer.h");
+    println!("cargo:rerun-if-changed=include/map_observer.h");
     println!("cargo:rerun-if-changed=include/rust_log_observer.h");
     cxx_build::bridge("src/renderer/bridge.rs")
         .includes(include_dirs)
         .file("src/renderer/bridge.cpp")
-        .flag_if_supported("-std=c++20")
+        .std("c++20") // required because of std::range
         .compile("maplibre_rust_map_renderer_bindings");
 
     // Link mbgl-core after the bridge - or else `cargo test` won't be able to find the symbols.
@@ -215,7 +236,13 @@ fn build_bridge(lib_name: &str, include_dirs: &[PathBuf]) {
 
 fn build_mln() {
     let root = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
-    let (cpp_root, include_dirs) = resolve_mln_core(&root);
+    let (cpp_root, mut include_dirs) = resolve_mln_core(&root);
+    let target_os = env::var("CARGO_CFG_TARGET_OS").expect("CARGO_CFG_TARGET_OS not set");
+    let is_android = target_os == "android";
+
+    println!("cargo:rerun-if-env-changed=MLN_CORE_LIBRARY_NO_AMALGAM");
+    let no_amalgam_lib = env::var_os("MLN_CORE_LIBRARY_NO_AMALGAM").is_some();
+
     println!(
         "cargo:warning=Using precompiled maplibre-native static library from {}",
         cpp_root.display()
@@ -226,7 +253,8 @@ fn build_mln() {
     );
 
     // Add system library search paths for macOS
-    if cfg!(target_os = "macos") {
+    let target_os = env::var("CARGO_CFG_TARGET_OS").expect("CARGO_CFG_TARGET_OS not set");
+    if target_os == "macos" {
         // Check for Homebrew installation paths
         if let Ok(homebrew_prefix) = env::var("HOMEBREW_PREFIX") {
             println!("cargo:rustc-link-search=native={homebrew_prefix}/lib");
@@ -251,6 +279,13 @@ fn build_mln() {
                 }
             }
         }
+    } else if target_os == "android" {
+        // let ndk_home = env::var("ANDROID_NDK_HOME")
+        //     .expect("Building for android, but ANDROID_NDK_HOME is not set.");
+        // include_dirs.push(
+        //     Path::new(&ndk_home)
+        //         .join("toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/c++/v1"),
+        // );
     }
 
     // These `cargo:rustc-link-lib` must be done before curl and GL,
@@ -263,18 +298,44 @@ fn build_mln() {
         .replacen("lib", "", 1)
         .replace(".a", "");
     build_bridge(&lib_name, &include_dirs);
+    if no_amalgam_lib {
+        // The dependent libs are not bundled in the core lib, so we have to link manually
+        // Required for mlt-cpp. Cpp root link search was already added above
+        println!(
+            "cargo:rustc-link-search=native={}",
+            cpp_root
+                .parent()
+                .unwrap()
+                .join("vendor")
+                .join("maplibre-tile-spec")
+                .join("cpp")
+                .display()
+        );
+        println!("cargo:rustc-link-lib=mbgl-harfbuzz"); // provided with matlibre-native
+        println!("cargo:rustc-link-lib=mbgl-freetype"); // provided with matlibre-native
+        println!("cargo:rustc-link-lib=mbgl-vendor-nunicode"); // provided with matlibre-native
+        println!("cargo:rustc-link-lib=mbgl-vendor-parsedate"); // provided with matlibre-native
+        println!("cargo:rustc-link-lib=mbgl-vendor-sqlite"); // provided with matlibre-native
+        println!("cargo:rustc-link-lib=mbgl-vendor-csscolorparser"); // provided with matlibre-native
+        println!("cargo:rustc-link-lib=mlt-cpp"); // provided with matlibre-native
 
-    // Check target OS using CARGO_CFG_TARGET_OS environment variable
-    // This is set by Cargo and correctly reflects the target platform during cross-compilation
-    let target_os = env::var("CARGO_CFG_TARGET_OS").expect("CARGO_CFG_TARGET_OS not set");
-    let is_android = target_os == "android";
-
+        println!("cargo:rustc-link-lib=icuuc"); // fedora: libicu-devel
+        println!("cargo:rustc-link-lib=icudata"); // fedora: libicu-devel
+        println!("cargo:rustc-link-lib=icui18n"); // fedora: libicu-devel
+        println!("cargo:rustc-link-lib=glslang"); //fedora: libglslang-devel
+        println!("cargo:rustc-link-lib=glslang-default-resource-limits"); // fedora: libglslang-devel
+        println!("cargo:rustc-link-lib=SPIRV-Tools"); //fedora: spirv-tools-devel // Required by glslang
+        println!("cargo:rustc-link-lib=SPIRV-Tools-opt"); //fedora: spirv-tools-devel // Required by glslang
+        println!("cargo:rustc-link-lib=png"); // fedora: libpng-devel
+        println!("cargo:rustc-link-lib=jpeg"); // fedora: libjpeg-turbo-devel
+        println!("cargo:rustc-link-lib=uv"); // fedora: libuv-devel
+        println!("cargo:rustc-link-lib=webp"); // fedora: libwebp-devel
+        println!("cargo:rustc-link-lib=z");
+    }
     // Android doesn't need curl (uses Android's HTTP stack)
     if !is_android {
         println!("cargo:rustc-link-lib=curl");
     }
-    println!("cargo:rustc-link-lib=z");
-
     match GraphicsRenderingAPI::from_selected_features() {
         GraphicsRenderingAPI::Vulkan => {
             if is_android {

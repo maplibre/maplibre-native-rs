@@ -1,0 +1,3 @@
+[toolchain]
+# required because const expressions in templates are not in the stable channel
+channel = "nightly"
