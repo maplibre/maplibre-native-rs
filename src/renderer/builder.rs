@@ -246,7 +246,7 @@ impl ImageRendererBuilder {
     }
 
     /// Builds a continuous renderer
-    /// Using the MapObserver it is possible to react on signals from the Map
+    /// Using the `MapObserver` it is possible to react on signals from the Map
     #[must_use]
     pub fn build_continuous_renderer(self) -> ImageRenderer<Continuous> {
         ImageRenderer::new(MapMode::Continuous, self)

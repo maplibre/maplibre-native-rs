@@ -277,7 +277,7 @@ impl ImagePtr {
         self.instance.size()
     }
 
-    pub fn buffer<'a>(&'a self) -> &'a [u8] {
+    pub fn buffer(&self) -> &[u8] {
         unsafe { std::slice::from_raw_parts(self.instance.get(), self.instance.bufferLength()) }
     }
 }

@@ -1,4 +1,4 @@
-use crate::renderer::callbacks::*;
+use crate::renderer::callbacks::{VoidCallback, FinishRenderingFrameCallback, CameraDidChangeCallback, FailingLoadingMapCallback, void_callback, finish_rendering_frame_callback, camera_did_change_callback, failing_loading_map_callback};
 use std::ops::Sub;
 
 // https://maplibre.org/maplibre-native/docs/book/design/ten-thousand-foot-view.html
@@ -48,7 +48,9 @@ pub struct ScreenCoordinate {
 }
 
 impl ScreenCoordinate {
-    /// Create a new ScreenCoordinate object
+    /// Create a new `ScreenCoordinate` object
+    #[must_use]
+    #[allow(clippy::needless_pass_by_value)]
     pub fn new(x: X, y: Y) -> Self {
         Self { x: x.0, y: y.0 }
     }
@@ -73,6 +75,8 @@ pub struct Size {
 
 impl Size {
     /// Create a new size object
+    #[must_use]
+    #[allow(clippy::needless_pass_by_value)]
     pub fn new(width: Width, height: Height) -> Self {
         Self {
             width: width.0,
@@ -81,12 +85,14 @@ impl Size {
     }
 
     /// get width
-    pub fn width(&self) -> u32 {
+    #[must_use]
+    pub fn width(self) -> u32 {
         self.width
     }
 
     /// get height
-    pub fn height(&self) -> u32 {
+    #[must_use]
+    pub fn height(self) -> u32 {
         self.heigth
     }
 }
@@ -342,7 +348,7 @@ mod test {
         let s2 = ScreenCoordinate::new(X(3.), Y(-10.));
 
         let res = s1 - s2;
-        assert_eq!(res.x, 2.);
-        assert_eq!(res.y, 9.);
+        assert!((res.x - 2.).abs() < 0.00001);
+        assert!((res.y - 9.).abs() < 0.00001);
     }
 }

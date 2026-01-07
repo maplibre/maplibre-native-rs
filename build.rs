@@ -173,7 +173,7 @@ fn resolve_mln_core(root: &Path) -> (PathBuf, Vec<PathBuf>) {
         "The MLN library at {} must be a file. When building locally on Linux it is called libmbgl-core.a",
         library_file.display()
     );
-    if let Some(_) = env::var_os("MLN_CORE_LIBRARY_HEADERS_PATH") {
+    if env::var_os("MLN_CORE_LIBRARY_HEADERS_PATH").is_some() {
         assert!(
             headers.is_file(),
             "The MLN headers at {} must be a gzip (tar.gz) file containing the headers. When building locally checkout <maplibre-native repository>/.github/workflows/core-release.yml commands how to create the header archive",
