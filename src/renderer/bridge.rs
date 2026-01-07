@@ -41,7 +41,7 @@ pub struct Width(pub u32);
 pub struct Height(pub u32);
 
 /// A position in screen coordinates
-#[derive(Debug, Clone, Copy)]
+#[derive(Default, Debug, Clone, Copy)]
 pub struct ScreenCoordinate {
     x: f64,
     y: f64,
