@@ -4,28 +4,151 @@
     <meta charset="utf-8" />
     <title>MapLibre Native Tile Server</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- MapLibre GL JS -->
+    <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
+    <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+
     <style>
       body {
         margin: 0;
         padding: 0;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       }
       #map {
         height: 100vh;
         width: 100%;
       }
+      #controls {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: white;
+        padding: 15px;
+        border-radius: 5px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        z-index: 1000;
+        min-width: 200px;
+      }
+      #controls h3 {
+        margin: 0 0 10px 0;
+        font-size: 14px;
+        font-weight: 600;
+      }
+      #controls label {
+        display: block;
+        margin: 8px 0;
+        font-size: 13px;
+      }
+      #stats {
+        margin-top: 15px;
+        padding-top: 15px;
+        border-top: 1px solid #ddd;
+        font-size: 12px;
+      }
+      #stats div {
+        margin: 5px 0;
+      }
+      .stat-label {
+        font-weight: 600;
+        color: #555;
+      }
     </style>
   </head>
-  <body>
-    <div id="map"></div>
-    <script>
-      const map = L.map("map").setView([0, 0], 2);
 
-      L.tileLayer("/{z}/{x}/{y}", {
-        attribution: "MapLibre Native",
-        maxZoom: 18,
-      }).addTo(map);
+  <body>
+    <div id="controls">
+      <h3>Image Format</h3>
+      <label>
+        <input type="radio" name="format" value="png" checked onchange="changeFormat(this.value)" />
+        PNG
+      </label>
+      <label>
+        <input type="radio" name="format" value="webp" onchange="changeFormat(this.value)" />
+        WebP
+      </label>
+
+      <div id="stats">
+        <div>
+          <span class="stat-label">Format:</span>
+          <span id="current-format">PNG</span>
+        </div>
+        <div>
+          <span class="stat-label">Tiles loaded (incl. from cache):</span>
+          <span id="tile-count">0</span>
+        </div>
+      </div>
+    </div>
+
+    <div id="map"></div>
+
+    <script>
+      let currentFormat = "png";
+      let tileCount = 0;
+      const SOURCE_ID = "raster-tiles";
+      const LAYER_ID = "raster-layer";
+
+      const map = new maplibregl.Map({
+        container: "map",
+        center: [0, 0],
+        zoom: 2,
+        style: {
+          version: 8,
+          sources: {},
+          layers: [],
+        },
+      });
+
+      function tileURL(format) {
+        return format === "png" ? "/{z}/{x}/{y}" : "/{z}/{x}/{y}?format=webp";
+      }
+
+      function addRasterLayer(format) {
+        if (map.getLayer(LAYER_ID)) {
+          map.removeLayer(LAYER_ID);
+        }
+        if (map.getSource(SOURCE_ID)) {
+          map.removeSource(SOURCE_ID);
+        }
+
+        map.addSource(SOURCE_ID, {
+          type: "raster",
+          tiles: [tileURL(format)],
+          tileSize: 256,
+          attribution: "MapLibre Native",
+          maxzoom: 18,
+        });
+
+        map.addLayer({
+          id: LAYER_ID,
+          type: "raster",
+          source: SOURCE_ID,
+        });
+      }
+
+      function resetStats(format) {
+        currentFormat = format;
+        tileCount = 0;
+        document.getElementById("current-format").textContent = format.toUpperCase();
+        document.getElementById("tile-count").textContent = tileCount;
+      }
+
+      function changeFormat(format) {
+        resetStats(format);
+        addRasterLayer(format);
+      }
+
+      // Count tile loads (best-effort)
+      map.on("data", (e) => {
+        if (e.dataType === "tile" && e.sourceId === SOURCE_ID) {
+          tileCount++;
+          document.getElementById("tile-count").textContent = tileCount;
+        }
+      });
+
+      map.on("load", () => {
+        addRasterLayer("png");
+      });
     </script>
   </body>
 </html>

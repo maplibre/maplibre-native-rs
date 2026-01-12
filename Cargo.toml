@@ -21,12 +21,14 @@ metal = [] # default on Apple platforms, do not add to default features
 opengl = []
 vulkan = []  # default on other platforms
 log = ["dep:log"]
-pool = ["dep:tokio"]
+pool = ["dep:tokio", "dep:serde", "dep:bincode"]
 
 [dependencies]
+bincode = { workspace = true, optional = true }
 cxx.workspace = true
 image.workspace = true
 log = { workspace = true, optional = true }
+serde = { workspace = true, features = ["derive"], optional = true }
 thiserror.workspace = true
 tokio = { workspace = true, features = ["sync"], optional = true }
 url.workspace = true
@@ -63,6 +65,7 @@ license = "MIT OR Apache-2.0"
 
 [workspace.dependencies]
 axum = "0.8"
+bincode = "1.3"
 clap = { version = "4.5.27", features = ["derive", "env", "unstable-markdown"] }
 cmake = "0.1"
 cxx = "1.0.138"
@@ -75,6 +78,8 @@ image = "0.25"
 insta = "1.43.2"
 log = "0.4"
 maplibre_native = { path = ".", version = "0.4.0" }
+serde = "1.0"
+serde_json = "1.0"
 tar = "0.4.44"
 thiserror = "2.0.16"
 tokio = { version = "1", features = [], default-features = false }

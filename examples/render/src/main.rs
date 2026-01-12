@@ -223,6 +223,16 @@ impl Renderer {
     }
 }
 fn main() {
+    // Check if this is a worker process for the multi-threaded pool
+    if maplibre_native::MultiThreadedRenderPool::is_worker_process() {
+        // Run as worker process
+        if let Err(e) = maplibre_native::MultiThreadedRenderPool::run_worker() {
+            eprintln!("Worker process error: {}", e);
+            std::process::exit(1);
+        }
+        return;
+    }
+
     env_logger::Builder::from_env(Env::new().default_filter_or("trace")).init();
     log::info!("Starting MapLibre Native renderer with logging enabled");
 

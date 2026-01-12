@@ -1,0 +1,17 @@
+[package]
+name = "parallel-render"
+version = "0.1.0"
+edition.workspace = true
+publish = false
+
+[dependencies]
+clap.workspace = true
+env_logger.workspace = true
+futures.workspace = true
+log.workspace = true
+maplibre_native.workspace = true
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+url.workspace = true
+
+[lints]
+workspace = true

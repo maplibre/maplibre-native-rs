@@ -3,7 +3,7 @@
 use std::path::PathBuf;
 
 use insta::{assert_binary_snapshot, assert_debug_snapshot};
-use maplibre_native::{Image, SingleThreadedRenderPool};
+use maplibre_native::{Image, MultiThreadedRenderPool, SingleThreadedRenderPool};
 
 fn image_to_png_bytes(image: &Image) -> Vec<u8> {
     let mut png_bytes = Vec::new();
@@ -138,4 +138,112 @@ async fn various_zoom_levels() {
         // Should handle all zoom levels without crashing
         let _ = result;
     }
+}
+
+// MultiThreadedRenderPool tests
+
+#[tokio::test]
+async fn multi_threaded_basic_render() {
+    // Skip if running as worker
+    if MultiThreadedRenderPool::is_worker_process() {
+        return;
+    }
+
+    let pool = MultiThreadedRenderPool::new(2).unwrap();
+    let style_path = fixture_path("test-style.json");
+
+    let result = pool.render_tile(style_path, 1, 0, 0).await.unwrap();
+    assert_binary_snapshot!(".png", image_to_png_bytes(&result));
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn multi_threaded_concurrent_rendering() {
+    // Skip if running as worker
+    if MultiThreadedRenderPool::is_worker_process() {
+        return;
+    }
+
+    let pool = MultiThreadedRenderPool::new(2).unwrap();
+    let style_path = fixture_path("test-style.json");
+
+    let handles: Vec<_> = (0..5)
+        .map(|i| {
+            let path = style_path.clone();
+            let pool = pool.clone();
+            tokio::spawn(async move { pool.render_tile(path, 0, i, 0).await })
+        })
+        .collect();
+
+    // All requests should complete without panic
+    for handle in handles {
+        let _ = handle.await.unwrap();
+    }
+}
+
+#[tokio::test]
+async fn multi_threaded_io_errors() {
+    // Skip if running as worker
+    if MultiThreadedRenderPool::is_worker_process() {
+        return;
+    }
+
+    let pool = MultiThreadedRenderPool::new(1).unwrap();
+
+    let result = pool
+        .render_tile(PathBuf::from("missing.json"), 0, 0, 0)
+        .await
+        .unwrap_err();
+    assert_debug_snapshot!(result, @r#"
+    WorkerError(
+        "Failed to load style: Path missing.json is not a file",
+    )
+    "#);
+}
+
+#[tokio::test]
+async fn multi_threaded_parallel_workload() {
+    // Skip if running as worker
+    if MultiThreadedRenderPool::is_worker_process() {
+        return;
+    }
+
+    let pool = MultiThreadedRenderPool::new(4).unwrap();
+    let style_path = fixture_path("test-style.json");
+
+    // Render multiple tiles in parallel
+    let futures: Vec<_> = (0..8)
+        .map(|i| {
+            let path = style_path.clone();
+            let pool = pool.clone();
+            async move { pool.render_tile(path, 1, i, 0).await }
+        })
+        .collect();
+
+    let results = futures::future::join_all(futures).await;
+
+    // All should succeed
+    for result in results {
+        assert!(result.is_ok());
+    }
+}
+
+#[tokio::test]
+async fn multi_threaded_style_switching() {
+    // Skip if running as worker
+    if MultiThreadedRenderPool::is_worker_process() {
+        return;
+    }
+
+    let pool = MultiThreadedRenderPool::new(1).unwrap();
+    let style1 = fixture_path("test-style.json");
+    let style2 = fixture_path("test-style-alt.json");
+
+    let result = pool.render_tile(style1.clone(), 1, 0, 0).await.unwrap();
+    assert_binary_snapshot!(".png", image_to_png_bytes(&result));
+
+    let result = pool.render_tile(style2.clone(), 1, 0, 0).await.unwrap();
+    assert_binary_snapshot!(".png", image_to_png_bytes(&result));
+
+    let result = pool.render_tile(style1.clone(), 1, 0, 1).await.unwrap();
+    assert_binary_snapshot!(".png", image_to_png_bytes(&result));
 }

@@ -56,6 +56,37 @@ impl Image {
     pub fn as_image(&self) -> &ImageBuffer<Rgba<u8>, Vec<u8>> {
         &self.0
     }
+
+    /// Serialize the image to raw RGBA bytes with dimensions header.
+    ///
+    /// Format: [width: 4 bytes][height: 4 bytes][rgba data: width*height*4 bytes]
+    ///
+    /// This is primarily used for inter-process communication in the multi-threaded pool.
+    #[cfg(feature = "pool")]
+    pub(crate) fn to_raw_bytes(&self) -> Vec<u8> {
+        let width = self.0.width();
+        let height = self.0.height();
+        let mut bytes = Vec::with_capacity(8 + (width * height * 4) as usize);
+
+        // Write dimensions (4 bytes each, native endian)
+        bytes.extend_from_slice(&width.to_ne_bytes());
+        bytes.extend_from_slice(&height.to_ne_bytes());
+
+        // Write raw RGBA data
+        bytes.extend_from_slice(self.0.as_raw());
+
+        bytes
+    }
+
+    /// Deserialize an image from raw RGBA bytes with dimensions header.
+    ///
+    /// Format: [width: 4 bytes][height: 4 bytes][rgba data: width*height*4 bytes]
+    ///
+    /// This is primarily used for inter-process communication in the multi-threaded pool.
+    #[cfg(feature = "pool")]
+    pub(crate) fn from_raw_bytes(bytes: &[u8]) -> Option<Self> {
+        Self::from_raw(bytes)
+    }
 }
 
 /// Internal state type to render a static map image.

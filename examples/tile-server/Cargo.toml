@@ -6,6 +6,8 @@ edition.workspace = true
 
 [dependencies]
 axum.workspace = true
+clap.workspace = true
 image.workspace = true
 maplibre_native = { workspace = true, features = ["pool"] }
+serde.workspace = true
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }

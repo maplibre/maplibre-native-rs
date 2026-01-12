@@ -1,5 +1,6 @@
 **/*.rs.bk
 *.pdb
+*.png
 .ccache
 .idea/
 .vscode/
