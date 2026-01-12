@@ -134,7 +134,7 @@ impl Worker {
             y,
         };
 
-        let encoded = bincode::serialize(&request)
+        let encoded = postcard::to_allocvec(&request)
             .map_err(|e| MultiThreadedRenderPoolError::SerializationError(e.to_string()))?;
 
         // Send length prefix followed by data
@@ -177,8 +177,8 @@ impl Worker {
                 break;
             }
 
-            // Deserialize response using bincode
-            let response: WorkerResponse = match bincode::deserialize(&buffer) {
+            // Deserialize response using postcard
+            let response: WorkerResponse = match postcard::from_bytes(&buffer) {
                 Ok(r) => r,
                 Err(_) => continue,
             };
@@ -354,8 +354,8 @@ impl MultiThreadedRenderPool {
                 break;
             }
 
-            // Deserialize request using bincode
-            let request: WorkerRequest = match bincode::deserialize(&buffer) {
+            // Deserialize request using postcard
+            let request: WorkerRequest = match postcard::from_bytes(&buffer) {
                 Ok(r) => r,
                 Err(e) => {
                     eprintln!("Worker: Failed to parse request: {}", e);
@@ -439,7 +439,7 @@ impl MultiThreadedRenderPool {
     fn send_response(response: &WorkerResponse) -> Result<(), MultiThreadedRenderPoolError> {
         use std::io::Write;
 
-        let encoded = bincode::serialize(response)
+        let encoded = postcard::to_allocvec(response)
             .map_err(|e| MultiThreadedRenderPoolError::SerializationError(e.to_string()))?;
 
         // Send length prefix followed by data
