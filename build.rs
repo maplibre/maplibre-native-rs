@@ -1,4 +1,14 @@
 //! File for defining how we download and link against `MapLibre Native`.
+//! Set `MLN_CORE_LIBRARY_PATH` and `MLN_CORE_LIBRARY_HEADERS_PATH` environment variables to use a local version of maplibre
+//!
+//! If you don't use the AMALGAM library define the env variable `MLN_CORE_LIBRARY_NO_AMALGAM` (value does not matter).
+//! In this case all dependend libraries get linked manually
+//!
+//! IMPORTANT: The library path must point to the amalgan library which contains all the dependent libraries if `MLN_CORE_LIBRARY_NO_AMALGAM` is not set!
+//!
+//! Required libraries:
+//! Fedora:
+//!     - `sudo dnf install libicu-devel libglslang-devel spirv-tools-devel libpng-devel libjpeg-turbo-devel libuv-devel libwebp-devel`
 
 use std::path::{Path, PathBuf};
 use std::{env, fs};
@@ -160,14 +170,22 @@ fn resolve_mln_core(root: &Path) -> (PathBuf, Vec<PathBuf>) {
      };
     assert!(
         library_file.is_file(),
-        "The MLN library at {} must be a file",
+        "The MLN library at {} must be a file. When building locally on Linux it is called libmbgl-core.a",
         library_file.display()
     );
-    assert!(
-        headers.is_file(),
-        "The MLN headers at {} must be a zip file containing the headers",
-        headers.display()
-    );
+    if env::var_os("MLN_CORE_LIBRARY_HEADERS_PATH").is_some() {
+        assert!(
+            headers.is_file(),
+            "The MLN headers at {} must be a gzip (tar.gz) file containing the headers. When building locally checkout <maplibre-native repository>/.github/workflows/core-release.yml commands how to create the header archive",
+            headers.display()
+        );
+    } else {
+        assert!(
+            headers.is_file(),
+            "The MLN headers at {} must be a zip file containing the headers.",
+            headers.display()
+        );
+    }
 
     let extracted_path = out_dir.join("headers");
     extract_headers(&headers, &extracted_path);
@@ -199,6 +217,8 @@ fn resolve_mln_core(root: &Path) -> (PathBuf, Vec<PathBuf>) {
 fn build_bridge(lib_name: &str, include_dirs: &[PathBuf]) {
     println!("cargo:rerun-if-changed=src/renderer/bridge.rs");
     println!("cargo:rerun-if-changed=include/map_renderer.h");
+    println!("cargo:rerun-if-changed=include/renderer_observer.h");
+    println!("cargo:rerun-if-changed=include/map_observer.h");
     println!("cargo:rerun-if-changed=include/rust_log_observer.h");
     cxx_build::bridge("src/renderer/bridge.rs")
         .includes(include_dirs)
@@ -213,6 +233,10 @@ fn build_bridge(lib_name: &str, include_dirs: &[PathBuf]) {
 fn build_mln() {
     let root = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
     let (cpp_root, include_dirs) = resolve_mln_core(&root);
+
+    println!("cargo:rerun-if-env-changed=MLN_CORE_LIBRARY_NO_AMALGAM");
+    let no_amalgam_lib = env::var_os("MLN_CORE_LIBRARY_NO_AMALGAM").is_some();
+
     println!(
         "cargo:warning=Using precompiled maplibre-native static library from {}",
         cpp_root.display()
@@ -261,7 +285,39 @@ fn build_mln() {
         .replacen("lib", "", 1)
         .replace(".a", "");
     build_bridge(&lib_name, &include_dirs);
-
+    if no_amalgam_lib {
+        // The dependent libs are not bundled in the core lib, so we have to link manually
+        // Required for mlt-cpp. Cpp root link search was already added above
+        println!(
+            "cargo:rustc-link-search=native={}",
+            cpp_root
+                .parent()
+                .unwrap()
+                .join("vendor")
+                .join("maplibre-tile-spec")
+                .join("cpp")
+                .display()
+        );
+        println!("cargo:rustc-link-lib=mbgl-harfbuzz");
+        println!("cargo:rustc-link-lib=mbgl-freetype");
+        println!("cargo:rustc-link-lib=mbgl-vendor-nunicode");
+        println!("cargo:rustc-link-lib=mbgl-vendor-parsedate");
+        println!("cargo:rustc-link-lib=mbgl-vendor-sqlite");
+        println!("cargo:rustc-link-lib=mbgl-vendor-csscolorparser");
+        println!("cargo:rustc-link-lib=mlt-cpp"); // provided with matlibre-native
+                                                  // println!("cargo:rustc-link-lib=utf8proc"); // sudo dnf install utf8proc-devel
+        println!("cargo:rustc-link-lib=icuuc"); //sudo dnf install libicu-devel
+        println!("cargo:rustc-link-lib=icudata"); //sudo dnf install libicu-devel
+        println!("cargo:rustc-link-lib=icui18n"); //sudo dnf install libicu-devel
+        println!("cargo:rustc-link-lib=glslang"); //sudo dnf install libglslang-devel
+        println!("cargo:rustc-link-lib=glslang-default-resource-limits"); //sudo dnf install libglslang-devel
+        println!("cargo:rustc-link-lib=SPIRV-Tools"); //sudo dnf install  spirv-tools-devel // Required by glslang spirv-tools-devel
+        println!("cargo:rustc-link-lib=SPIRV-Tools-opt"); //sudo dnf install  spirv-tools-devel // Required by glslang spirv-tools-devel
+        println!("cargo:rustc-link-lib=png"); // sudo dnf install libpng-devel
+        println!("cargo:rustc-link-lib=jpeg"); // sudo dnf install libjpeg-turbo-devel
+        println!("cargo:rustc-link-lib=uv"); // sudo dnf install libuv-devel
+        println!("cargo:rustc-link-lib=webp"); // sudo dnf install libwebp-devel
+    }
     println!("cargo:rustc-link-lib=curl");
     println!("cargo:rustc-link-lib=z");
     match GraphicsRenderingAPI::from_selected_features() {

@@ -1,13 +1,16 @@
+use crate::renderer::bridge::ffi;
+use crate::renderer::bridge::ffi::BridgeImage;
+use crate::renderer::callbacks::{
+    CameraDidChangeCallback, FailingLoadingMapCallback, FinishRenderingFrameCallback, VoidCallback,
+};
+use crate::renderer::MapDebugOptions;
+use crate::{ScreenCoordinate, Size};
+use cxx::{SharedPtr, UniquePtr};
+use image::{ImageBuffer, Rgba};
 use std::f64::consts::PI;
 use std::fmt::Debug;
 use std::marker::PhantomData;
 use std::path::Path;
-
-use cxx::UniquePtr;
-use image::{ImageBuffer, Rgba};
-
-use crate::renderer::bridge::ffi;
-use crate::renderer::MapDebugOptions;
 
 /// A rendered map image.
 ///
@@ -64,6 +67,10 @@ pub struct Static;
 /// Internal state type to render a map tile.
 #[derive(Debug)]
 pub struct Tile;
+
+/// Internal state type to render continuously
+#[derive(Debug)]
+pub struct Continuous;
 
 /// Configuration options for a tile server.
 pub struct ImageRenderer<S> {
@@ -171,6 +178,156 @@ impl ImageRenderer<Tile> {
     }
 }
 
+/// Object to modify the map observer callbacks
+pub struct MapObserver {
+    instance: SharedPtr<ffi::MapObserver>,
+}
+
+impl MapObserver {
+    fn new(instance: SharedPtr<ffi::MapObserver>) -> Self {
+        Self { instance }
+    }
+
+    /// React on start loading map
+    pub fn set_will_start_loading_map_callback<F: Fn() + 'static>(&mut self, callback: F) {
+        unsafe {
+            self.instance
+                .pin_mut_unchecked()
+                .setWillStartLoadingMapCallback(Box::new(VoidCallback::new(callback)));
+        }
+    }
+
+    /// Set a callback to react when style loading finished
+    pub fn set_did_finish_loading_style_callback<F: Fn() + 'static>(&mut self, callback: F) {
+        unsafe {
+            self.instance
+                .pin_mut_unchecked()
+                .setFinishLoadingStyleCallback(Box::new(VoidCallback::new(callback)));
+        }
+    }
+
+    /// Set a callback when the map gets idle
+    pub fn set_did_become_idle_callback<F: Fn() + 'static>(&mut self, callback: F) {
+        unsafe {
+            self.instance
+                .pin_mut_unchecked()
+                .setBecomeIdleCallback(Box::new(VoidCallback::new(callback)));
+        }
+    }
+
+    /// Set callback to react on failing loading map
+    pub fn set_did_fail_loading_map_callback<F: Fn(ffi::MapLoadError, &str) + 'static>(
+        &mut self,
+        callback: F,
+    ) {
+        unsafe {
+            self.instance
+                .pin_mut_unchecked()
+                .setFailLoadingMapCallback(Box::new(FailingLoadingMapCallback::new(callback)));
+        }
+    }
+
+    /// Set a callback to react on camera changes
+    pub fn set_camera_changed_callback<F: Fn(ffi::MapObserverCameraChangeMode) + 'static>(
+        &mut self,
+        callback: F,
+    ) {
+        unsafe {
+            self.instance
+                .pin_mut_unchecked()
+                .setCameraDidChangeCallback(Box::new(CameraDidChangeCallback::new(callback)));
+        }
+    }
+
+    /// Set a callback to react on finished rendering frames
+    pub fn set_finish_rendering_frame_callback<
+        F: Fn(/*needs_repaint:*/ bool, /*placement_changed:*/ bool) + 'static,
+    >(
+        &mut self,
+        callback: F,
+    ) {
+        unsafe {
+            self.instance
+                .pin_mut_unchecked()
+                .setFinishRenderingFrameCallback(Box::new(FinishRenderingFrameCallback::new(
+                    callback,
+                )));
+        }
+    }
+}
+
+/// Keeps information about an image including a buffer
+/// This is used, so no unneccesary copy of the data must be made
+pub struct ImagePtr {
+    instance: UniquePtr<BridgeImage>,
+}
+
+impl Debug for ImagePtr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "ImagePtr")
+    }
+}
+
+impl ImagePtr {
+    fn new(image: UniquePtr<BridgeImage>) -> Self {
+        Self { instance: image }
+    }
+
+    pub fn size(&self) -> Size {
+        self.instance.size()
+    }
+
+    pub fn buffer(&self) -> &[u8] {
+        unsafe { std::slice::from_raw_parts(self.instance.get(), self.instance.bufferLength()) }
+    }
+}
+
+impl ImageRenderer<Continuous> {
+    /// Set the camera
+    /// Important: Without setting the camera initially no image will be generated!
+    pub fn set_camera(&mut self, x: u32, y: u32, zoom: u8, bearing: f64, pitch: f64) {
+        let (lat, lon) = coords_to_lat_lon(f64::from(zoom), x, y);
+        ffi::MapRenderer_setCamera(
+            self.instance.pin_mut(),
+            lat,
+            lon,
+            f64::from(zoom),
+            bearing,
+            pitch,
+        );
+    }
+
+    /// Get access to the map observer to setup callbacks
+    pub fn map_observer(&mut self) -> MapObserver {
+        MapObserver::new(self.instance.pin_mut().observer())
+    }
+
+    /// Move map by
+    pub fn move_by(&mut self, delta: ScreenCoordinate) {
+        ffi::MapRenderer_moveBy(self.instance.pin_mut(), &delta);
+    }
+
+    /// Scale map (zooming)
+    pub fn scale_by(&mut self, scale: f64, pos: ScreenCoordinate) {
+        ffi::MapRenderer_scaleBy(self.instance.pin_mut(), scale, &pos);
+    }
+
+    /// Set the map size. It determines also the rendered image size
+    pub fn set_map_size(&mut self, size: Size) {
+        ffi::MapRenderer_setSize(self.instance.pin_mut(), &size);
+    }
+
+    /// Trigger render loop once (animations)
+    pub fn render_once(&mut self) {
+        ffi::MapRenderer_render_once(self.instance.pin_mut());
+    }
+
+    /// Reading rendered image
+    pub fn read_still_image(&mut self) -> ImagePtr {
+        ImagePtr::new(ffi::MapRenderer_readStillImage(self.instance.pin_mut()))
+    }
+}
+
 #[allow(clippy::cast_precision_loss)]
 fn coords_to_lat_lon(zoom: f64, x: u32, y: u32) -> (f64, f64) {
     // https://github.com/oldmammuth/slippy_map_tilenames/blob/058678480f4b50b622cda7a48b98647292272346/src/lib.rs#L114
@@ -191,4 +348,10 @@ pub enum RenderingError {
     /// The renderer returned invalid or corrupted image data.
     #[error("Invalid image data received from renderer")]
     InvalidImageData,
+}
+
+impl Debug for MapObserver {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "MapObserver")
+    }
 }

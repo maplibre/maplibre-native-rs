@@ -1,3 +1,12 @@
+use crate::renderer::callbacks::{
+    camera_did_change_callback, failing_loading_map_callback, finish_rendering_frame_callback,
+    void_callback, CameraDidChangeCallback, FailingLoadingMapCallback,
+    FinishRenderingFrameCallback, VoidCallback,
+};
+use std::ops::Sub;
+
+// https://maplibre.org/maplibre-native/docs/book/design/ten-thousand-foot-view.html
+
 /// Enable or disable the internal logging thread
 ///
 /// By default, logs are generated asynchronously except for Error level messages.
@@ -19,11 +28,86 @@ fn log_from_cpp(severity: ffi::EventSeverity, event: ffi::Event, code: i64, mess
     }
 }
 
+/// An x value
+#[derive(Debug)]
+pub struct X(pub f64);
+
+/// An y value
+#[derive(Debug)]
+pub struct Y(pub f64);
+
+/// A width value
+#[derive(Debug)]
+pub struct Width(pub u32);
+
+/// A height value
+#[derive(Debug)]
+pub struct Height(pub u32);
+
+/// A position in screen coordinates
+#[derive(Default, Debug, Clone, Copy)]
+pub struct ScreenCoordinate {
+    x: f64,
+    y: f64,
+}
+
+impl ScreenCoordinate {
+    /// Create a new `ScreenCoordinate` object
+    #[must_use]
+    #[allow(clippy::needless_pass_by_value)]
+    pub fn new(x: X, y: Y) -> Self {
+        Self { x: x.0, y: y.0 }
+    }
+}
+
+impl Sub for ScreenCoordinate {
+    type Output = Self;
+    fn sub(self, rhs: Self) -> Self::Output {
+        Self {
+            x: self.x - rhs.x,
+            y: self.y - rhs.y,
+        }
+    }
+}
+
+/// A size
+#[derive(Debug, Clone, Copy)]
+pub struct Size {
+    width: u32,
+    heigth: u32,
+}
+
+impl Size {
+    /// Create a new size object
+    #[must_use]
+    #[allow(clippy::needless_pass_by_value)]
+    pub fn new(width: Width, height: Height) -> Self {
+        Self {
+            width: width.0,
+            heigth: height.0,
+        }
+    }
+
+    /// get width
+    #[must_use]
+    pub fn width(self) -> u32 {
+        self.width
+    }
+
+    /// get height
+    #[must_use]
+    pub fn height(self) -> u32 {
+        self.heigth
+    }
+}
+
 #[allow(clippy::borrow_as_ptr)]
 #[cxx::bridge(namespace = "mln::bridge")]
 pub mod ffi {
     // CXX validates enum types against the C++ definition during compilation
 
+    // The mbgl enums must be defined in the same namespace than on the C++ side
+    #[namespace = "mbgl"]
     #[repr(u32)]
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     /// Map rendering mode configuration.
@@ -36,6 +120,27 @@ pub mod ffi {
         Tile,
     }
 
+    #[namespace = "mln::bridge"]
+    #[repr(u32)]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    // Map Load error
+    enum MapObserverCameraChangeMode {
+        Immediate,
+        Animated,
+    }
+
+    #[namespace = "mbgl"]
+    #[repr(u32)]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    // Map Load error
+    enum MapLoadError {
+        StyleParseError,
+        StyleLoadError,
+        NotFoundError,
+        UnknownError,
+    }
+
+    #[namespace = "mbgl"]
     #[repr(u32)]
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     /// Debug visualization options for map rendering.
@@ -69,6 +174,7 @@ pub mod ffi {
     }
 
     /// MapLibre Native Event Severity levels
+    #[namespace = "mbgl"]
     #[repr(u8)]
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
     pub enum EventSeverity {
@@ -79,6 +185,7 @@ pub mod ffi {
     }
 
     /// MapLibre Native Event types
+    #[namespace = "mbgl"]
     #[repr(u8)]
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
     pub enum Event {
@@ -102,20 +209,35 @@ pub mod ffi {
     }
 
     #[namespace = "mbgl"]
-    unsafe extern "C++" {
+    extern "C++" {
         include!("mbgl/map/mode.hpp");
+        include!("mbgl/map/map_observer.hpp");
+        include!("mbgl/util/geo.hpp");
 
         type MapMode;
         type MapDebugOptions;
         pub type EventSeverity;
         pub type Event;
+        type MapLoadError;
     }
 
+    #[namespace = "mbgl"]
+    extern "C++" {
+        type ScreenCoordinate = super::ScreenCoordinate;
+        type Size = super::Size;
+    }
+
+    // Declarations for Rust with implementations in C++
     unsafe extern "C++" {
         include!("map_renderer.h");
-        // include!("maplibre-native/src/map_renderer/map_renderer.h");
+        include!("map_observer.h"); // Required to find functions below
 
+        type BridgeImage;
+        type MapObserverCameraChangeMode;
+        type MapObserver; // Created custom map observer
         type MapRenderer;
+        // Left side must match a type in C++! Right side must be defined in Rust
+        // example: type VoidCallback = super::VoidTrVoidCallbackampoline;
 
         #[allow(clippy::too_many_arguments)]
         fn MapRenderer_new(
@@ -136,6 +258,11 @@ pub mod ffi {
             tileTemplate: &str,
             requiresApiKey: bool,
         ) -> UniquePtr<MapRenderer>;
+        fn MapRenderer_readStillImage(obj: Pin<&mut MapRenderer>) -> UniquePtr<BridgeImage>;
+        fn get(self: &BridgeImage) -> *const u8;
+        fn size(self: &BridgeImage) -> Size;
+        fn bufferLength(self: &BridgeImage) -> usize;
+        fn MapRenderer_render_once(obj: Pin<&mut MapRenderer>);
         fn MapRenderer_render(obj: Pin<&mut MapRenderer>) -> UniquePtr<CxxString>;
         fn MapRenderer_setDebugFlags(obj: Pin<&mut MapRenderer>, flags: MapDebugOptions);
         fn MapRenderer_setCamera(
@@ -146,10 +273,54 @@ pub mod ffi {
             bearing: f64,
             pitch: f64,
         );
+        fn MapRenderer_moveBy(obj: Pin<&mut MapRenderer>, delta: &ScreenCoordinate);
+        fn MapRenderer_scaleBy(obj: Pin<&mut MapRenderer>, scale: f64, pos: &ScreenCoordinate);
         fn MapRenderer_getStyle_loadURL(obj: Pin<&mut MapRenderer>, url: &str);
+        fn MapRenderer_setSize(obj: Pin<&mut MapRenderer>, size: &Size);
+        fn observer(self: Pin<&mut MapRenderer>) -> SharedPtr<MapObserver>;
+
+        // With `self: Pin<&mut MapObserver>` as first argument, it is a non static method of that object.
+        // cxx searches for such a method
+        fn setWillStartLoadingMapCallback(self: Pin<&mut MapObserver>, callback: Box<VoidCallback>);
+        fn setFinishLoadingStyleCallback(self: Pin<&mut MapObserver>, callback: Box<VoidCallback>);
+        fn setBecomeIdleCallback(self: Pin<&mut MapObserver>, callback: Box<VoidCallback>);
+        fn setFailLoadingMapCallback(
+            self: Pin<&mut MapObserver>,
+            callback: Box<FailingLoadingMapCallback>,
+        );
+        fn setFinishRenderingFrameCallback(
+            self: Pin<&mut MapObserver>,
+            callback: Box<FinishRenderingFrameCallback>,
+        );
+        fn setCameraDidChangeCallback(
+            self: Pin<&mut MapObserver>,
+            callback: Box<CameraDidChangeCallback>,
+        );
     }
 
+    // Declarations for C++ with implementations in Rust
     extern "Rust" {
+        type VoidCallback;
+        type FinishRenderingFrameCallback;
+        type CameraDidChangeCallback;
+        type FailingLoadingMapCallback;
+
+        fn void_callback(callback: &VoidCallback);
+        fn finish_rendering_frame_callback(
+            callback: &FinishRenderingFrameCallback,
+            needsRepaint: bool,
+            placementChanged: bool,
+        );
+        fn camera_did_change_callback(
+            callback: &CameraDidChangeCallback,
+            mode: MapObserverCameraChangeMode,
+        );
+        fn failing_loading_map_callback(
+            callback: &FailingLoadingMapCallback,
+            error: MapLoadError,
+            what: &str,
+        );
+
         /// Bridge logging from C++ to Rust log crate
         fn log_from_cpp(severity: EventSeverity, event: Event, code: i64, message: &str);
     }
@@ -158,5 +329,30 @@ pub mod ffi {
         include!("rust_log_observer.h");
 
         fn Log_useLogThread(enable: bool);
+    }
+}
+
+unsafe impl cxx::ExternType for Size {
+    type Id = cxx::type_id!("mbgl::Size");
+    type Kind = cxx::kind::Trivial;
+}
+
+unsafe impl cxx::ExternType for ScreenCoordinate {
+    type Id = cxx::type_id!("mbgl::ScreenCoordinate");
+    type Kind = cxx::kind::Trivial;
+}
+
+#[cfg(test)]
+mod test {
+    use crate::{ScreenCoordinate, X, Y};
+
+    #[test]
+    fn screen_corrdinate_diff() {
+        let s1 = ScreenCoordinate::new(X(5.), Y(-1.));
+        let s2 = ScreenCoordinate::new(X(3.), Y(-10.));
+
+        let res = s1 - s2;
+        assert!((res.x - 2.).abs() < 0.00001);
+        assert!((res.y - 9.).abs() < 0.00001);
     }
 }
