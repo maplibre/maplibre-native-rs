@@ -3,7 +3,7 @@
 //! This example demonstrates how to use the different rendering options
 //! including different map styles, zoom levels, and output formats.
 //!
-//! For exapmle create a image of a specific tile with `cargo run -- -m tile -z 3 -x 4 -y 2`
+//! For example create a image of a specific tile with `cargo run -- -m tile -z 3 -x 4 -y 2`
 //! or of a specific area (uses lat,lon and zoom) `cargo run -- --zoom 3.9 --lat 17.209 --lon -87.41`
 
 use std::num::NonZeroU32;
@@ -259,13 +259,13 @@ fn main() {
     println!("Rendering arguments: {args:#?}");
     let output = args.output.clone();
 
-    let before_initalisation = Instant::now();
+    let before_initialisation = Instant::now();
     let mut renderer = args.load();
-    println!("intialisation took {:?}", before_initalisation.elapsed());
+    println!("initialisation took {:?}", before_initialisation.elapsed());
     let before_render1 = Instant::now();
     let data = renderer.render();
     println!(
-        "Rendering successfull in {:?}, writing result to {}",
+        "Rendering successful in {:?}, writing result to {}",
         before_render1.elapsed(),
         output.display()
     );
