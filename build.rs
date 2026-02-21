@@ -76,6 +76,13 @@ impl std::fmt::Display for GraphicsRenderingAPI {
     }
 }
 
+fn emit_build_verbose_warning(message: impl AsRef<str>) {
+    println!("cargo:rerun-if-env-changed=MLN_BUILD_VERBOSE");
+    if env::var("MLN_BUILD_VERBOSE").is_ok() {
+        println!("cargo:warning={}", message.as_ref());
+    }
+}
+
 fn is_macos_arm64_target() -> bool {
     let target_os = env::var("CARGO_CFG_TARGET_OS").expect("CARGO_CFG_TARGET_OS not set");
     let target_arch = env::var("CARGO_CFG_TARGET_ARCH").expect("CARGO_CFG_TARGET_ARCH not set");
@@ -165,6 +172,34 @@ fn collect_required_mbgl_symbols(bridge_objects: &[PathBuf]) -> Vec<String> {
     required_symbols
 }
 
+fn collect_unresolved_icu61_symbols(library_file: &Path) -> Vec<String> {
+    let nm_output = Command::new("nm")
+        .arg("-u")
+        .arg(library_file)
+        .output()
+        .expect("Failed to inspect amalgam archive symbols with nm");
+    assert!(
+        nm_output.status.success(),
+        "nm failed while inspecting amalgam archive symbols"
+    );
+
+    let mut required_symbols = nm_output
+        .stdout
+        .split(|byte| *byte == b'\n')
+        .filter_map(|line| {
+            std::str::from_utf8(line)
+                .ok()
+                .and_then(|value| value.split_whitespace().last())
+                .map(ToOwned::to_owned)
+        })
+        .filter(|symbol| symbol.ends_with("_61"))
+        .filter(|symbol| symbol.starts_with("_u") || symbol.starts_with("_ubidi"))
+        .collect::<Vec<_>>();
+    required_symbols.sort();
+    required_symbols.dedup();
+    required_symbols
+}
+
 fn globalize_macos_amalgam_symbols(library_file: &Path) {
     if !is_macos_arm64_target() {
         return;
@@ -194,10 +229,24 @@ fn globalize_macos_amalgam_symbols(library_file: &Path) {
     if required_symbols.is_empty() {
         return;
     }
+    emit_build_verbose_warning(format!(
+        "Globalizing {} mbgl symbols from bridge object requirements",
+        required_symbols.len()
+    ));
+    for symbol in &required_symbols {
+        emit_build_verbose_warning(format!("mbgl symbol required by bridge: {symbol}"));
+    }
+    let icu61_symbols = collect_unresolved_icu61_symbols(library_file);
+    if !icu61_symbols.is_empty() {
+        emit_build_verbose_warning(format!(
+            "Detected unresolved ICU _61 symbols from amalgam archive: {}",
+            icu61_symbols.join(", ")
+        ));
+    }
 
     let mut command = Command::new(objcopy);
     command.arg("--wildcard");
-    for symbol in required_symbols {
+    for symbol in &required_symbols {
         command.arg(format!("--globalize-symbol={symbol}"));
     }
     command.arg(library_file);
