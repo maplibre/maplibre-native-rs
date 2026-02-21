@@ -97,7 +97,10 @@ fn llvm_objcopy_path() -> Option<PathBuf> {
         return Some(PathBuf::from("llvm-objcopy"));
     }
 
-    if let Ok(output) = Command::new("xcrun").args(["--find", "llvm-objcopy"]).output() {
+    if let Ok(output) = Command::new("xcrun")
+        .args(["--find", "llvm-objcopy"])
+        .output()
+    {
         if output.status.success() {
             let path = String::from_utf8_lossy(&output.stdout).trim().to_owned();
             if !path.is_empty() {
