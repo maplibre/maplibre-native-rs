@@ -7,10 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Fixed
-
-- *(build)* fix macos arm64 amalgam linking by globalizing required `mbgl` symbols, adding icu61 compatibility shims, and linking macos system libraries
-
 ## [0.4.1](https://github.com/maplibre/maplibre-native-rs/compare/v0.4.0...v0.4.1) - 2025-10-06
 
 ### Other
