@@ -121,6 +121,43 @@ maplibre-native-info: (assert-cmd "curl") (assert-cmd "jq")
         echo "Date: $(echo "$COMMIT_INFO" | jq -r '.commit.author.date')"
     fi
 
+# Reproduce macOS arm64 amalgam linking and print relevant symbol details
+[macos]
+repro-macos-arm64-amalgam-link: (assert-cmd "nm")
+    #!/usr/bin/env sh
+    set -eu
+
+    if [ "$(uname -m)" != "arm64" ]; then
+        echo "This repro command is for macOS arm64 only."
+        exit 1
+    fi
+
+    echo "Building maplibre_native with metal backend and verbose build diagnostics..."
+    MLN_BUILD_VERBOSE=1 cargo build -p maplibre_native --features metal
+
+    archive_path="$(find target/debug/build -type f -name 'libmaplibre-native-core-amalgam-macos-arm64-metal.a' | head -n 1)"
+    if [ -z "${archive_path}" ]; then
+        echo "No macos arm64 amalgam static archive found under target/debug/build"
+        exit 1
+    fi
+
+    bridge_objects_file="$(mktemp)"
+    find target/debug/build -type f \( -name '*-bridge.rs.o' -o -name '*-bridge.o' \) -print0 > "${bridge_objects_file}"
+    if [ ! -s "${bridge_objects_file}" ]; then
+        rm -f "${bridge_objects_file}"
+        echo "No bridge object files found under target/debug/build"
+        exit 1
+    fi
+
+    echo "Using amalgam archive: ${archive_path}"
+    echo
+    echo "mbgl symbols required by bridge objects:"
+    xargs -0 nm -u < "${bridge_objects_file}" | awk '{print $NF}' | grep '^__ZN4mbgl' | sort -u
+    echo
+    echo "icu _61 symbols unresolved by amalgam archive:"
+    nm -u "${archive_path}" | awk '{print $NF}' | grep -E '^_(u|ubidi).*_61$' | sort -u
+    rm -f "${bridge_objects_file}"
+
 # Find the minimum supported Rust version (MSRV) using cargo-msrv extension, and update Cargo.toml
 msrv:  (cargo-install 'cargo-msrv')
     cargo msrv find --write-msrv --ignore-lockfile
