@@ -60,6 +60,15 @@ jobs:
       - uses: taiki-e/install-action@288875dd3d64326724fa6d9593062d9f8ba0b131 # v2.67.30
         with: { tool: 'just' }
       - run: just env-info install-dependencies '${{ matrix.backend }}'
+      - if: matrix.runs-on == 'macos-latest' && matrix.backend == 'metal'
+        run: echo "LLVM_OBJCOPY=$(brew --prefix llvm)/bin/llvm-objcopy" >> "$GITHUB_ENV"
+      - if: matrix.runs-on == 'macos-latest' && matrix.backend == 'metal'
+        run: |
+          uname -m
+          echo "LLVM_OBJCOPY=$LLVM_OBJCOPY"
+          which llvm-objcopy || true
+          xcrun --find llvm-objcopy || true
+          "$LLVM_OBJCOPY" --version || true
       - run: rustup update stable && rustup default stable
       - run: just ci-test ${{ matrix.backend }}
 

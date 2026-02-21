@@ -101,6 +101,7 @@ install-dependencies backend='vulkan':
         {{if backend == 'vulkan' {'molten-vk vulkan-headers'} else {''} }} \
         curl \
         glfw \
+        llvm \
         libuv \
         zlib
 
