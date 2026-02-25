@@ -33,6 +33,8 @@ fn alpha_at_corners(image: &image::ImageBuffer<image::Rgba<u8>, Vec<u8>>) -> [u8
 
 #[test]
 fn projection_setter_roundtrips() {
+    let _guard = test_lock();
+
     let mut renderer = ImageRendererBuilder::new()
         .with_size(
             NonZeroU32::new(128).expect("constant non-zero width"),
