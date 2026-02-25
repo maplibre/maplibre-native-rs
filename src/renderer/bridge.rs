@@ -37,6 +37,17 @@ pub mod ffi {
     }
 
     #[repr(u32)]
+    #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
+    /// Map projection type configuration.
+    pub enum MapProjectionType {
+        /// Render in standard Web Mercator.
+        #[default]
+        Mercator,
+        /// Render using the globe projection.
+        Globe,
+    }
+
+    #[repr(u32)]
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     /// Debug visualization options for map rendering.
     enum MapDebugOptions {
@@ -107,6 +118,7 @@ pub mod ffi {
 
         type MapMode;
         type MapDebugOptions;
+        type MapProjectionType;
         pub type EventSeverity;
         pub type Event;
     }
@@ -146,6 +158,7 @@ pub mod ffi {
             bearing: f64,
             pitch: f64,
         );
+        fn MapRenderer_setMapProjection(obj: Pin<&mut MapRenderer>, projection: MapProjectionType);
         fn MapRenderer_getStyle_loadURL(obj: Pin<&mut MapRenderer>, url: &str);
     }
 

@@ -70,6 +70,7 @@ pub struct ImageRenderer<S> {
     pub(crate) instance: UniquePtr<ffi::MapRenderer>,
     pub(crate) _marker: PhantomData<S>,
     pub(crate) style_specified: bool,
+    pub(crate) map_projection: ffi::MapProjectionType,
 }
 
 impl<S> Debug for ImageRenderer<S> {
@@ -121,6 +122,19 @@ impl<S> ImageRenderer<S> {
         ffi::MapRenderer_setDebugFlags(self.instance.pin_mut(), flags);
         self
     }
+
+    /// Sets map projection mode.
+    pub fn set_projection(&mut self, projection: ffi::MapProjectionType) -> &mut Self {
+        self.map_projection = projection;
+        ffi::MapRenderer_setMapProjection(self.instance.pin_mut(), projection);
+        self
+    }
+
+    /// Returns map projection mode.
+    #[must_use]
+    pub fn projection(&self) -> ffi::MapProjectionType {
+        self.map_projection
+    }
 }
 
 impl ImageRenderer<Static> {
@@ -141,6 +155,7 @@ impl ImageRenderer<Static> {
             return Err(RenderingError::StyleNotSpecified);
         }
 
+        ffi::MapRenderer_setMapProjection(self.instance.pin_mut(), self.map_projection);
         ffi::MapRenderer_setCamera(self.instance.pin_mut(), lat, lon, zoom, bearing, pitch);
         let data = ffi::MapRenderer_render(self.instance.pin_mut());
         let bytes = data.as_bytes();
@@ -161,6 +176,10 @@ impl ImageRenderer<Tile> {
             return Err(RenderingError::StyleNotSpecified);
         }
 
+        ffi::MapRenderer_setMapProjection(
+            self.instance.pin_mut(),
+            ffi::MapProjectionType::Mercator,
+        );
         let (lat, lon) = coords_to_lat_lon(f64::from(zoom), x, y);
         ffi::MapRenderer_setCamera(self.instance.pin_mut(), lat, lon, f64::from(zoom), 0.0, 0.0);
 
