@@ -1,3 +1,4 @@
+use crate::Size;
 use maplibre_native::Continuous;
 use maplibre_native::ImageRenderer;
 use maplibre_native::ImageRendererBuilder;
@@ -6,13 +7,12 @@ use std::cell::RefCell;
 use std::num::NonZeroU32;
 use std::path::Path;
 use std::sync::Arc;
-use crate::Size;
 
 #[derive(Default)]
 struct Flags {
     style_loaded: bool,
     map_idle: bool,
-    frame_updated: bool,  
+    frame_updated: bool,
 }
 
 pub struct MapLibre {
@@ -51,7 +51,10 @@ impl MapLibre {
 
 pub fn create_map(size: Size) -> Arc<RefCell<MapLibre>> {
     let mut renderer = ImageRendererBuilder::new()
-        .with_size(NonZeroU32::new(size.width as u32).unwrap(), NonZeroU32::new(size.height as u32).unwrap())
+        .with_size(
+            NonZeroU32::new(size.width as u32).unwrap(),
+            NonZeroU32::new(size.height as u32).unwrap(),
+        )
         .with_pixel_ratio(1.0)
         .with_cache_path(Path::new(env!("CARGO_MANIFEST_DIR")).join("maplibre_database.sqlite"))
         .build_continuous_renderer();
@@ -109,6 +112,6 @@ pub fn create_map(size: Size) -> Arc<RefCell<MapLibre>> {
             }
         }
     });
-    
+
     map
 }
