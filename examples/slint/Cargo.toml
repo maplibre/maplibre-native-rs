@@ -1,0 +1,11 @@
+[package]
+name = "slint_map_libre_native"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+slint = { version = "1.15", features = ["backend-android-activity-06"] }
+maplibre_native = { path = "../.."}
+
+[build-dependencies]
+slint-build = { version = "1.15"  }
