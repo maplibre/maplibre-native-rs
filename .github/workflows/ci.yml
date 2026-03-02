@@ -27,7 +27,7 @@ jobs:
       - if: github.event_name != 'release' && github.event_name != 'workflow_dispatch'
         uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
       - run: rustup update stable && rustup default stable && rustup component add rustfmt && rustup component add clippy
-      - uses: taiki-e/install-action@f92912fad184299a31e22ad070a5059fd07d4f59 # v2.68.7
+      - uses: taiki-e/install-action@68675c5a5f1a6950c3975d33f3ae0ef155e5bf3d # v2.68.15
         with: { tool: 'just' }
       - run: just ci-lint
   test:
@@ -57,7 +57,7 @@ jobs:
         with: { persist-credentials: false }
       - if: github.event_name != 'release' && github.event_name != 'workflow_dispatch'
         uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
-      - uses: taiki-e/install-action@f92912fad184299a31e22ad070a5059fd07d4f59 # v2.68.7
+      - uses: taiki-e/install-action@68675c5a5f1a6950c3975d33f3ae0ef155e5bf3d # v2.68.15
         with: { tool: 'just' }
       - run: just env-info install-dependencies '${{ matrix.backend }}'
       - run: rustup update stable && rustup default stable
@@ -90,7 +90,7 @@ jobs:
         with: { persist-credentials: false }
       - if: github.event_name != 'release' && github.event_name != 'workflow_dispatch'
         uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
-      - uses: taiki-e/install-action@f92912fad184299a31e22ad070a5059fd07d4f59 # v2.68.7
+      - uses: taiki-e/install-action@68675c5a5f1a6950c3975d33f3ae0ef155e5bf3d # v2.68.15
         with: { tool: 'just' }
       - run: just env-info install-dependencies '${{ matrix.backend }}'
       - name: Read MSRV
