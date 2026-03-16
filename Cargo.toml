@@ -8,7 +8,7 @@ edition.workspace = true
 license.workspace = true
 keywords = ["maplibre", "rendering", "gis", "tiles"]
 categories = ["external-ffi-bindings", "science::geo", "rendering"]
-rust-version = "1.87" # due to cxx
+rust-version = "1.90" # due to image crate
 exclude = []
 
 [package.metadata.mln]
@@ -16,10 +16,10 @@ repo = "maplibre/maplibre-native"
 release = "core-aeaadc06b4e0614f4f243db4dce210c22dde9f9c"
 
 [features]
-default = ["log", "pool"] # automatically picks the platform-specific features
-metal = [] # default on Apple platforms, do not add to default features
+default = ["log", "pool"]
+metal = []
 opengl = []
-vulkan = []  # default on other platforms
+vulkan = []
 log = ["dep:log"]
 pool = ["dep:tokio"]
 
