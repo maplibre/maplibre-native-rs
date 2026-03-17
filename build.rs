@@ -1,6 +1,7 @@
 //! File for defining how we download and link against `MapLibre Native`.
 
 use std::path::{Path, PathBuf};
+use std::process::Command;
 use std::{env, fs};
 
 use downloader::{Download, Downloader};
@@ -46,7 +47,9 @@ impl GraphicsRenderingAPI {
                 // TODO: modify for better defaults
                 // This might not be the best logic, but it can change at any moment because it's a fallback with a warning
                 // Current logic: if opengl is enabled, always use that, otherwise pick metal on macOS and vulkan on other platforms
-                println!("cargo::warning=Features 'metal', 'opengl', and 'vulkan' are mutually exclusive.");
+                println!(
+                    "cargo::warning=Features 'metal', 'opengl', and 'vulkan' are mutually exclusive."
+                );
 
                 let default_choice = if with_opengl {
                     Self::OpenGL
@@ -55,7 +58,9 @@ impl GraphicsRenderingAPI {
                 } else {
                     Self::Vulkan
                 };
-                println!("cargo::warning=Using only '{default_choice}', but this default selection may change in future releases.");
+                println!(
+                    "cargo::warning=Using only '{default_choice}', but this default selection may change in future releases."
+                );
                 default_choice
             }
         }
@@ -71,34 +76,226 @@ impl std::fmt::Display for GraphicsRenderingAPI {
     }
 }
 
+fn emit_build_verbose_warning(message: impl AsRef<str>) {
+    println!("cargo:rerun-if-env-changed=MLN_BUILD_VERBOSE");
+    if env::var("MLN_BUILD_VERBOSE").is_ok() {
+        println!("cargo:warning={}", message.as_ref());
+    }
+}
+
+fn is_macos_arm64_target() -> bool {
+    let target_os = env::var("CARGO_CFG_TARGET_OS").expect("CARGO_CFG_TARGET_OS not set");
+    let target_arch = env::var("CARGO_CFG_TARGET_ARCH").expect("CARGO_CFG_TARGET_ARCH not set");
+    target_os == "macos" && target_arch == "aarch64"
+}
+
+fn llvm_objcopy_path() -> Option<PathBuf> {
+    if let Some(path) = env::var_os("LLVM_OBJCOPY").map(PathBuf::from) {
+        if path.is_file() {
+            return Some(path);
+        }
+    }
+
+    if Command::new("llvm-objcopy")
+        .arg("--version")
+        .output()
+        .is_ok()
+    {
+        return Some(PathBuf::from("llvm-objcopy"));
+    }
+
+    if let Ok(output) = Command::new("xcrun")
+        .args(["--find", "llvm-objcopy"])
+        .output()
+    {
+        if output.status.success() {
+            let path = String::from_utf8_lossy(&output.stdout).trim().to_owned();
+            if !path.is_empty() {
+                let candidate = PathBuf::from(path);
+                if candidate.is_file() {
+                    return Some(candidate);
+                }
+            }
+        }
+    }
+
+    [
+        "/opt/homebrew/opt/llvm/bin/llvm-objcopy",
+        "/usr/local/opt/llvm/bin/llvm-objcopy",
+    ]
+    .iter()
+    .map(PathBuf::from)
+    .find(|path| path.is_file())
+}
+
+fn collect_bridge_object_files(out_dir: &Path) -> Vec<PathBuf> {
+    fs::read_dir(out_dir)
+        .expect("Failed to read OUT_DIR")
+        .filter_map(Result::ok)
+        .map(|entry| entry.path())
+        .filter(|path| {
+            path.is_file()
+                && path
+                    .file_name()
+                    .and_then(|value| value.to_str())
+                    .is_some_and(|name| {
+                        name.ends_with("-bridge.rs.o") || name.ends_with("-bridge.o")
+                    })
+        })
+        .collect()
+}
+
+fn collect_required_mbgl_symbols(bridge_objects: &[PathBuf]) -> Vec<String> {
+    let nm_output = Command::new("nm")
+        .arg("-u")
+        .args(bridge_objects)
+        .output()
+        .expect("Failed to inspect bridge object symbols with nm");
+    assert!(
+        nm_output.status.success(),
+        "nm failed while inspecting bridge object symbols"
+    );
+
+    let mut required_symbols = nm_output
+        .stdout
+        .split(|byte| *byte == b'\n')
+        .filter_map(|line| {
+            std::str::from_utf8(line)
+                .ok()
+                .and_then(|value| value.split_whitespace().last())
+                .map(ToOwned::to_owned)
+        })
+        .filter(|symbol| symbol.starts_with("__ZN4mbgl"))
+        .collect::<Vec<_>>();
+    required_symbols.sort();
+    required_symbols.dedup();
+    required_symbols
+}
+
+fn collect_unresolved_icu61_symbols(library_file: &Path) -> Vec<String> {
+    let nm_output = Command::new("nm")
+        .arg("-u")
+        .arg(library_file)
+        .output()
+        .expect("Failed to inspect amalgam archive symbols with nm");
+    assert!(
+        nm_output.status.success(),
+        "nm failed while inspecting amalgam archive symbols"
+    );
+
+    let mut required_symbols = nm_output
+        .stdout
+        .split(|byte| *byte == b'\n')
+        .filter_map(|line| {
+            std::str::from_utf8(line)
+                .ok()
+                .and_then(|value| value.split_whitespace().last())
+                .map(ToOwned::to_owned)
+        })
+        .filter(|symbol| symbol.ends_with("_61"))
+        .filter(|symbol| symbol.starts_with("_u") || symbol.starts_with("_ubidi"))
+        .collect::<Vec<_>>();
+    required_symbols.sort();
+    required_symbols.dedup();
+    required_symbols
+}
+
+fn globalize_macos_amalgam_symbols(library_file: &Path) {
+    if !is_macos_arm64_target() {
+        return;
+    }
+
+    let Some(file_name) = library_file.file_name().and_then(|value| value.to_str()) else {
+        return;
+    };
+    if !file_name.contains("amalgam-macos-arm64") {
+        return;
+    }
+
+    println!("cargo:rerun-if-env-changed=LLVM_OBJCOPY");
+    let Some(objcopy) = llvm_objcopy_path() else {
+        panic!(
+            "llvm-objcopy is required on macos arm64 to prepare maplibre amalgam symbols; set LLVM_OBJCOPY or install llvm-objcopy"
+        );
+    };
+
+    let out_dir = PathBuf::from(env::var_os("OUT_DIR").expect("OUT_DIR is not set"));
+    let bridge_objects = collect_bridge_object_files(&out_dir);
+    if bridge_objects.is_empty() {
+        return;
+    }
+
+    let required_symbols = collect_required_mbgl_symbols(&bridge_objects);
+    if required_symbols.is_empty() {
+        return;
+    }
+    emit_build_verbose_warning(format!(
+        "Globalizing {} mbgl symbols from bridge object requirements",
+        required_symbols.len()
+    ));
+    for symbol in &required_symbols {
+        emit_build_verbose_warning(format!("mbgl symbol required by bridge: {symbol}"));
+    }
+    let icu61_symbols = collect_unresolved_icu61_symbols(library_file);
+    if !icu61_symbols.is_empty() {
+        emit_build_verbose_warning(format!(
+            "Detected unresolved ICU _61 symbols from amalgam archive: {}",
+            icu61_symbols.join(", ")
+        ));
+    }
+
+    let mut command = Command::new(objcopy);
+    command.arg("--wildcard");
+    for symbol in &required_symbols {
+        command.arg(format!("--globalize-symbol={symbol}"));
+    }
+    command.arg(library_file);
+    let status = command.status().expect("Failed to run llvm-objcopy");
+    assert!(
+        status.success(),
+        "llvm-objcopy failed while preparing maplibre amalgam symbols"
+    );
+}
+
 fn download_static(out_dir: &Path, revision: &str) -> (PathBuf, PathBuf) {
     let graphics_api = GraphicsRenderingAPI::from_selected_features();
 
-    let target = if cfg!(all(target_os = "linux", target_arch = "aarch64")) {
-        "amalgam-linux-arm64"
-    } else if cfg!(all(target_os = "linux", target_arch = "x86_64")) {
-        "amalgam-linux-x64"
-    } else if cfg!(all(target_os = "macos", target_arch = "aarch64")) {
-        "amalgam-macos-arm64"
-    } else {
-        panic!(
-            "unsupported target: only linux and macos are currently supported by maplibre-native"
-        );
+    let target_os = env::var("CARGO_CFG_TARGET_OS").expect("CARGO_CFG_TARGET_OS not set");
+    let target_arch = env::var("CARGO_CFG_TARGET_ARCH").expect("CARGO_CFG_TARGET_ARCH not set");
+    let target = match (target_os.as_str(), target_arch.as_str()) {
+        ("linux", "aarch64") => "amalgam-linux-arm64",
+        ("linux", "x86_64") => "amalgam-linux-x64",
+        ("macos", "aarch64") => "amalgam-macos-arm64",
+        _ => {
+            panic!(
+                "unsupported target: only linux and macos are currently supported by maplibre-native"
+            );
+        }
     };
 
     let mut tasks = Vec::new();
     let lib_filename = format!("libmaplibre-native-core-{target}-{graphics_api}.a");
     let library_file = out_dir.join(&lib_filename);
     if !library_file.is_file() {
-        let static_url = format!("https://github.com/maplibre/maplibre-native/releases/download/{revision}/{lib_filename}");
-        println!("cargo:warning=Downloading precompiled maplibre-native core library from {static_url} into {}", out_dir.display());
+        let static_url = format!(
+            "https://github.com/maplibre/maplibre-native/releases/download/{revision}/{lib_filename}"
+        );
+        println!(
+            "cargo:warning=Downloading precompiled maplibre-native core library from {static_url} into {}",
+            out_dir.display()
+        );
         tasks.push(Download::new(&static_url));
     }
 
     let headers_file = out_dir.join("maplibre-native-headers.tar.gz");
     if !headers_file.is_file() {
-        let headers_url = format!("https://github.com/maplibre/maplibre-native/releases/download/{revision}/maplibre-native-headers.tar.gz");
-        println!("cargo:warning=Downloading headers for maplibre-native core library from {headers_url} into {}", out_dir.display());
+        let headers_url = format!(
+            "https://github.com/maplibre/maplibre-native/releases/download/{revision}/maplibre-native-headers.tar.gz"
+        );
+        println!(
+            "cargo:warning=Downloading headers for maplibre-native core library from {headers_url} into {}",
+            out_dir.display()
+        );
         tasks.push(Download::new(&headers_url));
     }
     fs::create_dir_all(out_dir).expect("Failed to create output directory");
@@ -151,13 +348,22 @@ fn resolve_mln_core(root: &Path) -> (PathBuf, Vec<PathBuf>) {
 
     println!("cargo:rerun-if-env-changed=MLN_CORE_LIBRARY_PATH");
     println!("cargo:rerun-if-env-changed=MLN_CORE_LIBRARY_HEADERS_PATH");
-    let (library_file, headers) =match (env::var_os("MLN_CORE_LIBRARY_PATH"), env::var_os("MLN_CORE_LIBRARY_HEADERS_PATH")) {
-      (Some(library_path),Some(headers_path)) => (PathBuf::from(library_path), PathBuf::from(headers_path)),
-      (Some(_), None) => panic!("MLN_CORE_LIBRARY_HEADERS_PATH is not set. To compile from a local library/headers, both MLN_CORE_LIBRARY_PATH and MLN_CORE_LIBRARY_HEADERS_PATH must be set."),
-      (None, Some(_)) => panic!("MLN_CORE_LIBRARY_PATH is not set. To compile from a local library/headers, both MLN_CORE_LIBRARY_PATH and MLN_CORE_LIBRARY_HEADERS_PATH must be set."),
-      // Default => to downloading the static library
-      (None, None) => download_static(&out_dir, MLN_REVISION),
-     };
+    let (library_file, headers) = match (
+        env::var_os("MLN_CORE_LIBRARY_PATH"),
+        env::var_os("MLN_CORE_LIBRARY_HEADERS_PATH"),
+    ) {
+        (Some(library_path), Some(headers_path)) => {
+            (PathBuf::from(library_path), PathBuf::from(headers_path))
+        }
+        (Some(_), None) => panic!(
+            "MLN_CORE_LIBRARY_HEADERS_PATH is not set. To compile from a local library/headers, both MLN_CORE_LIBRARY_PATH and MLN_CORE_LIBRARY_HEADERS_PATH must be set."
+        ),
+        (None, Some(_)) => panic!(
+            "MLN_CORE_LIBRARY_PATH is not set. To compile from a local library/headers, both MLN_CORE_LIBRARY_PATH and MLN_CORE_LIBRARY_HEADERS_PATH must be set."
+        ),
+        // Default => to downloading the static library
+        (None, None) => download_static(&out_dir, MLN_REVISION),
+    };
     assert!(
         library_file.is_file(),
         "The MLN library at {} must be a file",
@@ -200,11 +406,20 @@ fn build_bridge(lib_name: &str, include_dirs: &[PathBuf]) {
     println!("cargo:rerun-if-changed=src/renderer/bridge.rs");
     println!("cargo:rerun-if-changed=include/map_renderer.h");
     println!("cargo:rerun-if-changed=include/rust_log_observer.h");
-    cxx_build::bridge("src/renderer/bridge.rs")
+
+    let target_os = env::var("CARGO_CFG_TARGET_OS").expect("CARGO_CFG_TARGET_OS not set");
+    let target_arch = env::var("CARGO_CFG_TARGET_ARCH").expect("CARGO_CFG_TARGET_ARCH not set");
+
+    let mut bridge = cxx_build::bridge("src/renderer/bridge.rs");
+    bridge
         .includes(include_dirs)
         .file("src/renderer/bridge.cpp")
-        .flag_if_supported("-std=c++20")
-        .compile("maplibre_rust_map_renderer_bindings");
+        .flag_if_supported("-std=c++20");
+    if target_os == "macos" && target_arch == "aarch64" {
+        println!("cargo:rerun-if-changed=src/renderer/icu61_compat.cpp");
+        bridge.file("src/renderer/icu61_compat.cpp");
+    }
+    bridge.compile("maplibre_rust_map_renderer_bindings");
 
     // Link mbgl-core after the bridge - or else `cargo test` won't be able to find the symbols.
     println!("cargo:rustc-link-lib=static={lib_name}");
@@ -212,6 +427,7 @@ fn build_bridge(lib_name: &str, include_dirs: &[PathBuf]) {
 
 fn build_mln() {
     let root = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
+    let target_os = env::var("CARGO_CFG_TARGET_OS").expect("CARGO_CFG_TARGET_OS not set");
     let (cpp_root, include_dirs) = resolve_mln_core(&root);
     println!(
         "cargo:warning=Using precompiled maplibre-native static library from {}",
@@ -223,7 +439,6 @@ fn build_mln() {
     );
 
     // Add system library search paths for macOS
-    let target_os = env::var("CARGO_CFG_TARGET_OS").expect("CARGO_CFG_TARGET_OS not set");
     if target_os == "macos" {
         // Check for Homebrew installation paths
         if let Ok(homebrew_prefix) = env::var("HOMEBREW_PREFIX") {
@@ -261,9 +476,15 @@ fn build_mln() {
         .replacen("lib", "", 1)
         .replace(".a", "");
     build_bridge(&lib_name, &include_dirs);
+    globalize_macos_amalgam_symbols(&cpp_root);
 
     println!("cargo:rustc-link-lib=curl");
     println!("cargo:rustc-link-lib=z");
+    if target_os == "macos" {
+        println!("cargo:rustc-link-lib=sqlite3");
+        println!("cargo:rustc-link-lib=icucore");
+        println!("cargo:rustc-link-lib=bz2");
+    }
     match GraphicsRenderingAPI::from_selected_features() {
         GraphicsRenderingAPI::Vulkan => {}
         GraphicsRenderingAPI::OpenGL => {
