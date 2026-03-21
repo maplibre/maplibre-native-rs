@@ -52,17 +52,17 @@ namespace bridge {
         private:
             void onWillStartLoadingMap() override {
                 if (willStartLoadingMapCallback.has_value()) {
-                    void_callback(*(*willStartLoadingMapCallback)); 
+                    void_callback(*(*willStartLoadingMapCallback));
                 }
             }
             void onDidFinishLoadingStyle() override {
                 if (finishLoadingStyleCallback.has_value()) {
-                    void_callback(*(*finishLoadingStyleCallback)); 
+                    void_callback(*(*finishLoadingStyleCallback));
                 }
             }
             void onDidBecomeIdle() override {
                 if (becomeIdleCallback.has_value()) {
-                    void_callback(*(*becomeIdleCallback)); 
+                    void_callback(*(*becomeIdleCallback));
                 }
             }
 
