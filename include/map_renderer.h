@@ -21,7 +21,6 @@ namespace mln {
 namespace bridge {
 
 constexpr size_t BYTES_PER_PIXEL = 4; // rgba
-constexpr size_t HEADER = sizeof(uint32_t) * 2; // Width and Height are stored as first values in the buffer
 
 class MapRenderer {
 public:
@@ -111,7 +110,7 @@ struct BridgeImage {
 
         size_t bufferLength() const {
             const size_t pixelCount = mSize.width * mSize.height;
-            return HEADER + pixelCount * BYTES_PER_PIXEL;
+            return pixelCount * BYTES_PER_PIXEL;
         }
 
         mbgl::Size size() const {
@@ -143,7 +142,7 @@ inline std::unique_ptr<std::string> MapRenderer_render(MapRenderer& self) {
     // Prepare string with dimensions and pixel data
     const size_t pixelCount = unpremultipliedImage.size.width * unpremultipliedImage.size.height;
     std::string data;
-    data.reserve(HEADER + pixelCount * BYTES_PER_PIXEL);
+    data.reserve(pixelCount * BYTES_PER_PIXEL);
 
     // First 8 bytes: width and height as uint32_t (little-endian)
     uint32_t width = unpremultipliedImage.size.width;
