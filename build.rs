@@ -170,8 +170,8 @@ fn resolve_mln_core(root: &Path) -> (PathBuf, Vec<PathBuf>) {
     let (library_file, headers) =match (env::var_os("MLN_CORE_LIBRARY_PATH"), env::var_os("MLN_CORE_LIBRARY_HEADERS_PATH")) {
       (Some(library_path),Some(headers_path)) => {
         println!("cargo:warning=Local library and headers will be used");
-        let _ = headers_path.clone().into_string().inspect(|s| println!("cargo:rerun-if-changed={}", s));
-        let _ = library_path.clone().into_string().inspect(|s| println!("cargo:rerun-if-changed={}", s));
+        let _ = headers_path.clone().into_string().inspect(|s| println!("cargo:rerun-if-changed={s}"));
+        let _ = library_path.clone().into_string().inspect(|s| println!("cargo:rerun-if-changed={s}"));
         (PathBuf::from(library_path), PathBuf::from(headers_path))
     },
       (Some(_), None) => panic!("MLN_CORE_LIBRARY_HEADERS_PATH is not set. To compile from a local library/headers, both MLN_CORE_LIBRARY_PATH and MLN_CORE_LIBRARY_HEADERS_PATH must be set."),
