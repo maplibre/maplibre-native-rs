@@ -25,27 +25,27 @@ namespace bridge {
 
     class MapObserver: public mbgl::MapObserver {
         public:
-            void setWillStartLoadingMapCallback(rust::Box<VoidCallback> callback) {
+            void setWillStartLoadingMapCallback(rust::Box<VoidCallback> callback) const {
                 willStartLoadingMapCallback = std::optional<rust::Box<VoidCallback>>{std::move(callback)};
             }
 
-            void setFinishLoadingStyleCallback(rust::Box<VoidCallback> callback) {
+            void setFinishLoadingStyleCallback(rust::Box<VoidCallback> callback) const {
                 finishLoadingStyleCallback = std::optional<rust::Box<VoidCallback>>{std::move(callback)};
             }
 
-            void setBecomeIdleCallback(rust::Box<VoidCallback> callback) {
+            void setBecomeIdleCallback(rust::Box<VoidCallback> callback) const {
                 becomeIdleCallback = std::optional<rust::Box<VoidCallback>>{std::move(callback)};
             }
 
-            void setFailLoadingMapCallback(rust::Box<FailingLoadingMapCallback> callback) {
+            void setFailLoadingMapCallback(rust::Box<FailingLoadingMapCallback> callback) const {
                 failLoadingMapCallback = std::optional<rust::Box<FailingLoadingMapCallback>>{std::move(callback)};
             }
 
-            void setFinishRenderingFrameCallback(rust::Box<FinishRenderingFrameCallback> callback) {
+            void setFinishRenderingFrameCallback(rust::Box<FinishRenderingFrameCallback> callback) const {
                 finishRenderingFrameCallback = std::optional<rust::Box<FinishRenderingFrameCallback>>{std::move(callback)};
             }
 
-            void setCameraDidChangeCallback(rust::Box<CameraDidChangeCallback> callback) {
+            void setCameraDidChangeCallback(rust::Box<CameraDidChangeCallback> callback) const {
                 cameraDidChangeCallback = std::optional<rust::Box<CameraDidChangeCallback>>{std::move(callback)};
             }
 
@@ -86,12 +86,12 @@ namespace bridge {
             }
 
         private:
-            std::optional<rust::Box<VoidCallback>> willStartLoadingMapCallback;
-            std::optional<rust::Box<VoidCallback>> finishLoadingStyleCallback;
-            std::optional<rust::Box<VoidCallback>> becomeIdleCallback;
-            std::optional<rust::Box<FailingLoadingMapCallback>> failLoadingMapCallback;
-            std::optional<rust::Box<CameraDidChangeCallback>> cameraDidChangeCallback;
-            std::optional<rust::Box<FinishRenderingFrameCallback>> finishRenderingFrameCallback;
+            mutable std::optional<rust::Box<VoidCallback>> willStartLoadingMapCallback;
+            mutable std::optional<rust::Box<VoidCallback>> finishLoadingStyleCallback;
+            mutable std::optional<rust::Box<VoidCallback>> becomeIdleCallback;
+            mutable std::optional<rust::Box<FailingLoadingMapCallback>> failLoadingMapCallback;
+            mutable std::optional<rust::Box<CameraDidChangeCallback>> cameraDidChangeCallback;
+            mutable std::optional<rust::Box<FinishRenderingFrameCallback>> finishRenderingFrameCallback;
     };
 
 } // namespace bridge

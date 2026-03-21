@@ -189,70 +189,52 @@ impl MapObserver {
     }
 
     /// React on start loading map
-    pub fn set_will_start_loading_map_callback<F: Fn() + 'static>(&mut self, callback: F) {
-        unsafe {
-            self.instance
-                .pin_mut_unchecked()
-                .setWillStartLoadingMapCallback(Box::new(VoidCallback::new(callback)));
-        }
+    pub fn set_will_start_loading_map_callback<F: Fn() + 'static>(&self, callback: F) {
+        self.instance
+            .setWillStartLoadingMapCallback(Box::new(VoidCallback::new(callback)));
     }
 
     /// Set a callback to react when style loading finished
-    pub fn set_did_finish_loading_style_callback<F: Fn() + 'static>(&mut self, callback: F) {
-        unsafe {
-            self.instance
-                .pin_mut_unchecked()
-                .setFinishLoadingStyleCallback(Box::new(VoidCallback::new(callback)));
-        }
+    pub fn set_did_finish_loading_style_callback<F: Fn() + 'static>(&self, callback: F) {
+        self.instance
+            .setFinishLoadingStyleCallback(Box::new(VoidCallback::new(callback)));
     }
 
     /// Set a callback when the map gets idle
-    pub fn set_did_become_idle_callback<F: Fn() + 'static>(&mut self, callback: F) {
-        unsafe {
-            self.instance
-                .pin_mut_unchecked()
-                .setBecomeIdleCallback(Box::new(VoidCallback::new(callback)));
-        }
+    pub fn set_did_become_idle_callback<F: Fn() + 'static>(&self, callback: F) {
+        self.instance
+            .setBecomeIdleCallback(Box::new(VoidCallback::new(callback)));
     }
 
     /// Set callback to react on failing loading map
     pub fn set_did_fail_loading_map_callback<F: Fn(ffi::MapLoadError, &str) + 'static>(
-        &mut self,
+        &self,
         callback: F,
     ) {
-        unsafe {
-            self.instance
-                .pin_mut_unchecked()
-                .setFailLoadingMapCallback(Box::new(FailingLoadingMapCallback::new(callback)));
-        }
+        self.instance
+            .setFailLoadingMapCallback(Box::new(FailingLoadingMapCallback::new(callback)));
     }
 
     /// Set a callback to react on camera changes
     pub fn set_camera_changed_callback<F: Fn(ffi::MapObserverCameraChangeMode) + 'static>(
-        &mut self,
+        &self,
         callback: F,
     ) {
-        unsafe {
-            self.instance
-                .pin_mut_unchecked()
-                .setCameraDidChangeCallback(Box::new(CameraDidChangeCallback::new(callback)));
-        }
+        self.instance
+            .setCameraDidChangeCallback(Box::new(CameraDidChangeCallback::new(callback)));
     }
 
     /// Set a callback to react on finished rendering frames
     pub fn set_finish_rendering_frame_callback<
         F: Fn(/*needs_repaint:*/ bool, /*placement_changed:*/ bool) + 'static,
     >(
-        &mut self,
+        &self,
         callback: F,
     ) {
-        unsafe {
-            self.instance
-                .pin_mut_unchecked()
-                .setFinishRenderingFrameCallback(Box::new(FinishRenderingFrameCallback::new(
-                    callback,
-                )));
-        }
+        self.instance
+            .setFinishRenderingFrameCallback(Box::new(FinishRenderingFrameCallback::new(
+                callback,
+            )));
     }
 }
 

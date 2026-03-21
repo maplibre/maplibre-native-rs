@@ -283,19 +283,16 @@ pub mod ffi {
 
         // With `self: Pin<&mut MapObserver>` as first argument, it is a non static method of that object.
         // cxx searches for such a method
-        fn setWillStartLoadingMapCallback(self: Pin<&mut MapObserver>, callback: Box<VoidCallback>);
-        fn setFinishLoadingStyleCallback(self: Pin<&mut MapObserver>, callback: Box<VoidCallback>);
-        fn setBecomeIdleCallback(self: Pin<&mut MapObserver>, callback: Box<VoidCallback>);
-        fn setFailLoadingMapCallback(
-            self: Pin<&mut MapObserver>,
-            callback: Box<FailingLoadingMapCallback>,
-        );
+        fn setWillStartLoadingMapCallback(self: &MapObserver, callback: Box<VoidCallback>);
+        fn setFinishLoadingStyleCallback(self: &MapObserver, callback: Box<VoidCallback>);
+        fn setBecomeIdleCallback(self: &MapObserver, callback: Box<VoidCallback>);
+        fn setFailLoadingMapCallback(self: &MapObserver, callback: Box<FailingLoadingMapCallback>,);
         fn setFinishRenderingFrameCallback(
-            self: Pin<&mut MapObserver>,
+            self: &MapObserver,
             callback: Box<FinishRenderingFrameCallback>,
         );
         fn setCameraDidChangeCallback(
-            self: Pin<&mut MapObserver>,
+            self: &MapObserver,
             callback: Box<CameraDidChangeCallback>,
         );
     }
