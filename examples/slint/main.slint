@@ -1,5 +1,4 @@
 import { Button, VerticalBox, ComboBox, HorizontalBox, Slider } from "std-widgets.slint";
-import { MaterialWindow, MaterialWindowAdapter, ListItem } from "dependencies/slint/ui-libraries/material/src/material.slint";
 
 
 // Define a struct to hold window size
@@ -82,7 +81,7 @@ export component MapWidget inherits Rectangle {
     }
 }
 
-export component MainWindow inherits MaterialWindow {
+export component MainWindow inherits Window {
     callback map-size-changed <=> map.map-size-changed;
     out property <Size> map-size <=> map.map-size;
 

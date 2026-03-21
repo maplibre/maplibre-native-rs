@@ -100,7 +100,7 @@ pub fn create_map(size: Size) -> Arc<RefCell<MapLibre>> {
             });
         }
     });
-    map_observer.set_camera_changed_callback(|mode| {});
+    map_observer.set_camera_changed_callback(|_mode| {});
     map_observer.set_finish_rendering_frame_callback({
         let flags = Arc::downgrade(&map.borrow().flags);
         move |needs_repaint: bool, placement_changed: bool| {

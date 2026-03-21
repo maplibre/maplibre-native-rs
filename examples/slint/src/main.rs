@@ -1,7 +1,5 @@
 mod maplibre;
 
-use std::sync::Arc;
-
 slint::include_modules!();
 
 fn main() {

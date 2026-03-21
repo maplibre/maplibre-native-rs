@@ -9,6 +9,12 @@
 //! Required libraries:
 //! Fedora:
 //!     - `sudo dnf install libicu-devel libglslang-devel spirv-tools-devel libpng-devel libjpeg-turbo-devel libuv-devel libwebp-devel`
+//! Ubuntu:
+//!     - `sudo apt install glslang-dev glslang-tools libicu-dev libpng-dev libjpeg-turbo8-dev libuv1-dev libwebp-dev libglfw3-dev ccache`
+//! 
+//! To build the amalgam library [armerge](https://github.com/tux3/armerge) is required:
+//!     - `cargo install armerge`
+//!     - `sudo apt install llvm` llvm-objcopy required
 
 use std::path::{Path, PathBuf};
 use std::{env, fs};
@@ -162,7 +168,12 @@ fn resolve_mln_core(root: &Path) -> (PathBuf, Vec<PathBuf>) {
     println!("cargo:rerun-if-env-changed=MLN_CORE_LIBRARY_PATH");
     println!("cargo:rerun-if-env-changed=MLN_CORE_LIBRARY_HEADERS_PATH");
     let (library_file, headers) =match (env::var_os("MLN_CORE_LIBRARY_PATH"), env::var_os("MLN_CORE_LIBRARY_HEADERS_PATH")) {
-      (Some(library_path),Some(headers_path)) => (PathBuf::from(library_path), PathBuf::from(headers_path)),
+      (Some(library_path),Some(headers_path)) => {
+        println!("cargo:warning=Local library and headers will be used");
+        let _ = headers_path.clone().into_string().inspect(|s| println!("cargo:rerun-if-changed={}", s));
+        let _ = library_path.clone().into_string().inspect(|s| println!("cargo:rerun-if-changed={}", s));
+        (PathBuf::from(library_path), PathBuf::from(headers_path))
+    },
       (Some(_), None) => panic!("MLN_CORE_LIBRARY_HEADERS_PATH is not set. To compile from a local library/headers, both MLN_CORE_LIBRARY_PATH and MLN_CORE_LIBRARY_HEADERS_PATH must be set."),
       (None, Some(_)) => panic!("MLN_CORE_LIBRARY_PATH is not set. To compile from a local library/headers, both MLN_CORE_LIBRARY_PATH and MLN_CORE_LIBRARY_HEADERS_PATH must be set."),
       // Default => to downloading the static library
