@@ -29,7 +29,7 @@ check:
 ci-lint: env-info test-fmt clippy
 
 # Run all tests as expected by CI
-ci-test backend: env-info (build backend) (test backend) (test-doc backend) (test example_slint) && assert-git-is-clean
+ci-test backend: env-info (build backend) (test backend) (test-doc backend) (test-example_slint) && assert-git-is-clean
 
 # Run minimal subset of tests to ensure compatibility with MSRV
 ci-test-msrv backend: (ci-test backend)  # for now, same as ci-test
@@ -145,8 +145,8 @@ test backend='vulkan':
     cargo test --all-targets --features {{backend}} --workspace
 
 # Test slint example
-test example_slint='vulkan':
-    cd examples/slint && cargo build
+test-example_slint backend='vulkan':
+    cd examples/slint && cargo build --features {{backend}}
 
 # Run all tests and accept the changes. Requires cargo-insta to be installed.
 test-accept:
