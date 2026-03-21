@@ -193,7 +193,7 @@ fn resolve_mln_core(root: &Path) -> (PathBuf, Vec<PathBuf>) {
     } else {
         assert!(
             headers.is_file(),
-            "The MLN headers at {} must be a zip file containing the headers.",
+            "The MLN headers at {} must be a gzip (tar.gz) file containing the headers.",
             headers.display()
         );
     }
