@@ -22,9 +22,9 @@ export global MapAdapter {
     callback bearing_changed(float);
 }
 
-export component MapWidget inherits Rectangle {
+export component MapWidget {
     // Default size
-    background: green;
+    // background: green;
 
     // Expose map image area size so backend can match framebuffer size
     out property<Size> map-size: { width: map.width, height: map.height };

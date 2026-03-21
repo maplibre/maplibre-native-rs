@@ -9,3 +9,9 @@ maplibre_native = { path = "../.."}
 
 [build-dependencies]
 slint-build = { version = "1.15"  }
+
+[features]
+default = ["vulkan"]
+vulkan = ["maplibre_native/vulkan"]
+opengl = ["maplibre_native/opengl"]
+metal = ["maplibre_native/metal"]
