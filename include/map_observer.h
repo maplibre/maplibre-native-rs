@@ -51,38 +51,38 @@ namespace bridge {
 
         private:
             void onWillStartLoadingMap() override {
-                try {
-                    void_callback(*willStartLoadingMapCallback.value());
-                } catch (...) {}
+                if (willStartLoadingMapCallback.has_value()) {
+                    void_callback(*(*willStartLoadingMapCallback)); 
+                }
             }
             void onDidFinishLoadingStyle() override {
-                try {
-                    void_callback(*(finishLoadingStyleCallback.value()));
-                } catch (...) {}
+                if (finishLoadingStyleCallback.has_value()) {
+                    void_callback(*(*finishLoadingStyleCallback)); 
+                }
             }
             void onDidBecomeIdle() override {
-                try {
-                    void_callback(*(becomeIdleCallback.value()));
-                } catch (...) {}
+                if (becomeIdleCallback.has_value()) {
+                    void_callback(*(*becomeIdleCallback)); 
+                }
             }
 
             void onDidFailLoadingMap(mbgl::MapLoadError error, const std::string& what) override {
-                try {
-                    failing_loading_map_callback(*(failLoadingMapCallback.value()), error, what);
-                } catch (...) {}
+                if (failLoadingMapCallback.has_value()) {
+                    failing_loading_map_callback(*(*failLoadingMapCallback), error, what);
+                }
             }
 
             void onCameraDidChange(MapObserverCameraChangeMode mode) override {
-                try {
-                    camera_did_change_callback(*(cameraDidChangeCallback.value()), mode);
-                } catch (...) {}
+                if (cameraDidChangeCallback.has_value()) {
+                    camera_did_change_callback(*(*cameraDidChangeCallback), mode);
+                }
             }
             // void onSourceChanged(mbgl::style::Source&) override;
 
             void onDidFinishRenderingFrame(const mbgl::MapObserver::RenderFrameStatus& status) override {
-                try {
-                    finish_rendering_frame_callback(*(finishRenderingFrameCallback.value()), status.needsRepaint, status.placementChanged);
-                } catch (...) {}
+                if (finishRenderingFrameCallback.has_value()) {
+                    finish_rendering_frame_callback(*(*finishRenderingFrameCallback), status.needsRepaint, status.placementChanged);
+                }
             }
 
         private:

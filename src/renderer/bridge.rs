@@ -45,6 +45,7 @@ pub struct Width(pub u32);
 pub struct Height(pub u32);
 
 /// A position in screen coordinates
+#[repr(C)]
 #[derive(Default, Debug, Clone, Copy)]
 pub struct ScreenCoordinate {
     x: f64,
@@ -71,6 +72,7 @@ impl Sub for ScreenCoordinate {
 }
 
 /// A size
+#[repr(C)]
 #[derive(Debug, Clone, Copy)]
 pub struct Size {
     width: u32,
