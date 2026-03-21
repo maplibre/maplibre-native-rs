@@ -34,7 +34,7 @@ At its core, we work as follows:
 ```rust
 use maplibre_native::{ImageRendererBuilder, Image};
 let mut renderer = ImageRendererBuilder::new();
-renderer.with_size(512, 512);
+renderer.with_size(NonZeroU32::new(512).unwrap(),NonZeroU32::new(512).unwrap(),);
 let mut renderer = renderer.build_static_renderer();
 renderer.load_style_from_url(&"https://demotiles.maplibre.org/style.json".parse().unwrap());
 let image: Image = renderer.render_static(0.0, 0.0, 0.0, 0.0, 0.0).unwrap();
