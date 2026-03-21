@@ -83,6 +83,7 @@ get-crate-field field package=main_crate:  (assert-cmd 'jq')
 get-msrv package=main_crate:  (get-crate-field 'rust_version' package)
 
 # Install Linux dependencies (Ubuntu/Debian). Supports 'vulkan' and 'opengl' backends.
+# fontconfig is required for the slint example
 [linux]
 install-dependencies backend='vulkan':
     sudo apt-get update
@@ -93,7 +94,8 @@ install-dependencies backend='vulkan':
       libglfw3-dev \
       libuv1-dev \
       libz-dev \
-      libfontconfig-dev # required for the slint example
+      libfontconfig-dev \
+      pkg-config # required for fontconfig detection
 
 # Install macOS dependencies via Homebrew
 [macos]
