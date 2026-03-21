@@ -92,7 +92,8 @@ install-dependencies backend='vulkan':
       libcurl4-openssl-dev \
       libglfw3-dev \
       libuv1-dev \
-      libz-dev
+      libz-dev \
+      libfontconfig-dev # required for the slint example
 
 # Install macOS dependencies via Homebrew
 [macos]
