@@ -33,7 +33,7 @@ enum GraphicsRenderingAPI {
     /// [Vulkan API](https://www.vulkan.org/)
     Vulkan,
     /// [WGPU API](https://github.com/gfx-rs/wgpu)
-    WGPU
+    WGPU,
 }
 impl GraphicsRenderingAPI {
     /// Selects the rendering API based on enabled cargo features and platform.
@@ -46,7 +46,6 @@ impl GraphicsRenderingAPI {
         let with_metal = env::var("CARGO_FEATURE_METAL").is_ok();
         let with_vulkan = env::var("CARGO_FEATURE_VULKAN").is_ok();
         let with_wgpu = env::var("CARGO_FEATURE_WGPU").is_ok();
-
 
         let target_os = env::var("CARGO_CFG_TARGET_OS").expect("CARGO_CFG_TARGET_OS not set");
         let is_macos = target_os == "ios" || target_os == "macos";
