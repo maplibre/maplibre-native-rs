@@ -181,7 +181,7 @@ fn resolve_mln_core(root: &Path) -> (PathBuf, Vec<PathBuf>) {
      };
     assert!(
         library_file.is_file(),
-        "The MLN library at {} must be a file. When building locally on Linux it is called libmbgl-core.a",
+        "The MLN library at {} must be a file. When building locally on Linux it is called libmbgl-core-amalgam.a",
         library_file.display()
     );
     if env::var_os("MLN_CORE_LIBRARY_HEADERS_PATH").is_some() {
