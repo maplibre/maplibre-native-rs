@@ -62,7 +62,7 @@ pub fn create_map(size: Size) -> Arc<RefCell<MapLibre>> {
     renderer.load_style_from_url(&"https://demotiles.maplibre.org/style.json".parse().unwrap());
     let map = Arc::new(RefCell::new(MapLibre::new(renderer)));
 
-    let mut map_observer = map.borrow_mut().renderer().map_observer();
+    let map_observer = map.borrow_mut().renderer().map_observer();
     map_observer.set_did_become_idle_callback({
         let flags = Arc::downgrade(&map.borrow().flags);
         move || {
