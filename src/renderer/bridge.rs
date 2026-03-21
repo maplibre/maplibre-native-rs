@@ -286,15 +286,12 @@ pub mod ffi {
         fn setWillStartLoadingMapCallback(self: &MapObserver, callback: Box<VoidCallback>);
         fn setFinishLoadingStyleCallback(self: &MapObserver, callback: Box<VoidCallback>);
         fn setBecomeIdleCallback(self: &MapObserver, callback: Box<VoidCallback>);
-        fn setFailLoadingMapCallback(self: &MapObserver, callback: Box<FailingLoadingMapCallback>,);
+        fn setFailLoadingMapCallback(self: &MapObserver, callback: Box<FailingLoadingMapCallback>);
         fn setFinishRenderingFrameCallback(
             self: &MapObserver,
             callback: Box<FinishRenderingFrameCallback>,
         );
-        fn setCameraDidChangeCallback(
-            self: &MapObserver,
-            callback: Box<CameraDidChangeCallback>,
-        );
+        fn setCameraDidChangeCallback(self: &MapObserver, callback: Box<CameraDidChangeCallback>);
     }
 
     // Declarations for C++ with implementations in Rust

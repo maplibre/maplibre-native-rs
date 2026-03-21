@@ -232,9 +232,7 @@ impl MapObserver {
         callback: F,
     ) {
         self.instance
-            .setFinishRenderingFrameCallback(Box::new(FinishRenderingFrameCallback::new(
-                callback,
-            )));
+            .setFinishRenderingFrameCallback(Box::new(FinishRenderingFrameCallback::new(callback)));
     }
 }
 
