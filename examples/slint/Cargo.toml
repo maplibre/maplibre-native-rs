@@ -4,7 +4,8 @@ version = "0.1.0"
 edition = "2024"
 
 [features]
-default = ["vulkan"]
+default = ["wgpu"]
+wgpu = ["maplibre_native/wgpu"]
 vulkan = ["maplibre_native/vulkan"]
 opengl = ["maplibre_native/opengl"]
 metal = ["maplibre_native/metal"]
