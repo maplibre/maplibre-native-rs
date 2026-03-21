@@ -1,6 +1,6 @@
 [package]
 name = "maplibre_native"
-version = "0.4.1"
+version = "0.4.2"
 description = "Rust bindings to the MapLibre Native map rendering engine"
 authors = ["Yuri Astrakhan <YuriAstrakhan@gmail.com>", "MapLibre contributors"]
 repository = "https://github.com/maplibre/maplibre-native-rs"
@@ -8,7 +8,7 @@ edition.workspace = true
 license.workspace = true
 keywords = ["maplibre", "rendering", "gis", "tiles"]
 categories = ["external-ffi-bindings", "science::geo", "rendering"]
-rust-version = "1.87" # due to cxx
+rust-version = "1.90" # due to image crate
 exclude = []
 
 [package.metadata.mln]
@@ -16,10 +16,10 @@ repo = "maplibre/maplibre-native"
 release = "core-aeaadc06b4e0614f4f243db4dce210c22dde9f9c"
 
 [features]
-default = ["log", "pool"] # automatically picks the platform-specific features
-metal = [] # default on Apple platforms, do not add to default features
+default = ["log", "pool"]
+metal = []
 opengl = []
-vulkan = []  # default on other platforms
+vulkan = []
 log = ["dep:log"]
 pool = ["dep:tokio"]
 
@@ -74,7 +74,7 @@ futures = "0.3"
 image = "0.25"
 insta = "1.43.2"
 log = "0.4"
-maplibre_native = { path = ".", version = "0.4.1" }
+maplibre_native = { path = ".", version = "0.4.2" }
 tar = "0.4.44"
 thiserror = "2.0.16"
 tokio = { version = "1", features = [], default-features = false }
