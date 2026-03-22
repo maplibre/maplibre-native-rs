@@ -111,7 +111,28 @@ public:
     Texture(WGPUTexture texture): mTexture(texture) {
         assert(mTexture);
     }
-public:
+
+    WGPUTextureView createView(WGPUTextureViewDescriptor const * descriptor) {
+        return wgpuTextureCreateView(mTexture, descriptor);
+    }
+
+    ~Texture() {
+        destroy();
+    }
+
+    void destroy() const {
+        wgpuTextureDestroy(mTexture);
+        //mTexture = nullptr;
+    }
+
+    WGPUExtent3D getExtend3d() const {
+        return WGPUExtent3D {
+            0, // TODO: where do I get this information?
+            0,// TODO: where do I get this information?
+            wgpuTextureGetDepthOrArrayLayers(mTexture)
+        };
+    }
+
     uint32_t getMipLevelCount() const {
         return wgpuTextureGetMipLevelCount(mTexture);
     }

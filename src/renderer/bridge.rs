@@ -1,8 +1,7 @@
-use crate::renderer::callbacks::{
-    camera_did_change_callback, failing_loading_map_callback, finish_rendering_frame_callback,
-    void_callback, CameraDidChangeCallback, FailingLoadingMapCallback,
-    FinishRenderingFrameCallback, VoidCallback,
-};
+use cxx::UniquePtr;
+use crate::renderer::{bridge::ffi::{WGPUTextureDimension, WGPUTextureFormat, WGPUTextureUsage}, callbacks::{
+    CameraDidChangeCallback, FailingLoadingMapCallback, FinishRenderingFrameCallback, VoidCallback, camera_did_change_callback, failing_loading_map_callback, finish_rendering_frame_callback, void_callback
+}};
 use std::ops::Sub;
 
 // https://maplibre.org/maplibre-native/docs/book/design/ten-thousand-foot-view.html
@@ -102,6 +101,31 @@ impl Size {
         self.heigth
     }
 }
+
+struct Extent3d(pub(crate) wgpu::Extent3d);
+struct TextureDimension(pub(crate) wgpu::TextureDimension);
+struct TextureFormat(pub(crate) wgpu::TextureFormat);
+struct TextureUsages(pub(crate) wgpu::TextureUsages);
+pub struct TextureInterface(pub UniquePtr<ffi::Texture>);
+
+impl std::fmt::Debug for TextureInterface {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "TextureInterface")
+    }
+}
+
+impl wgpu::custom::TextureInterface for TextureInterface {
+    fn create_view(&self, desc: &wgpu::TextureViewDescriptor<'_>) -> wgpu::custom::DispatchTextureView {
+        wgpu::custom::DispatchTextureView::Core(std::sync::Arc::new(self.0.createView()))
+    }
+
+    fn destroy(&self) {
+        self.0.destroy();
+    }
+}
+
+unsafe impl Send for TextureInterface {}
+unsafe impl Sync for TextureInterface {}
 
 #[allow(clippy::borrow_as_ptr)]
 #[cxx::bridge(namespace = "mln::bridge")]
@@ -233,9 +257,10 @@ pub mod ffi {
 
     #[namespace = ""]
     extern "C++" {
-        type WGPUTextureDimension = wgpu::Texture::TextureDimension;
-        type WGPUTextureFormat = wgpu::Texture::TextureFormat;
-        type WGPUTextureUsage = wgpu::Texture::TextureUsages;
+        type WGPUTextureDimension = super::TextureDimension;
+        type WGPUTextureFormat = super::TextureFormat;
+        type WGPUTextureUsage = super::TextureUsages;
+        type WGPUExtent3D = super::Extent3d;
     }
 
     // Declarations for Rust with implementations in C++
@@ -273,7 +298,7 @@ pub mod ffi {
         fn get(self: &BridgeImage) -> *const u8;
         fn size(self: &BridgeImage) -> Size;
         fn bufferLength(self: &BridgeImage) -> usize;
-        fn getTexture(self: Pin<&mut MapRenderer>) -> UniquePtr<BridgeImage>;
+        fn getTexture(self: Pin<&mut MapRenderer>) -> UniquePtr<Texture>;
         fn MapRenderer_render_once(obj: Pin<&mut MapRenderer>);
         fn MapRenderer_render(obj: Pin<&mut MapRenderer>) -> UniquePtr<CxxString>;
         fn MapRenderer_setDebugFlags(obj: Pin<&mut MapRenderer>, flags: MapDebugOptions);
@@ -304,12 +329,14 @@ pub mod ffi {
         fn setCameraDidChangeCallback(self: &MapObserver, callback: Box<CameraDidChangeCallback>);
 
         // Texture
+        fn createView(self: &Texture, );
+        fn destroy(self: &Texture);
         fn getMipLevelCount(self: &Texture) -> u32;
         fn getSampleCount(self: &Texture) -> u32;
         fn getDimension(self: &Texture) -> WGPUTextureDimension;
         fn getFormat(self: &Texture) -> WGPUTextureFormat;
         fn getUsage(self: &Texture) -> WGPUTextureUsage;
-
+        fn getExtend3d(self: &Texture) -> WGPUExtent3D;
     }
 
     // Declarations for C++ with implementations in Rust
@@ -353,6 +380,26 @@ unsafe impl cxx::ExternType for Size {
 
 unsafe impl cxx::ExternType for ScreenCoordinate {
     type Id = cxx::type_id!("mbgl::ScreenCoordinate");
+    type Kind = cxx::kind::Trivial;
+}
+
+unsafe impl cxx::ExternType for WGPUTextureDimension {
+    type Id = cxx::type_id!("WGPUTextureDimension");
+    type Kind = cxx::kind::Trivial;
+}
+
+unsafe impl cxx::ExternType for WGPUTextureFormat {
+    type Id = cxx::type_id!("WGPUTextureFormat");
+    type Kind = cxx::kind::Trivial;
+}
+
+unsafe impl cxx::ExternType for WGPUTextureUsage {
+    type Id = cxx::type_id!("WGPUTextureUsage");
+    type Kind = cxx::kind::Trivial;
+}
+
+unsafe impl cxx::ExternType for Extent3d {
+    type Id = cxx::type_id!("WGPUExtent3D");
     type Kind = cxx::kind::Trivial;
 }
 
