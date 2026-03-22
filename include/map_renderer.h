@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cassert>
 #include <mbgl/gfx/headless_frontend.hpp>
 #include <mbgl/map/map.hpp>
 #include <mbgl/map/map_options.hpp>
@@ -20,6 +21,8 @@
 namespace mln {
 namespace bridge {
 
+struct Texture;
+
 class MapRenderer {
 public:
     explicit MapRenderer(std::unique_ptr<mbgl::HeadlessFrontend> frontendInstance,
@@ -37,8 +40,8 @@ public:
         return mapObserverInstance;
     }
 
-    WGPUTexture getTexture() {
-        return this->frontend->getTexture();
+    inline std::unique_ptr<Texture> getTexture() {
+        return std::make_unique<Texture>(this->frontend->getTexture());
     }
 
 public:
@@ -101,6 +104,35 @@ inline std::unique_ptr<MapRenderer> MapRenderer_new(
 
     return std::make_unique<MapRenderer>(std::move(frontend), mapObserver, std::move(map));
 }
+
+struct Texture {
+public:
+    Texture() = delete;
+    Texture(WGPUTexture texture): mTexture(texture) {
+        assert(mTexture);
+    }
+public:
+    uint32_t getMipLevelCount() const {
+        return wgpuTextureGetMipLevelCount(mTexture);
+    }
+    uint32_t getSampleCount() const {
+        return wgpuTextureGetSampleCount(mTexture);
+    }
+
+    WGPUTextureDimension getDimension() const {
+        return wgpuTextureGetDimension(mTexture);
+    }
+
+    WGPUTextureFormat getFormat() const {
+        return wgpuTextureGetFormat(mTexture);
+    }
+
+    WGPUTextureUsage getUsage() const {
+        return wgpuTextureGetUsage(mTexture);
+    }
+private:
+    WGPUTexture mTexture;
+};
 
 struct BridgeImage {
     public:

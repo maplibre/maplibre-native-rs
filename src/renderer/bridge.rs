@@ -4,7 +4,6 @@ use crate::renderer::callbacks::{
     FinishRenderingFrameCallback, VoidCallback,
 };
 use std::ops::Sub;
-use wgpu::Texture;
 
 // https://maplibre.org/maplibre-native/docs/book/design/ten-thousand-foot-view.html
 
@@ -228,6 +227,9 @@ pub mod ffi {
     extern "C++" {
         type ScreenCoordinate = super::ScreenCoordinate;
         type Size = super::Size;
+        type WGPUTextureDimension = wgpu::Texture::TextureDimension;
+        type WGPUTextureFormat = wgpu::Texture::TextureFormat;
+        type WGPUTextureUsage = wgpu::Texture::TextureUsages;
     }
 
     // Declarations for Rust with implementations in C++
@@ -235,12 +237,13 @@ pub mod ffi {
         include!("map_renderer.h");
         include!("map_observer.h"); // Required to find functions below
 
+        // Left side must match a type in C++! Right side must be defined in Rust
+        // example: type VoidCallback = super::VoidCallbackampoline;
         type BridgeImage;
         type MapObserverCameraChangeMode;
         type MapObserver; // Created custom map observer
         type MapRenderer;
-        // Left side must match a type in C++! Right side must be defined in Rust
-        // example: type VoidCallback = super::VoidTrVoidCallbackampoline;
+        type Texture;
 
         #[allow(clippy::too_many_arguments)]
         fn MapRenderer_new(
@@ -265,7 +268,7 @@ pub mod ffi {
         fn get(self: &BridgeImage) -> *const u8;
         fn size(self: &BridgeImage) -> Size;
         fn bufferLength(self: &BridgeImage) -> usize;
-        fn getTexture(self: Pin<&mut MapRenderer>) -> Texture;
+        fn getTexture(self: Pin<&mut MapRenderer>) -> UniquePtr<BridgeImage>;
         fn MapRenderer_render_once(obj: Pin<&mut MapRenderer>);
         fn MapRenderer_render(obj: Pin<&mut MapRenderer>) -> UniquePtr<CxxString>;
         fn MapRenderer_setDebugFlags(obj: Pin<&mut MapRenderer>, flags: MapDebugOptions);
@@ -294,6 +297,14 @@ pub mod ffi {
             callback: Box<FinishRenderingFrameCallback>,
         );
         fn setCameraDidChangeCallback(self: &MapObserver, callback: Box<CameraDidChangeCallback>);
+
+        // Texture
+        fn getMipLevelCount(self: &Texture);
+        fn getSampleCount(self: &Texture);
+        fn getDimension(self: &Texture);
+        fn getFormat(self: &Texture);
+        fn getUsage(self: &Texture);
+
     }
 
     // Declarations for C++ with implementations in Rust
