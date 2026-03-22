@@ -3,6 +3,7 @@ use crate::renderer::callbacks::{
     void_callback, CameraDidChangeCallback, FailingLoadingMapCallback,
     FinishRenderingFrameCallback, VoidCallback,
 };
+use cxx::UniquePtr;
 use std::ops::Sub;
 
 // https://maplibre.org/maplibre-native/docs/book/design/ten-thousand-foot-view.html
@@ -419,17 +420,17 @@ unsafe impl cxx::ExternType for ScreenCoordinate {
     type Kind = cxx::kind::Trivial;
 }
 
-unsafe impl cxx::ExternType for WGPUTextureDimension {
+unsafe impl cxx::ExternType for TextureDimension {
     type Id = cxx::type_id!("WGPUTextureDimension");
     type Kind = cxx::kind::Trivial;
 }
 
-unsafe impl cxx::ExternType for WGPUTextureFormat {
+unsafe impl cxx::ExternType for TextureFormat {
     type Id = cxx::type_id!("WGPUTextureFormat");
     type Kind = cxx::kind::Trivial;
 }
 
-unsafe impl cxx::ExternType for WGPUTextureUsage {
+unsafe impl cxx::ExternType for TextureUsages {
     type Id = cxx::type_id!("WGPUTextureUsage");
     type Kind = cxx::kind::Trivial;
 }
