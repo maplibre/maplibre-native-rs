@@ -120,7 +120,10 @@ impl std::fmt::Debug for TextureInterface {
 }
 
 impl wgpu::custom::TextureInterface for TextureInterface {
-    fn create_view(&self, desc: &wgpu::TextureViewDescriptor<'_>) -> wgpu::custom::DispatchTextureView {
+    fn create_view(
+        &self,
+        desc: &wgpu::TextureViewDescriptor<'_>,
+    ) -> wgpu::custom::DispatchTextureView {
         // TODO: get rid of unwraps!
         let format = TextureFormat(desc.format.unwrap_or(self.0.getFormat().0));
         let dimension = TextureViewDimension(desc.dimension.unwrap()); // _or(self.0.getDimension().0);
@@ -366,7 +369,17 @@ pub mod ffi {
         fn setCameraDidChangeCallback(self: &MapObserver, callback: Box<CameraDidChangeCallback>);
 
         // Texture
-        fn createView(self: &Texture, format: WGPUTextureFormat, dimension: WGPUTextureViewDimension, usage: WGPUTextureUsage, aspect: WGPUTextureAspect, base_mip_level: u32, mip_level_count: u32, base_array_layer: u32, array_layer_count: u32) -> UniquePtr<TextureView>;
+        fn createView(
+            self: &Texture,
+            format: WGPUTextureFormat,
+            dimension: WGPUTextureViewDimension,
+            usage: WGPUTextureUsage,
+            aspect: WGPUTextureAspect,
+            base_mip_level: u32,
+            mip_level_count: u32,
+            base_array_layer: u32,
+            array_layer_count: u32,
+        ) -> UniquePtr<TextureView>;
         fn destroy(self: &Texture);
         fn getMipLevelCount(self: &Texture) -> u32;
         fn getSampleCount(self: &Texture) -> u32;

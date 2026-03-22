@@ -312,9 +312,8 @@ impl ImageRenderer<Continuous> {
         let t = self.instance.pin_mut().getTexture();
         assert!(!t.is_null());
 
-
         let desc = wgpu::TextureDescriptor {
-           /// Debug label of the texture. This will show up in graphics debuggers for easy identification.
+            /// Debug label of the texture. This will show up in graphics debuggers for easy identification.
             label: None,
             size: t.getExtend3d().0,
             mip_level_count: t.getMipLevelCount(),
@@ -322,9 +321,9 @@ impl ImageRenderer<Continuous> {
             dimension: t.getDimension().0,
             format: t.getFormat().0,
             usage: t.getUsage().0,
-            view_formats: &[], 
+            view_formats: &[],
         };
-        
+
         wgpu::Texture::from_custom(TextureInterface(t), &desc)
     }
 }
