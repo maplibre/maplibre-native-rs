@@ -310,6 +310,8 @@ impl ImageRenderer<Continuous> {
 
     pub fn get_texture(&mut self) -> wgpu::Texture {
         let t = self.instance.pin_mut().getTexture();
+        assert!(!t.is_null());
+
 
         let desc = wgpu::TextureDescriptor {
            /// Debug label of the texture. This will show up in graphics debuggers for easy identification.
