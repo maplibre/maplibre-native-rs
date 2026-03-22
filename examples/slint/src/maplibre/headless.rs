@@ -6,7 +6,7 @@ use maplibre_native::ScreenCoordinate;
 use std::cell::RefCell;
 use std::num::NonZeroU32;
 use std::path::Path;
-use std::sync::Arc;
+use std::rc::Rc;
 
 #[derive(Default)]
 struct Flags {
@@ -16,7 +16,7 @@ struct Flags {
 }
 
 pub struct MapLibre {
-    flags: Arc<RefCell<Flags>>,
+    flags: Rc<RefCell<Flags>>,
     renderer: ImageRenderer<Continuous>,
     last_pos: ScreenCoordinate,
 }
@@ -25,7 +25,7 @@ impl MapLibre {
     pub fn new(renderer: ImageRenderer<Continuous>) -> Self {
         Self {
             renderer,
-            flags: Arc::default(),
+            flags: Rc::default(),
             last_pos: ScreenCoordinate::default(),
         }
     }
@@ -36,7 +36,7 @@ impl MapLibre {
         updated
     }
 
-    pub fn renderer<'a>(&'a mut self) -> &'a mut ImageRenderer<Continuous> {
+    pub fn renderer(&mut self) -> &mut ImageRenderer<Continuous> {
         &mut self.renderer
     }
 
@@ -49,7 +49,7 @@ impl MapLibre {
     }
 }
 
-pub fn create_map(size: Size) -> Arc<RefCell<MapLibre>> {
+pub fn create_map(size: Size) -> Rc<RefCell<MapLibre>> {
     let mut renderer = ImageRendererBuilder::new()
         .with_size(
             NonZeroU32::new(size.width as u32).unwrap(),
@@ -60,11 +60,11 @@ pub fn create_map(size: Size) -> Arc<RefCell<MapLibre>> {
         .build_continuous_renderer();
     renderer.set_camera(0, 0, 0, 0., 0.); // setting the camera is important, otherwise map libre does nothing (no logs are comming and no map gets generated)
     renderer.load_style_from_url(&"https://demotiles.maplibre.org/style.json".parse().unwrap());
-    let map = Arc::new(RefCell::new(MapLibre::new(renderer)));
+    let map = Rc::new(RefCell::new(MapLibre::new(renderer)));
 
     let map_observer = map.borrow_mut().renderer().map_observer();
     map_observer.set_did_become_idle_callback({
-        let flags = Arc::downgrade(&map.borrow().flags);
+        let flags = Rc::downgrade(&map.borrow().flags);
         move || {
             println!("set_on_did_become_idle_callback");
             flags.upgrade().inspect(|v| {
@@ -73,7 +73,7 @@ pub fn create_map(size: Size) -> Arc<RefCell<MapLibre>> {
         }
     });
     map_observer.set_will_start_loading_map_callback({
-        let flags = Arc::downgrade(&map.borrow().flags);
+        let flags = Rc::downgrade(&map.borrow().flags);
         move || {
             println!("set_on_will_start_loading_map_callback");
             flags.upgrade().inspect(|v| {
@@ -83,7 +83,7 @@ pub fn create_map(size: Size) -> Arc<RefCell<MapLibre>> {
         }
     });
     map_observer.set_did_finish_loading_style_callback({
-        let flags = Arc::downgrade(&map.borrow().flags);
+        let flags = Rc::downgrade(&map.borrow().flags);
         move || {
             println!("set_on_did_finish_loading_style_callback");
             flags.upgrade().inspect(|v| {
@@ -92,7 +92,7 @@ pub fn create_map(size: Size) -> Arc<RefCell<MapLibre>> {
         }
     });
     map_observer.set_did_fail_loading_map_callback({
-        let flags = Arc::downgrade(&map.borrow().flags);
+        let flags = Rc::downgrade(&map.borrow().flags);
         move |_error, what| {
             println!("Failed to load map: {what}");
             flags.upgrade().inspect(|v| {
@@ -102,7 +102,7 @@ pub fn create_map(size: Size) -> Arc<RefCell<MapLibre>> {
     });
     map_observer.set_camera_changed_callback(|_mode| {});
     map_observer.set_finish_rendering_frame_callback({
-        let flags = Arc::downgrade(&map.borrow().flags);
+        let flags = Rc::downgrade(&map.borrow().flags);
         move |needs_repaint: bool, placement_changed: bool| {
             if needs_repaint || placement_changed {
                 flags.upgrade().inspect(|v| {

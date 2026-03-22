@@ -25,6 +25,8 @@ namespace bridge {
 struct Texture;
 struct TextureView;
 
+constexpr size_t BYTES_PER_PIXEL = 4; // rgba
+
 class MapRenderer {
 public:
     explicit MapRenderer(std::unique_ptr<mbgl::HeadlessFrontend> frontendInstance,
@@ -196,9 +198,7 @@ struct BridgeImage {
 
         size_t bufferLength() const {
             const size_t pixelCount = mSize.width * mSize.height;
-            constexpr size_t bytes_per_pixel = 4; // rgba
-            // TODO: why *2?
-            return sizeof(uint32_t) * 2 + pixelCount * bytes_per_pixel;
+            return pixelCount * BYTES_PER_PIXEL;
         }
 
         mbgl::Size size() const {
@@ -230,7 +230,7 @@ inline std::unique_ptr<std::string> MapRenderer_render(MapRenderer& self) {
     // Prepare string with dimensions and pixel data
     const size_t pixelCount = unpremultipliedImage.size.width * unpremultipliedImage.size.height;
     std::string data;
-    data.reserve(sizeof(uint32_t) * 2 + pixelCount * 4);
+    data.reserve(pixelCount * BYTES_PER_PIXEL);
 
     // First 8 bytes: width and height as uint32_t (little-endian)
     uint32_t width = unpremultipliedImage.size.width;
@@ -240,7 +240,7 @@ inline std::unique_ptr<std::string> MapRenderer_render(MapRenderer& self) {
 
     // Append the unpremultiplied RGBA pixel data directly
     const char* pixelData = reinterpret_cast<const char*>(unpremultipliedImage.data.get());
-    data.append(pixelData, pixelCount * 4);
+    data.append(pixelData, pixelCount * BYTES_PER_PIXEL);
 
     return std::make_unique<std::string>(std::move(data));
 }

@@ -4,16 +4,16 @@ use maplibre_native::Height;
 use maplibre_native::ScreenCoordinate;
 use maplibre_native::Width;
 use slint::ComponentHandle;
-use std::sync::Arc;
+use std::rc::Rc;
 mod headless;
 use headless::MapLibre;
 pub use headless::create_map;
 use maplibre_native::{X, Y};
 use std::cell::RefCell;
 
-pub fn init(ui: &MainWindow, map: &Arc<RefCell<MapLibre>>) {
+pub fn init(ui: &MainWindow, map: &Rc<RefCell<MapLibre>>) {
     ui.on_map_size_changed({
-        let map = Arc::downgrade(map);
+        let map = Rc::downgrade(map);
         move |size| {
             let size =
                 maplibre_native::Size::new(Width(size.width as u32), Height(size.height as u32));
@@ -26,7 +26,7 @@ pub fn init(ui: &MainWindow, map: &Arc<RefCell<MapLibre>>) {
     });
 
     ui.global::<MapAdapter>().on_tick_map_loop({
-        let map = Arc::downgrade(map);
+        let map = Rc::downgrade(map);
         let ui_handle = ui.as_weak();
         move || {
             let map = map.upgrade().unwrap();
@@ -54,7 +54,7 @@ pub fn init(ui: &MainWindow, map: &Arc<RefCell<MapLibre>>) {
     });
 
     ui.global::<MapAdapter>().on_mouse_press({
-        let map = Arc::downgrade(map);
+        let map = Rc::downgrade(map);
         move |x: f32, y: f32| {
             map.upgrade()
                 .unwrap()
@@ -64,7 +64,7 @@ pub fn init(ui: &MainWindow, map: &Arc<RefCell<MapLibre>>) {
     });
 
     ui.global::<MapAdapter>().on_mouse_move({
-        let map = Arc::downgrade(map);
+        let map = Rc::downgrade(map);
         move |x: f32, y: f32, _z: bool| {
             println!("Mouse move");
             let p = ScreenCoordinate::new(X(x.into()), Y(y.into()));
@@ -77,7 +77,7 @@ pub fn init(ui: &MainWindow, map: &Arc<RefCell<MapLibre>>) {
     });
 
     ui.global::<MapAdapter>().on_wheel_zoom({
-        let map = Arc::downgrade(map);
+        let map = Rc::downgrade(map);
         move |x: f32, y: f32, delta: f32| {
             const STEP: f64 = 1.2;
             let pos = ScreenCoordinate::new(X(x.into()), Y(y.into()));
