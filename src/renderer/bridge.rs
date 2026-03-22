@@ -225,8 +225,14 @@ pub mod ffi {
 
     #[namespace = "mbgl"]
     extern "C++" {
+        // Left side must match a type in C++! Right side must be defined in Rust
+        // example: type VoidCallback = super::VoidCallbackampoline;
         type ScreenCoordinate = super::ScreenCoordinate;
         type Size = super::Size;
+    }
+
+    #[namespace = ""]
+    extern "C++" {
         type WGPUTextureDimension = wgpu::Texture::TextureDimension;
         type WGPUTextureFormat = wgpu::Texture::TextureFormat;
         type WGPUTextureUsage = wgpu::Texture::TextureUsages;
@@ -237,8 +243,7 @@ pub mod ffi {
         include!("map_renderer.h");
         include!("map_observer.h"); // Required to find functions below
 
-        // Left side must match a type in C++! Right side must be defined in Rust
-        // example: type VoidCallback = super::VoidCallbackampoline;
+        // Opaque types
         type BridgeImage;
         type MapObserverCameraChangeMode;
         type MapObserver; // Created custom map observer
@@ -299,11 +304,11 @@ pub mod ffi {
         fn setCameraDidChangeCallback(self: &MapObserver, callback: Box<CameraDidChangeCallback>);
 
         // Texture
-        fn getMipLevelCount(self: &Texture);
-        fn getSampleCount(self: &Texture);
-        fn getDimension(self: &Texture);
-        fn getFormat(self: &Texture);
-        fn getUsage(self: &Texture);
+        fn getMipLevelCount(self: &Texture) -> u32;
+        fn getSampleCount(self: &Texture) -> u32;
+        fn getDimension(self: &Texture) -> WGPUTextureDimension;
+        fn getFormat(self: &Texture) -> WGPUTextureFormat;
+        fn getUsage(self: &Texture) -> WGPUTextureUsage;
 
     }
 
