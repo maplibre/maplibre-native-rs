@@ -1,7 +1,8 @@
-use cxx::UniquePtr;
-use crate::renderer::{bridge::ffi::{WGPUTextureDimension, WGPUTextureFormat, WGPUTextureUsage}, callbacks::{
-    CameraDidChangeCallback, FailingLoadingMapCallback, FinishRenderingFrameCallback, VoidCallback, camera_did_change_callback, failing_loading_map_callback, finish_rendering_frame_callback, void_callback
-}};
+use crate::renderer::callbacks::{
+    camera_did_change_callback, failing_loading_map_callback, finish_rendering_frame_callback,
+    void_callback, CameraDidChangeCallback, FailingLoadingMapCallback,
+    FinishRenderingFrameCallback, VoidCallback,
+};
 use std::ops::Sub;
 
 // https://maplibre.org/maplibre-native/docs/book/design/ten-thousand-foot-view.html
