@@ -1,0 +1,106 @@
+import { Button, VerticalBox, ComboBox, HorizontalBox, Slider } from "std-widgets.slint";
+
+
+// Define a struct to hold window size
+export struct Size {
+    width: length,
+    height: length,
+}
+
+// TODO: make this not global, because then it can be used only for one instance!
+export global MapAdapter {
+    in-out property <image> map_texture;
+    callback tick_map_loop();
+    callback mouse_press(x: float, y: float);
+    callback mouse_release(x: float, y: float);
+    callback mouse_move(x: float, y: float, bool);
+    callback style_changed(style: string);
+    callback double_click_with_shift(x: float, y: float, shift_pressed: bool);
+    callback wheel_zoom(x: float, y: float, zoom_delta: float); // Positive delta_y: zoom out; Negative: zoom in
+    callback fly_to(location: string);
+    callback pitch_changed(int);
+    callback bearing_changed(float);
+}
+
+export component MapWidget {
+    // Default size
+    // background: green;
+
+    // Expose map image area size so backend can match framebuffer size
+    out property<Size> map-size: { width: map.width, height: map.height };
+    callback map-size-changed(Size);
+    changed map-size => {
+        debug("Map size changed", map-size);
+        map-size-changed(map-size);
+    }
+
+    Timer {
+        interval: 16ms;
+        running: true;
+        triggered => {
+            MapAdapter.tick_map_loop();
+        }
+    }
+
+    VerticalBox {
+        spacing: 0px;
+
+        map := Image {
+            source: MapAdapter.map_texture;
+            image-fit: preserve; // Otherwise the mouse move is not correctly
+            vertical-alignment: center;
+            horizontal-alignment: center;
+
+            touch := TouchArea {
+                // Track last seen Shift modifier state from pointer events
+                property <bool> last-shift: false;
+                mouse-cursor: self.pressed ? grabbing : grab;
+
+                // Handle all pointer events properly
+                pointer-event(e) => {
+                    self.last-shift = e.modifiers.shift;
+
+                    if (e.kind == PointerEventKind.down) {
+                        MapAdapter.mouse_press(self.mouse-x / 1px, self.mouse-y / 1px);
+                    } else if (e.kind == PointerEventKind.up) {
+                        MapAdapter.mouse_release(self.mouse-x / 1px, self.mouse-y / 1px);
+                    } else if (e.kind == PointerEventKind.move && self.pressed) {
+                        MapAdapter.mouse_move(self.mouse-x / 1px, self.mouse-y / 1px, true);
+                    }
+                }
+
+                // Mouse-wheel / trackpad scroll to zoom
+                scroll-event(event) => {
+                    MapAdapter.wheel_zoom(self.mouse-x / 1px,
+                                        self.mouse-y / 1px,
+                                        event.delta_y / 1px);
+                    return accept;
+                }
+            }
+        }
+    }
+}
+
+export component MainWindow inherits Window {
+    callback map-size-changed <=> map.map-size-changed;
+    out property <Size> map-size <=> map.map-size;
+
+    preferred-width: 800px;
+    preferred-height: 600px;
+
+    init => {
+        debug("MainWindow width: ", self.width, ", Height: ", self.height);
+    }
+
+    map:= MapWidget {
+        width: root.width;
+        height: root.height;
+    }
+
+    Image {
+        x: 10px;
+        y: 10px;
+        width: 100px;
+        source: @image-url("slint-logo-simple.svg");
+    }
+}

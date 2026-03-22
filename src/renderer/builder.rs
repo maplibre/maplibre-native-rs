@@ -1,12 +1,11 @@
 //! Image renderer configuration and builder
 
+use crate::renderer::bridge::ffi;
+use crate::renderer::{Continuous, ImageRenderer, MapMode, Static, Tile};
 use std::ffi::OsString;
 use std::marker::PhantomData;
 use std::num::NonZeroU32;
 use std::path::PathBuf;
-
-use crate::renderer::bridge::ffi;
-use crate::renderer::{ImageRenderer, MapMode, Static, Tile};
 
 /// Builder for configuring [`ImageRenderer`] instances
 ///
@@ -244,6 +243,13 @@ impl ImageRendererBuilder {
     pub fn build_tile_renderer(self) -> ImageRenderer<Tile> {
         // TODO: Is the width/height used for this mode?
         ImageRenderer::new(MapMode::Tile, self)
+    }
+
+    /// Builds a continuous renderer
+    /// Using the `MapObserver` it is possible to react on signals from the Map
+    #[must_use]
+    pub fn build_continuous_renderer(self) -> ImageRenderer<Continuous> {
+        ImageRenderer::new(MapMode::Continuous, self)
     }
 }
 

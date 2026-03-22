@@ -1,0 +1,17 @@
+[package]
+name = "slint_map_libre_native"
+version = "0.1.0"
+edition = "2024"
+
+[features]
+default = ["vulkan"]
+vulkan = ["maplibre_native/vulkan"]
+opengl = ["maplibre_native/opengl"]
+metal = ["maplibre_native/metal"]
+
+[dependencies]
+maplibre_native = { path = "../.." }
+slint = { version = "1.15", features = ["backend-android-activity-06"] }
+
+[build-dependencies]
+slint-build = { version = "1.15" }

@@ -29,7 +29,7 @@ check:
 ci-lint: env-info test-fmt clippy
 
 # Run all tests as expected by CI
-ci-test backend: env-info (build backend) (test backend) (test-doc backend) && assert-git-is-clean
+ci-test backend: env-info (build backend) (test backend) (test-doc backend) (test-example_slint) && assert-git-is-clean
 
 # Run minimal subset of tests to ensure compatibility with MSRV
 ci-test-msrv backend: (ci-test backend)  # for now, same as ci-test
@@ -83,6 +83,7 @@ get-crate-field field package=main_crate:  (assert-cmd 'jq')
 get-msrv package=main_crate:  (get-crate-field 'rust_version' package)
 
 # Install Linux dependencies (Ubuntu/Debian). Supports 'vulkan' and 'opengl' backends.
+# fontconfig is required for the slint example
 [linux]
 install-dependencies backend='vulkan':
     sudo apt-get update
@@ -92,7 +93,9 @@ install-dependencies backend='vulkan':
       libcurl4-openssl-dev \
       libglfw3-dev \
       libuv1-dev \
-      libz-dev
+      libz-dev \
+      libfontconfig-dev \
+      pkg-config # required for fontconfig detection
 
 # Install macOS dependencies via Homebrew
 [macos]
@@ -143,6 +146,10 @@ semver *args:  (cargo-install 'cargo-semver-checks')
 # Run testcases against a specific backend
 test backend='vulkan':
     cargo test --all-targets --features {{backend}} --workspace
+
+# Test slint example
+test-example_slint backend='vulkan':
+    cd examples/slint && cargo build --features {{backend}}
 
 # Run all tests and accept the changes. Requires cargo-insta to be installed.
 test-accept:
