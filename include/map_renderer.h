@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cassert>
+#include <cstdint>
 #include <mbgl/gfx/headless_frontend.hpp>
 #include <mbgl/map/map.hpp>
 #include <mbgl/map/map_options.hpp>
@@ -112,8 +113,20 @@ public:
         assert(mTexture);
     }
 
-    WGPUTextureView createView(WGPUTextureViewDescriptor const * descriptor) {
-        return wgpuTextureCreateView(mTexture, descriptor);
+    void /*WGPUTextureView*/ createView(WGPUTextureFormat format, WGPUTextureViewDimension dimension, WGPUTextureUsage usage, WGPUTextureAspect aspect, uint32_t base_mip_level, uint32_t mip_level_count, uint32_t base_array_layer, uint32_t array_layer_count) const {
+        const auto desc = WGPUTextureViewDescriptor {
+            .nextInChain = nullptr,
+            .label = WGPUStringView {nullptr, 0},
+            .format = format,
+            .dimension = dimension,
+            .baseMipLevel = base_mip_level,
+            .mipLevelCount = mip_level_count,
+            .baseArrayLayer = base_array_layer,
+            .arrayLayerCount = array_layer_count,
+            .aspect = aspect,
+            .usage = usage,
+        };
+        return wgpuTextureCreateView(mTexture, &desc);
     }
 
     ~Texture() {
