@@ -37,6 +37,10 @@ public:
         return mapObserverInstance;
     }
 
+    WGPUTexture getTexture() {
+        return this->frontend->getTexture();
+    }
+
 public:
     mbgl::util::RunLoop runLoop;
     // Due to CXX limitations, make all these public and access them from the regular functions below

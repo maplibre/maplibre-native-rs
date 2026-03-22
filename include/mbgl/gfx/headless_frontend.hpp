@@ -1,5 +1,6 @@
 #pragma once
 
+#include </home/martin/GIT/maplibre-native/vendor/webgpu-cpp/wgpu-native/webgpu.h>
 #include <mbgl/gfx/headless_backend.hpp>
 #include <mbgl/gfx/rendering_stats.hpp>
 #include <mbgl/map/camera.hpp>
@@ -56,7 +57,9 @@ public:
     LatLng latLngForPixel(const ScreenCoordinate&);
 
     PremultipliedImage readStillImage();
+    WGPUTexture getTexture();
     RenderResult render(Map&);
+
     void renderOnce(Map&);
     void renderFrame();
 

@@ -4,6 +4,7 @@ use crate::renderer::callbacks::{
     FinishRenderingFrameCallback, VoidCallback,
 };
 use std::ops::Sub;
+use wgpu::Texture;
 
 // https://maplibre.org/maplibre-native/docs/book/design/ten-thousand-foot-view.html
 
@@ -264,6 +265,7 @@ pub mod ffi {
         fn get(self: &BridgeImage) -> *const u8;
         fn size(self: &BridgeImage) -> Size;
         fn bufferLength(self: &BridgeImage) -> usize;
+        fn getTexture(self: Pin<&mut MapRenderer>) -> Texture;
         fn MapRenderer_render_once(obj: Pin<&mut MapRenderer>);
         fn MapRenderer_render(obj: Pin<&mut MapRenderer>) -> UniquePtr<CxxString>;
         fn MapRenderer_setDebugFlags(obj: Pin<&mut MapRenderer>, flags: MapDebugOptions);
