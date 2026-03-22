@@ -23,6 +23,7 @@ namespace mln {
 namespace bridge {
 
 struct Texture;
+struct TextureView;
 
 class MapRenderer {
 public:
@@ -113,7 +114,7 @@ public:
         assert(mTexture);
     }
 
-    void /*WGPUTextureView*/ createView(WGPUTextureFormat format, WGPUTextureViewDimension dimension, WGPUTextureUsage usage, WGPUTextureAspect aspect, uint32_t base_mip_level, uint32_t mip_level_count, uint32_t base_array_layer, uint32_t array_layer_count) const {
+    std::unique_ptr<TextureView> createView(WGPUTextureFormat format, WGPUTextureViewDimension dimension, WGPUTextureUsage usage, WGPUTextureAspect aspect, uint32_t base_mip_level, uint32_t mip_level_count, uint32_t base_array_layer, uint32_t array_layer_count) const {
         const auto desc = WGPUTextureViewDescriptor {
             .nextInChain = nullptr,
             .label = WGPUStringView {nullptr, 0},
@@ -126,7 +127,7 @@ public:
             .aspect = aspect,
             .usage = usage,
         };
-        return wgpuTextureCreateView(mTexture, &desc);
+        return std::make_unique<TextureView>(wgpuTextureCreateView(mTexture, &desc));
     }
 
     ~Texture() {
@@ -166,6 +167,23 @@ public:
     }
 private:
     WGPUTexture mTexture;
+};
+
+struct TextureView {
+public:
+    TextureView() = delete;
+    explicit TextureView(WGPUTextureView textureView): mTextureView(textureView) {
+        assert(mTextureView);
+    }
+
+    ~TextureView() {
+        if (mTextureView) {
+            wgpuTextureViewRelease(mTextureView);
+        }
+    }
+
+private:
+    WGPUTextureView mTextureView;
 };
 
 struct BridgeImage {

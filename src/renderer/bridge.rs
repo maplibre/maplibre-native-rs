@@ -102,13 +102,14 @@ impl Size {
     }
 }
 
-struct Extent3d(pub(crate) wgpu::Extent3d);
-struct TextureDimension(pub(crate) wgpu::TextureDimension);
-struct TextureFormat(pub(crate) wgpu::TextureFormat);
-struct TextureUsages(pub(crate) wgpu::TextureUsages);
+pub(crate) struct Extent3d(pub(crate) wgpu::Extent3d);
+pub(crate) struct TextureDimension(pub(crate) wgpu::TextureDimension);
+pub(crate) struct TextureFormat(pub(crate) wgpu::TextureFormat);
+pub(crate) struct TextureUsages(pub(crate) wgpu::TextureUsages);
 pub struct TextureInterface(pub UniquePtr<ffi::Texture>);
-struct TextureAspect(pub(crate) wgpu::TextureAspect);
-struct TextureViewDimension(pub(crate) wgpu::TextureViewDimension);
+pub struct TextureViewInterface(pub UniquePtr<ffi::TextureView>);
+pub(crate) struct TextureAspect(pub(crate) wgpu::TextureAspect);
+pub(crate) struct TextureViewDimension(pub(crate) wgpu::TextureViewDimension);
 
 impl std::fmt::Debug for TextureInterface {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -127,7 +128,16 @@ impl wgpu::custom::TextureInterface for TextureInterface {
         let mip_level_count = desc.mip_level_count.unwrap();
         let base_array_layer = desc.base_array_layer;
         let array_layer_count = desc.array_layer_count.unwrap(); // _or(default)
-        wgpu::custom::DispatchTextureView::Core(std::sync::Arc::new(self.0.createView(format, dimension, usage, aspect, base_mip_level, mip_level_count, base_array_layer, array_layer_count)))
+        wgpu::custom::DispatchTextureView::custom(TextureViewInterface(self.0.createView(
+            format,
+            dimension,
+            usage,
+            aspect,
+            base_mip_level,
+            mip_level_count,
+            base_array_layer,
+            array_layer_count,
+        )))
     }
 
     fn destroy(&self) {
@@ -137,6 +147,17 @@ impl wgpu::custom::TextureInterface for TextureInterface {
 
 unsafe impl Send for TextureInterface {}
 unsafe impl Sync for TextureInterface {}
+
+impl std::fmt::Debug for TextureViewInterface {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "TextureViewInterface")
+    }
+}
+
+impl wgpu::custom::TextureViewInterface for TextureViewInterface {}
+
+unsafe impl Send for TextureViewInterface {}
+unsafe impl Sync for TextureViewInterface {}
 
 #[allow(clippy::borrow_as_ptr)]
 #[cxx::bridge(namespace = "mln::bridge")]
@@ -287,6 +308,7 @@ pub mod ffi {
         type MapObserver; // Created custom map observer
         type MapRenderer;
         type Texture;
+        type TextureView;
 
         #[allow(clippy::too_many_arguments)]
         fn MapRenderer_new(
@@ -342,7 +364,7 @@ pub mod ffi {
         fn setCameraDidChangeCallback(self: &MapObserver, callback: Box<CameraDidChangeCallback>);
 
         // Texture
-        fn createView(self: &Texture, format: WGPUTextureFormat, dimension: WGPUTextureViewDimension, usage: WGPUTextureUsage, aspect: WGPUTextureAspect, base_mip_level: u32, mip_level_count: u32, base_array_layer: u32, array_layer_count: u32);
+        fn createView(self: &Texture, format: WGPUTextureFormat, dimension: WGPUTextureViewDimension, usage: WGPUTextureUsage, aspect: WGPUTextureAspect, base_mip_level: u32, mip_level_count: u32, base_array_layer: u32, array_layer_count: u32) -> UniquePtr<TextureView>;
         fn destroy(self: &Texture);
         fn getMipLevelCount(self: &Texture) -> u32;
         fn getSampleCount(self: &Texture) -> u32;
