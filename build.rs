@@ -443,7 +443,7 @@ fn build_mln() {
                 if clone_dir.join(MAPLIBRE_NATIVE_DIR_NAME).exists() {
                     // let _ = fs::remove_dir_all(clone_dir.join(MAPLIBRE_NATIVE_DIR_NAME));
                 }
-                panic!("cargo:error=Failed to build maplibre native: {e}")
+                panic!("Failed to build maplibre native: {e}")
             }
             Ok(info) => info,
         }
