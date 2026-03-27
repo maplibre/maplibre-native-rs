@@ -393,7 +393,7 @@ fn build_mln() {
     println!("cargo:rerun-if-env-changed=MLN_PRECOMPILE");
     println!("cargo:rerun-if-env-changed=MLN_CORE_LIBRARY_USE_AMALGAM");
     let amalgam_lib = !env::var("MLN_CORE_LIBRARY_USE_AMALGAM")
-        .unwrap_or("1".to_string())
+        .unwrap_or("0".to_string())
         .eq("0");
     let precompiled = !env::var("MLN_PRECOMPILE")
         .unwrap_or("0".to_string())
