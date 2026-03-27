@@ -95,6 +95,14 @@ install-dependencies backend='vulkan':
       libuv1-dev \
       libz-dev \
       libfontconfig-dev \
+      glslang-dev \
+      glslang-tools \
+      libicu-dev \
+      libpng-dev \
+      libjpeg-turbo8-dev \
+      libwebp-dev \
+      ccache \
+      cmake \
       pkg-config # required for fontconfig detection
 
 # Install macOS dependencies via Homebrew
