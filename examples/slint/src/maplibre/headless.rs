@@ -106,7 +106,7 @@ pub fn create_map(size: Size) -> Rc<RefCell<MapLibre>> {
         move |needs_repaint: bool, placement_changed: bool| {
             if needs_repaint || placement_changed {
                 flags.upgrade().inspect(|v| {
-                    println!("Frame updated");
+                    // println!("Frame updated");
                     v.borrow_mut().frame_updated = true;
                 });
             }

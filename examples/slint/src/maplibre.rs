@@ -40,7 +40,7 @@ pub fn init(ui: &MainWindow, map: &Rc<RefCell<MapLibre>>) {
                     size.width(),
                     size.height(),
                 );
-                println!("New image: ({}, {})", size.width(), size.height());
+                // println!("New image: ({}, {})", size.width(), size.height());
                 ui_handle
                     .upgrade()
                     .unwrap()
