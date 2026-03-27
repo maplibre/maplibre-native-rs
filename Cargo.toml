@@ -96,6 +96,6 @@ similar.opt-level = 3
 
 # To debug the build script
 # Use `cargo build -v 2>&1 | grep build-script-build`
-# to find the location of the build scrip
+# to find the location of the build script
 [profile.dev.build-override]
 debug = true
