@@ -24,7 +24,7 @@ use downloader::{Download, Downloader};
 
 const MLN_REVISION: &str = "core-9b6325a14e2cf1cc29ab28c1855ad376f1ba4903";
 
-// File of the bridge
+// Files of the bridge
 const BRIDGE_FILES: &[&str] = &[
     "src/renderer/bridge.rs",
     "include/map_renderer.h",
