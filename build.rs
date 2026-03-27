@@ -322,7 +322,7 @@ fn build_local(
 
     let mut config = cmake::Config::new(maplibre_native_dir.clone());
     //config.out_dir(maplibre_native_dir.clone().join("build"));
-    // config.very_verbose(true);
+    config.very_verbose(true);
 
     const TARGET_NAME: &str = "mbgl-core";
     println!("cargo:warning=Building target {TARGET_NAME}");
