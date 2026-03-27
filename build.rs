@@ -339,7 +339,7 @@ fn build_local(
         } //GraphicsRenderingAPI::WebGPU => config.configure_arg("-DMLN_WITH_WEBGPU=ON").configure_arg("-DMLN_WEBGPU_IMPL_WGPU=ON"),
     }
     if amalgam_lib {
-        config.configure_arg("-D-DMLN_CREATE_AMALGAMATION:BOOL=ON");
+        config.configure_arg("-DMLN_CREATE_AMALGAMATION:BOOL=ON");
     }
     if cfg!(target_os = "linux") {
         config.configure_arg("-DMLN_WITH_WAYLAND=OFF");
@@ -387,7 +387,7 @@ fn build_mln() {
     println!("cargo:rerun-if-env-changed=MLN_PRECOMPILE");
     println!("cargo:rerun-if-env-changed=MLN_CORE_LIBRARY_USE_AMALGAM");
     let amalgam_lib = !env::var("MLN_CORE_LIBRARY_USE_AMALGAM")
-        .unwrap_or("0".to_string())
+        .unwrap_or("1".to_string())
         .eq("0");
     let precompiled = !env::var("MLN_PRECOMPILE")
         .unwrap_or("0".to_string())
