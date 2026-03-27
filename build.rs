@@ -17,11 +17,21 @@
 //!     - `sudo apt install llvm` llvm-objcopy required
 
 use std::path::{Path, PathBuf};
+use std::process::Command;
 use std::{env, fs};
 
 use downloader::{Download, Downloader};
 
 const MLN_REVISION: &str = "core-9b6325a14e2cf1cc29ab28c1855ad376f1ba4903";
+
+// File of the bridge
+const BRIDGE_FILES: &[&str] = &[
+    "src/renderer/bridge.rs",
+    "include/map_renderer.h",
+    "include/renderer_observer.h",
+    "include/map_observer.h",
+    "include/rust_log_observer.h",
+];
 
 /// Supported graphics rendering APIs.
 #[derive(PartialEq, Eq, Clone, Copy)]
@@ -226,13 +236,13 @@ fn resolve_mln_core(root: &Path) -> (PathBuf, Vec<PathBuf>) {
 
 /// Gather include directories and build the C++ bridge using `cxx_build`.
 fn build_bridge(lib_name: &str, include_dirs: &[PathBuf]) {
-    println!("cargo:rerun-if-changed=src/renderer/bridge.rs");
-    println!("cargo:rerun-if-changed=include/map_renderer.h");
-    println!("cargo:rerun-if-changed=include/renderer_observer.h");
-    println!("cargo:rerun-if-changed=include/map_observer.h");
-    println!("cargo:rerun-if-changed=include/rust_log_observer.h");
+    println!("cargo:warning=Include_dirs: {:?}", include_dirs);
+    BRIDGE_FILES.iter().for_each(|f| {
+        println!("cargo:rerun-if-changed={f}");
+    });
     cxx_build::bridge("src/renderer/bridge.rs")
         .includes(include_dirs)
+        .include("include")
         .file("src/renderer/bridge.cpp")
         .flag_if_supported("-std=c++20")
         .compile("maplibre_rust_map_renderer_bindings");
@@ -241,12 +251,15 @@ fn build_bridge(lib_name: &str, include_dirs: &[PathBuf]) {
     println!("cargo:rustc-link-lib=static={lib_name}");
 }
 
-fn build_mln() {
+struct Info {
+    lib_name: String,
+    include_dirs: Vec<PathBuf>,
+    cpp_root: PathBuf,
+}
+
+fn bundle_precompiled() -> Info {
     let root = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
     let (cpp_root, include_dirs) = resolve_mln_core(&root);
-
-    println!("cargo:rerun-if-env-changed=MLN_CORE_LIBRARY_NO_AMALGAM");
-    let no_amalgam_lib = env::var_os("MLN_CORE_LIBRARY_NO_AMALGAM").is_some();
 
     println!(
         "cargo:warning=Using precompiled maplibre-native static library from {}",
@@ -256,6 +269,120 @@ fn build_mln() {
         "cargo:rustc-link-search=native={}",
         cpp_root.parent().unwrap().display()
     );
+
+    // These `cargo:rustc-link-lib` must be done before curl and GL,
+    // especially on Linux before 1.90 (1.90 introduced new linker on Linux)
+    let lib_name = cpp_root
+        .file_name()
+        .expect("static library base has a file name")
+        .to_string_lossy()
+        .to_string()
+        .replacen("lib", "", 1)
+        .replace(".a", "");
+
+    Info {
+        lib_name,
+        include_dirs,
+        cpp_root,
+    }
+}
+
+fn build_local(
+    clone_dir: PathBuf,
+    name: &str,
+    amalgam_lib: bool,
+) -> Result<Info, Box<dyn std::error::Error>> {
+    let maplibre_native_dir = clone_dir.join(name);
+    if !clone_dir.join(name).exists() {
+        println!("cargo:warning=Cloning maplibre-native.");
+        Command::new("git")
+            .current_dir(clone_dir.clone())
+            .args(&[
+                "clone",
+                "--depth",
+                "1",
+                "https://github.com/maplibre/maplibre-native.git",
+                name,
+            ])
+            .status()?;
+
+        Command::new("git")
+            .current_dir(maplibre_native_dir.clone())
+            .args(&["checkout", "origin/master"])
+            .status()?;
+    }
+    println!("cargo:warning=Building maplibre-native.");
+    println!(
+        "cargo:rerun-if-changed={}",
+        maplibre_native_dir.as_os_str().to_str().unwrap()
+    );
+    Command::new("git")
+        .current_dir(maplibre_native_dir.clone())
+        .args(&["submodule", "update", "--init", "--recursive"])
+        .status()?;
+
+    let mut config = cmake::Config::new(maplibre_native_dir.clone());
+    //config.out_dir(maplibre_native_dir.clone().join("build"));
+    config.very_verbose(true);
+
+    const TARGET_NAME: &str = "mbgl-core";
+    println!("cargo:warning=Building target {TARGET_NAME}");
+    config.build_target(TARGET_NAME);
+    match GraphicsRenderingAPI::from_selected_features() {
+        GraphicsRenderingAPI::Metal => {
+            config.configure_arg("-DMLN_WITH_METAL=ON");
+        }
+        GraphicsRenderingAPI::OpenGL => {
+            config.configure_arg("-DMLN_WITH_OPENGL=ON");
+        }
+        GraphicsRenderingAPI::Vulkan => {
+            config.configure_arg("-DMLN_WITH_VULKAN=ON");
+        } //GraphicsRenderingAPI::WebGPU => config.configure_arg("-DMLN_WITH_WEBGPU=ON").configure_arg("-DMLN_WEBGPU_IMPL_WGPU=ON"),
+    }
+    if amalgam_lib {
+        config.configure_arg("-D-DMLN_CREATE_AMALGAMATION:BOOL=ON");
+    }
+    if cfg!(target_os = "linux") {
+        config.configure_arg("-DMLN_WITH_WAYLAND=OFF");
+        config.configure_arg("-DMLN_WITH_WAYLAND=ON");
+    }
+    let dest = config.build();
+    println!(
+        "cargo:rustc-link-search=native={}",
+        dest.join("build").display()
+    );
+    println!("cargo:warning=Building maplibre-native done.");
+
+    let include_dirs = vec![
+        "include",
+        "vendor/maplibre-native-base/include",
+        "vendor/maplibre-native-base/deps/variant/include",
+        "vendor/maplibre-native-base/deps/geometry.hpp/include",
+        "vendor/maplibre-native-base/deps/geojson.hpp/include",
+        "vendor/metal-cpp",
+        "vendor/expected-lite/include",
+    ]
+    .into_iter()
+    .map(|s| maplibre_native_dir.clone().join(s))
+    .collect();
+
+    Ok(Info {
+        lib_name: format!("{TARGET_NAME}{}", if amalgam_lib { "-amalgam" } else { "" }),
+        include_dirs,
+        cpp_root: maplibre_native_dir,
+    })
+}
+
+fn build_mln() {
+    println!("cargo:rerun-if-env-changed=MLN_PRECOMPILE");
+    println!("cargo:rerun-if-env-changed=MLN_CORE_LIBRARY_USE_AMALGAM");
+    let amalgam_lib = !env::var("MLN_CORE_LIBRARY_USE_AMALGAM")
+        .unwrap_or("0".to_string())
+        .eq("0");
+    let precompiled = !env::var("MLN_PRECOMPILE")
+        .unwrap_or("0".to_string())
+        .eq("0");
+    let system_lib = !env::var("MLN_SYSTEM").unwrap_or("0".to_string()).eq("0");
 
     // Add system library search paths for macOS
     let target_os = env::var("CARGO_CFG_TARGET_OS").expect("CARGO_CFG_TARGET_OS not set");
@@ -286,22 +413,34 @@ fn build_mln() {
         }
     }
 
-    // These `cargo:rustc-link-lib` must be done before curl and GL,
-    // especially on Linux before 1.90 (1.90 introduced new linker on Linux)
-    let lib_name = cpp_root
-        .file_name()
-        .expect("static library base has a file name")
-        .to_string_lossy()
-        .to_string()
-        .replacen("lib", "", 1)
-        .replace(".a", "");
-    build_bridge(&lib_name, &include_dirs);
-    if no_amalgam_lib {
+    let info = if precompiled {
+        bundle_precompiled()
+    } else if system_lib {
+        // Using pkg config
+        // let mut cfg = pkg_config::Config::new();
+        panic!("Not implemented")
+    } else {
+        let root = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
+        const MAPLIBRE_NATIVE_DIR_NAME: &str = "maplibre-native";
+        let clone_dir = root.join("target");
+        match build_local(clone_dir.clone(), MAPLIBRE_NATIVE_DIR_NAME, amalgam_lib) {
+            Err(e) => {
+                if clone_dir.join(MAPLIBRE_NATIVE_DIR_NAME).exists() {
+                    // let _ = fs::remove_dir_all(clone_dir.join(MAPLIBRE_NATIVE_DIR_NAME));
+                }
+                panic!("cargo:error=Failed to build maplibre native: {e}")
+            }
+            Ok(info) => info,
+        }
+    };
+
+    build_bridge(&info.lib_name, &info.include_dirs);
+    if !amalgam_lib {
         // The dependent libs are not bundled in the core lib, so we have to link manually
         // Required for mlt-cpp. Cpp root link search was already added above
         println!(
             "cargo:rustc-link-search=native={}",
-            cpp_root
+            info.cpp_root
                 .parent()
                 .unwrap()
                 .join("vendor")
