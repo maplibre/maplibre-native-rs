@@ -239,7 +239,7 @@ fn resolve_mln_core(root: &Path) -> (PathBuf, Vec<PathBuf>) {
 
 /// Gather include directories and build the C++ bridge using `cxx_build`.
 fn build_bridge(lib_name: &str, include_dirs: &[PathBuf]) {
-    println!("cargo:warning=Include_dirs: {:?}", include_dirs);
+    // println!("cargo:warning=Include_dirs: {:?}", include_dirs);
     BRIDGE_FILES.iter().for_each(|f| {
         println!("cargo:rerun-if-changed={f}");
     });
@@ -263,10 +263,10 @@ fn bundle_precompiled() -> Info {
     let root = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
     let (cpp_root, include_dirs) = resolve_mln_core(&root);
 
-    println!(
-        "cargo:warning=Using precompiled maplibre-native static library from {}",
-        cpp_root.display()
-    );
+    // println!(
+    //     "cargo:warning=Using precompiled maplibre-native static library from {}",
+    //     cpp_root.display()
+    // );
     println!(
         "cargo:rustc-link-search=native={}",
         cpp_root.parent().unwrap().display()
@@ -313,7 +313,7 @@ fn build_local(
             .args(&["checkout", MLN_COMMIT])
             .status()?;
     }
-    println!("cargo:warning=Building maplibre-native.");
+    // println!("cargo:warning=Building maplibre-native.");
     println!(
         "cargo:rerun-if-changed={}",
         maplibre_native_dir.as_os_str().to_str().unwrap()
@@ -325,10 +325,10 @@ fn build_local(
 
     let mut config = cmake::Config::new(maplibre_native_dir.clone());
     //config.out_dir(maplibre_native_dir.clone().join("build"));
-    config.very_verbose(true);
+    // config.very_verbose(true);
 
     const TARGET_NAME: &str = "mbgl-core";
-    println!("cargo:warning=Building target {TARGET_NAME}");
+    // println!("cargo:warning=Building target {TARGET_NAME}");
     config.build_target(TARGET_NAME);
     match GraphicsRenderingAPI::from_selected_features() {
         GraphicsRenderingAPI::Metal => {
@@ -361,7 +361,7 @@ fn build_local(
             .join("cpp")
             .display()
     );
-    println!("cargo:warning=Building maplibre-native done.");
+    // println!("cargo:warning=Building maplibre-native done.");
 
     // maplibre-native include directories
     let mut include_dirs: Vec<PathBuf> = vec![
@@ -387,6 +387,7 @@ fn build_local(
 }
 
 fn build_mln() {
+    println!("cargo:rerun-if-env-changed=MLN_SYSTEM");
     println!("cargo:rerun-if-env-changed=MLN_PRECOMPILE");
     println!("cargo:rerun-if-env-changed=MLN_CORE_LIBRARY_USE_AMALGAM");
     let amalgam_lib = !env::var("MLN_CORE_LIBRARY_USE_AMALGAM")
