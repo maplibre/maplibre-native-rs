@@ -242,7 +242,6 @@ fn build_bridge(lib_name: &str, include_dirs: &[PathBuf]) {
     });
     cxx_build::bridge("src/renderer/bridge.rs")
         .includes(include_dirs)
-        .include("include")
         .file("src/renderer/bridge.cpp")
         .flag_if_supported("-std=c++20")
         .compile("maplibre_rust_map_renderer_bindings");
