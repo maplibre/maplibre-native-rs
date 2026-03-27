@@ -360,7 +360,8 @@ fn build_local(
     );
     println!("cargo:warning=Building maplibre-native done.");
 
-    let include_dirs = vec![
+    // maplibre-native include directories
+    let mut include_dirs: Vec<PathBuf> = vec![
         "include",
         "platform/default/include",
         "vendor/maplibre-native-base/include",
@@ -373,6 +374,7 @@ fn build_local(
     .into_iter()
     .map(|s| maplibre_native_dir.clone().join(s))
     .collect();
+    include_dirs.push(Path::new("include").to_path_buf());
 
     Ok(Info {
         lib_name: format!("{TARGET_NAME}{}", if amalgam_lib { "-amalgam" } else { "" }),
