@@ -351,6 +351,14 @@ fn build_local(
         "cargo:rustc-link-search=native={}",
         dest.join("build").display()
     );
+    println!(
+        "cargo:rustc-link-search=native={}",
+        dest.join("build")
+            .join("vendor")
+            .join("maplibre-tile-spec")
+            .join("cpp")
+            .display()
+    );
     println!("cargo:warning=Building maplibre-native done.");
 
     let include_dirs = vec![
