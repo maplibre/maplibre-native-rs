@@ -241,9 +241,9 @@ fn resolve_mln_core(root: &Path) -> (PathBuf, Vec<PathBuf>) {
 /// Gather include directories and build the C++ bridge using `cxx_build`.
 fn build_bridge(lib_name: &str, include_dirs: &[PathBuf]) {
     // println!("cargo:warning=Include_dirs: {:?}", include_dirs);
-    BRIDGE_FILES.iter().for_each(|f| {
+    for f in BRIDGE_FILES {
         println!("cargo:rerun-if-changed={f}");
-    });
+    }
     cxx_build::bridge("src/renderer/bridge.rs")
         .includes(include_dirs)
         .file("src/renderer/bridge.cpp")
@@ -295,12 +295,14 @@ fn build_local(
     name: &str,
     amalgam_lib: bool,
 ) -> Result<Info, Box<dyn std::error::Error>> {
+    const TARGET_NAME: &str = "mbgl-core";
     let maplibre_native_dir = clone_dir.join(name);
+
     if !clone_dir.join(name).exists() {
         println!("cargo:warning=Cloning maplibre-native.");
         Command::new("git")
-            .current_dir(clone_dir.clone())
-            .args(&[
+            .current_dir(clone_dir)
+            .args([
                 "clone",
                 "--depth",
                 "1",
@@ -311,7 +313,7 @@ fn build_local(
 
         Command::new("git")
             .current_dir(maplibre_native_dir.clone())
-            .args(&["checkout", MLN_COMMIT])
+            .args(["checkout", MLN_COMMIT])
             .status()?;
     }
     // println!("cargo:warning=Building maplibre-native.");
@@ -321,14 +323,13 @@ fn build_local(
     );
     Command::new("git")
         .current_dir(maplibre_native_dir.clone())
-        .args(&["submodule", "update", "--init", "--recursive"])
+        .args(["submodule", "update", "--init", "--recursive"])
         .status()?;
 
     let mut config = cmake::Config::new(maplibre_native_dir.clone());
     //config.out_dir(maplibre_native_dir.clone().join("build"));
     // config.very_verbose(true);
 
-    const TARGET_NAME: &str = "mbgl-core";
     // println!("cargo:warning=Building target {TARGET_NAME}");
     config.build_target(TARGET_NAME);
     match GraphicsRenderingAPI::from_selected_features() {
@@ -435,9 +436,10 @@ fn build_mln() {
         // let mut cfg = pkg_config::Config::new();
         panic!("Not implemented")
     } else {
-        let root = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
         const MAPLIBRE_NATIVE_DIR_NAME: &str = "maplibre-native";
+        let root = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
         let clone_dir = root.join("target");
+
         match build_local(clone_dir.clone(), MAPLIBRE_NATIVE_DIR_NAME, amalgam_lib) {
             Err(e) => {
                 if clone_dir.join(MAPLIBRE_NATIVE_DIR_NAME).exists() {
