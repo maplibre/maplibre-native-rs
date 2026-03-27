@@ -323,7 +323,7 @@ fn build_local(
 
     let mut config = cmake::Config::new(maplibre_native_dir.clone());
     //config.out_dir(maplibre_native_dir.clone().join("build"));
-    config.very_verbose(true);
+    // config.very_verbose(true);
 
     const TARGET_NAME: &str = "mbgl-core";
     println!("cargo:warning=Building target {TARGET_NAME}");
@@ -363,6 +363,7 @@ fn build_local(
 
     let include_dirs = vec![
         "include",
+        "platform/default/include",
         "vendor/maplibre-native-base/include",
         "vendor/maplibre-native-base/deps/variant/include",
         "vendor/maplibre-native-base/deps/geometry.hpp/include",

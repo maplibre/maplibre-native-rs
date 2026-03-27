@@ -63,7 +63,6 @@ pub fn init(ui: &MainWindow, map: &Rc<RefCell<MapLibre>>) {
     ui.global::<MapAdapter>().on_mouse_move({
         let map = Rc::downgrade(map);
         move |x: f32, y: f32, _z: bool| {
-            println!("Mouse move");
             let p = ScreenCoordinate::new(X(x.into()), Y(y.into()));
             let map = map.upgrade().unwrap();
             let mut map = map.borrow_mut();
