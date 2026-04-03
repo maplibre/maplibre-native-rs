@@ -3,7 +3,7 @@
 
 namespace mln::bridge::resource_options {
 
-inline std::unique_ptr<mbgl::ResourceOptions> new_() {
+std::unique_ptr<mbgl::ResourceOptions> new_() {
     return std::make_unique<mbgl::ResourceOptions>();
 }
 

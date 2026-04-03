@@ -7,7 +7,7 @@ namespace mbgl {
 
 namespace mln::bridge::resource_options {
 
-inline std::unique_ptr<mbgl::ResourceOptions> new_();
+std::unique_ptr<mbgl::ResourceOptions> new_();
 void withAssetPath(mbgl::ResourceOptions &resource_options, rust::Slice<const uint8_t> path);
 void withCachePath(mbgl::ResourceOptions &resource_options, rust::Slice<const uint8_t> path);
 void withApiKey(mbgl::ResourceOptions &resource_options, rust::Str key);
