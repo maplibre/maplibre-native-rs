@@ -3,6 +3,7 @@ use crate::renderer::callbacks::{
     void_callback, CameraDidChangeCallback, FailingLoadingMapCallback,
     FinishRenderingFrameCallback, VoidCallback,
 };
+use cxx;
 use std::ops::Sub;
 
 // https://maplibre.org/maplibre-native/docs/book/design/ten-thousand-foot-view.html
@@ -100,6 +101,32 @@ impl Size {
     #[must_use]
     pub fn height(self) -> u32 {
         self.heigth
+    }
+}
+
+// ResourceOptions
+#[cxx::bridge()]
+pub mod resource_options {
+
+    #[namespace = "mbgl"]
+    extern "C++" {
+        // Opaque types
+        type ResourceOptions;
+    }
+
+    #[namespace = "mln::bridge::resource_options"]
+    unsafe extern "C++" {
+        // C++ Opaque types
+        include!("resource_options.h");
+
+        #[rust_name = "new"]
+        fn new_() -> UniquePtr<ResourceOptions>;
+
+        fn withApiKey(obj: Pin<&mut ResourceOptions>, key: &str);
+        fn withAssetPath(obj: Pin<&mut ResourceOptions>, path: &[u8]);
+        fn withCachePath(obj: Pin<&mut ResourceOptions>, path: &[u8]);
+
+        fn withMaximumCacheSize(obj: Pin<&mut ResourceOptions>, max_cache_size: u64);
     }
 }
 
@@ -218,6 +245,9 @@ pub mod ffi {
 
         type MapMode;
         type MapDebugOptions;
+        // The name must be unique but for some reason this is required
+        #[rust_name = "CxxResourceOptions"]
+        type ResourceOptions = super::resource_options::ResourceOptions;
         pub type EventSeverity;
         pub type Event;
         type MapLoadError;
@@ -234,6 +264,7 @@ pub mod ffi {
         include!("map_renderer.h");
         include!("map_observer.h"); // Required to find functions below
 
+        // C++ Opaque types
         type BridgeImage;
         type MapObserverCameraChangeMode;
         type MapObserver; // Created custom map observer
@@ -247,9 +278,6 @@ pub mod ffi {
             width: u32,
             height: u32,
             pixelRatio: f32,
-            cachePath: &[u8],
-            assetRoot: &[u8],
-            apiKey: &str,
             baseUrl: &str,
             uriSchemeAlias: &str,
             apiKeyParameterName: &str,
@@ -259,6 +287,7 @@ pub mod ffi {
             glyphsTemplate: &str,
             tileTemplate: &str,
             requiresApiKey: bool,
+            resource_options: UniquePtr<CxxResourceOptions>,
         ) -> UniquePtr<MapRenderer>;
         fn MapRenderer_readStillImage(obj: Pin<&mut MapRenderer>) -> UniquePtr<BridgeImage>;
         fn get(self: &BridgeImage) -> *const u8;
@@ -292,6 +321,7 @@ pub mod ffi {
             callback: Box<FinishRenderingFrameCallback>,
         );
         fn setCameraDidChangeCallback(self: &MapObserver, callback: Box<CameraDidChangeCallback>);
+
     }
 
     // Declarations for C++ with implementations in Rust

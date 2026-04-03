@@ -1,7 +1,8 @@
 //! Image renderer configuration and builder
 
-use crate::renderer::bridge::ffi;
+use crate::renderer::bridge::{ffi, resource_options};
 use crate::renderer::{Continuous, ImageRenderer, MapMode, Static, Tile};
+use crate::ResourceOptions;
 use std::ffi::OsString;
 use std::marker::PhantomData;
 use std::num::NonZeroU32;
@@ -17,7 +18,7 @@ use std::path::PathBuf;
 ///     .with_pixel_ratio(2.0)
 ///     .build_static_renderer();
 /// ```
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug)]
 pub struct ImageRendererBuilder {
     /// Image width in pixels
     width: u32,
@@ -25,6 +26,9 @@ pub struct ImageRendererBuilder {
     height: u32,
     /// Pixel ratio for high-DPI displays
     pixel_ratio: f32,
+
+    /// The maximum cache size in bytes
+    maximum_cache_size: u64,
 
     /// Cache database file path
     cache_path: Option<PathBuf>,
@@ -54,6 +58,8 @@ pub struct ImageRendererBuilder {
     api_key_parameter_name: String,
     /// Whether API key is required
     requires_api_key: bool,
+
+    resource_options: Option<ResourceOptions>,
 }
 
 impl Default for ImageRendererBuilder {
@@ -64,6 +70,7 @@ impl Default for ImageRendererBuilder {
             height: 512,
             pixel_ratio: 1.0,
 
+            maximum_cache_size: 5000000,
             cache_path: None,
             asset_root: std::env::current_dir().ok(),
 
@@ -81,6 +88,7 @@ impl Default for ImageRendererBuilder {
             api_key_parameter_name: String::new(),
             api_key: String::new(),
             requires_api_key: false,
+            resource_options: None,
         }
     }
 }
@@ -110,6 +118,14 @@ impl ImageRendererBuilder {
     #[allow(clippy::needless_pass_by_value, reason = "false positive")]
     pub fn with_pixel_ratio(mut self, pixel_ratio: impl Into<f32>) -> Self {
         self.pixel_ratio = pixel_ratio.into();
+        self
+    }
+
+    /// Sets the maximum cache size in bytes
+    #[must_use]
+    #[allow(clippy::needless_pass_by_value, reason = "false positive")]
+    pub fn with_maximum_cache_size(mut self, maximum_cache_size: u64) -> Self {
+        self.maximum_cache_size = maximum_cache_size;
         self
     }
 
@@ -256,19 +272,12 @@ impl ImageRendererBuilder {
 impl<S> ImageRenderer<S> {
     /// Creates a new renderer instance
     fn new(map_mode: MapMode, opts: ImageRendererBuilder) -> Self {
+        let resource_options = opts.resource_options.unwrap_or(ResourceOptions::new());
         let map = ffi::MapRenderer_new(
             map_mode,
             opts.width,
             opts.height,
             opts.pixel_ratio,
-            // cxx.rs does not support OsString, but going via &[u8] is close enough
-            opts.cache_path
-                .map_or(OsString::new(), PathBuf::into_os_string)
-                .as_encoded_bytes(),
-            opts.asset_root
-                .map_or(OsString::new(), PathBuf::into_os_string)
-                .as_encoded_bytes(),
-            &opts.api_key,
             opts.base_url.as_ref(),
             &opts.uri_scheme_alias,
             &opts.api_key_parameter_name,
@@ -278,6 +287,7 @@ impl<S> ImageRenderer<S> {
             &opts.glyphs_template,
             &opts.tile_template,
             opts.requires_api_key,
+            resource_options.into_ptr(),
         );
 
         Self {

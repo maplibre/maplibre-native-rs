@@ -31,10 +31,12 @@ const MLN_RELEASE: &str = "core-9b6325a14e2cf1cc29ab28c1855ad376f1ba4903";
 const BRIDGE_FILES: &[&str] = &[
     "src/renderer/bridge.rs",
     "src/renderer/bridge.cpp",
-    "include/map_renderer.h",
-    "include/renderer_observer.h",
-    "include/map_observer.h",
-    "include/rust_log_observer.h",
+    "src/cpp/resource_options.h",
+    "src/cpp/resource_options.cpp",
+    "src/cpp/map_renderer.h",
+    "src/cpp/renderer_observer.h",
+    "src/cpp/map_observer.h",
+    "src/cpp/rust_log_observer.h",
 ];
 
 /// Supported graphics rendering APIs.
@@ -241,14 +243,18 @@ fn resolve_mln_core(root: &Path) -> (PathBuf, Vec<PathBuf>) {
 /// Gather include directories and build the C++ bridge using `cxx_build`.
 fn build_bridge(lib_name: &str, include_dirs: &[PathBuf]) {
     // println!("cargo:warning=Include_dirs: {:?}", include_dirs);
+    let mut build = cxx_build::bridge("src/renderer/bridge.rs");
+    build.includes(include_dirs).flag_if_supported("-std=c++20");
+
     for f in BRIDGE_FILES {
         println!("cargo:rerun-if-changed={f}");
+        if f.ends_with(".cpp") {
+            println!("cargo:warning=Source file: {:?}", f);
+            build.file(f);
+        }
     }
-    cxx_build::bridge("src/renderer/bridge.rs")
-        .includes(include_dirs)
-        .file("src/renderer/bridge.cpp")
-        .flag_if_supported("-std=c++20")
-        .compile("maplibre_rust_map_renderer_bindings");
+
+    build.compile("maplibre_rust_map_renderer_bindings");
 
     // Link mbgl-core after the bridge - or else `cargo test` won't be able to find the symbols.
     println!("cargo:rustc-link-lib=static={lib_name}");
@@ -379,7 +385,9 @@ fn build_local(
     .into_iter()
     .map(|s| maplibre_native_dir.clone().join(s))
     .collect();
+    // maplibre-rs include dirs
     include_dirs.push(Path::new("include").to_path_buf());
+    include_dirs.push(Path::new("src/cpp").to_path_buf());
 
     Ok(Info {
         lib_name: format!("{TARGET_NAME}{}", if amalgam_lib { "-amalgam" } else { "" }),

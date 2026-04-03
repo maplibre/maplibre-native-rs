@@ -2,6 +2,7 @@ use crate::Size;
 use maplibre_native::Continuous;
 use maplibre_native::ImageRenderer;
 use maplibre_native::ImageRendererBuilder;
+use maplibre_native::ResourceOptions;
 use maplibre_native::ScreenCoordinate;
 use std::cell::RefCell;
 use std::num::NonZeroU32;
@@ -50,6 +51,8 @@ impl MapLibre {
 }
 
 pub fn create_map(size: Size) -> Rc<RefCell<MapLibre>> {
+    let resource_options = ResourceOptions::new();
+
     let mut renderer = ImageRendererBuilder::new()
         .with_size(
             NonZeroU32::new(size.width as u32).unwrap(),

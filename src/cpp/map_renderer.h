@@ -9,6 +9,7 @@
 #include <mbgl/util/premultiply.hpp>
 #include <mbgl/util/tile_server_options.hpp>
 #include <mbgl/util/size.hpp>
+#include "mbgl/storage/resource_options.hpp"
 #include <memory>
 #include <vector>
 #include <stdexcept>
@@ -53,9 +54,6 @@ inline std::unique_ptr<MapRenderer> MapRenderer_new(
             uint32_t width,
             uint32_t height,
             float pixelRatio,
-            rust::Slice<const uint8_t> cachePath,
-            rust::Slice<const uint8_t> assetRoot,
-            const rust::Str apiKey,
             const rust::Str baseUrl,
             const rust::Str uriSchemeAlias,
             const rust::Str apiKeyParameterName,
@@ -64,7 +62,8 @@ inline std::unique_ptr<MapRenderer> MapRenderer_new(
             const rust::Str spritesTemplate,
             const rust::Str glyphsTemplate,
             const rust::Str tileTemplate,
-            bool requiresApiKey
+            bool requiresApiKey,
+            std::unique_ptr<mbgl::ResourceOptions> resourceOptions
 ) {
     mbgl::Size size = {width, height};
     auto mapObserver = std::make_shared<MapObserver>();
@@ -81,12 +80,7 @@ inline std::unique_ptr<MapRenderer> MapRenderer_new(
         .withApiKeyParameterName((std::string)apiKeyParameterName)
         .setRequiresApiKey(requiresApiKey);
 
-    mbgl::ResourceOptions resourceOptions;
-    resourceOptions
-        .withCachePath(std::string(reinterpret_cast<const char*>(cachePath.data()), cachePath.size()))
-        .withAssetPath(std::string(reinterpret_cast<const char*>(assetRoot.data()), assetRoot.size()))
-        .withApiKey((std::string)apiKey)
-        .withTileServerOptions(options);
+    resourceOptions->withTileServerOptions(options);
 
     mbgl::MapOptions mapOptions;
     mapOptions.withMapMode(mapMode).withSize(size).withPixelRatio(pixelRatio);
@@ -95,7 +89,7 @@ inline std::unique_ptr<MapRenderer> MapRenderer_new(
     auto logObserver = std::make_unique<mln::bridge::RustLogObserver>();
     mbgl::Log::setObserver(std::move(logObserver));
 
-    auto map = std::make_unique<mbgl::Map>(*frontend, *mapObserver, mapOptions, resourceOptions);
+    auto map = std::make_unique<mbgl::Map>(*frontend, *mapObserver, mapOptions, *resourceOptions);
 
     return std::make_unique<MapRenderer>(std::move(frontend), mapObserver, std::move(map));
 }
