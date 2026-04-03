@@ -35,29 +35,9 @@ pub struct ImageRendererBuilder {
     /// Assets root directory
     asset_root: Option<PathBuf>,
 
-    /// Base URL for tile server
-    base_url: url::Url,
-    /// Custom URI scheme alias
-    uri_scheme_alias: String,
-
-    /// Source JSON URL template
-    source_template: String,
-    /// Style JSON URL template
-    style_template: String,
-    /// Sprite URL template
-    sprites_template: String,
-    /// Glyph URL template
-    glyphs_template: String,
-    /// Tile URL template
-    tile_template: String,
-
     /// API key for tile sources
     // TODO: remove?
     api_key: String,
-    /// API key parameter name
-    api_key_parameter_name: String,
-    /// Whether API key is required
-    requires_api_key: bool,
 
     resource_options: Option<ResourceOptions>,
 }
@@ -74,20 +54,20 @@ impl Default for ImageRendererBuilder {
             cache_path: None,
             asset_root: std::env::current_dir().ok(),
 
-            base_url: "https://demotiles.maplibre.org"
-                .parse()
-                .expect("is a valid url"),
-            uri_scheme_alias: "maplibre".to_string(),
+            // base_url: "https://demotiles.maplibre.org"
+            //     .parse()
+            //     .expect("is a valid url"),
+            // uri_scheme_alias: "maplibre".to_string(),
 
-            source_template: "/tiles/{domain}.json".to_string(),
-            style_template: "{path}.json".to_string(),
-            sprites_template: "/{path}/sprite{scale}.{format}".to_string(),
-            glyphs_template: "/font/{fontstack}/{start}-{end}.pbf".to_string(),
-            tile_template: "/{path}".to_string(),
+            // source_template: "/tiles/{domain}.json".to_string(),
+            // style_template: "{path}.json".to_string(),
+            // sprites_template: "/{path}/sprite{scale}.{format}".to_string(),
+            // glyphs_template: "/font/{fontstack}/{start}-{end}.pbf".to_string(),
+            // tile_template: "/{path}".to_string(),
 
-            api_key_parameter_name: String::new(),
+            // api_key_parameter_name: String::new(),
             api_key: String::new(),
-            requires_api_key: false,
+            // requires_api_key: false,
             resource_options: None,
         }
     }
@@ -149,85 +129,6 @@ impl ImageRendererBuilder {
         self
     }
 
-    /// Sets tile server base URL
-    ///
-    /// Default: <https://demotiles.maplibre.org>
-    #[must_use]
-    #[allow(clippy::needless_pass_by_value, reason = "false positive")]
-    pub fn with_base_url(mut self, base_url: url::Url) -> Self {
-        self.base_url = base_url;
-        self
-    }
-
-    /// Sets custom URI scheme alias
-    ///
-    /// Default: "maplibre"
-    #[must_use]
-    #[allow(clippy::needless_pass_by_value, reason = "false positive")]
-    pub fn with_uri_scheme_alias(mut self, uri_scheme_alias: impl ToString) -> Self {
-        self.uri_scheme_alias = uri_scheme_alias.to_string();
-        self
-    }
-
-    /// Sets source JSON URL template
-    ///
-    /// Default: "/tiles/{domain}.json"
-    #[must_use]
-    #[allow(clippy::needless_pass_by_value, reason = "false positive")]
-    pub fn with_source_template(mut self, source_template: impl ToString) -> Self {
-        self.source_template = source_template.to_string();
-        self
-    }
-    /// Sets style JSON URL template
-    ///
-    /// Default: "{path}.json"
-    #[must_use]
-    #[allow(clippy::needless_pass_by_value, reason = "false positive")]
-    pub fn with_style_template(mut self, style_template: impl ToString) -> Self {
-        self.style_template = style_template.to_string();
-        self
-    }
-
-    /// Sets sprite URL template
-    ///
-    /// Default: "/{path}/sprite{scale}.{format}"
-    #[must_use]
-    #[allow(clippy::needless_pass_by_value, reason = "false positive")]
-    pub fn with_sprites_template(mut self, sprites_template: impl ToString) -> Self {
-        self.sprites_template = sprites_template.to_string();
-        self
-    }
-
-    /// Sets glyph URL template
-    ///
-    /// Default: "/font/{fontstack}/{start}-{end}.pbf"
-    #[must_use]
-    #[allow(clippy::needless_pass_by_value, reason = "false positive")]
-    pub fn with_glyphs_template(mut self, glyphs_template: impl ToString) -> Self {
-        self.glyphs_template = glyphs_template.to_string();
-        self
-    }
-
-    /// Sets tile URL template
-    ///
-    /// Default: "/{path}"
-    #[must_use]
-    #[allow(clippy::needless_pass_by_value, reason = "false positive")]
-    pub fn with_tile_template(mut self, tile_template: impl ToString) -> Self {
-        self.tile_template = tile_template.to_string();
-        self
-    }
-
-    /// Sets API key parameter name
-    ///
-    /// Default: ""
-    #[must_use]
-    #[allow(clippy::needless_pass_by_value, reason = "false positive")]
-    pub fn with_api_key_parameter_name(mut self, api_key_parameter_name: impl ToString) -> Self {
-        self.api_key_parameter_name = api_key_parameter_name.to_string();
-        self
-    }
-
     /// Sets API key
     ///
     /// Default: ""
@@ -235,15 +136,6 @@ impl ImageRendererBuilder {
     #[allow(clippy::needless_pass_by_value, reason = "false positive")]
     pub fn with_api_key(mut self, api_key: impl ToString) -> Self {
         self.api_key = api_key.to_string();
-        self
-    }
-
-    /// Sets whether API key is required
-    ///
-    /// Default: `false`
-    #[must_use]
-    pub fn set_requires_api_key(mut self, requires_api_key: impl Into<bool>) -> Self {
-        self.requires_api_key = requires_api_key.into();
         self
     }
 
@@ -278,15 +170,6 @@ impl<S> ImageRenderer<S> {
             opts.width,
             opts.height,
             opts.pixel_ratio,
-            opts.base_url.as_ref(),
-            &opts.uri_scheme_alias,
-            &opts.api_key_parameter_name,
-            &opts.source_template,
-            &opts.style_template,
-            &opts.sprites_template,
-            &opts.glyphs_template,
-            &opts.tile_template,
-            opts.requires_api_key,
             resource_options.into_ptr(),
         );
 

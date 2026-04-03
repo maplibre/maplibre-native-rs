@@ -33,6 +33,8 @@ const BRIDGE_FILES: &[&str] = &[
     "src/renderer/bridge.cpp",
     "src/cpp/resource_options.h",
     "src/cpp/resource_options.cpp",
+    "src/cpp/tile_server_options.h",
+    "src/cpp/tile_server_options.cpp",
     "src/cpp/map_renderer.h",
     "src/cpp/renderer_observer.h",
     "src/cpp/map_observer.h",

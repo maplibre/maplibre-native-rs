@@ -5,6 +5,7 @@ mod image_renderer;
 mod layer;
 mod map_observer;
 mod resource_options;
+mod tile_server_options;
 
 pub use bridge::ffi::{MapDebugOptions, MapMode};
 pub use bridge::set_log_thread_enabled;
@@ -17,3 +18,4 @@ pub use callbacks::{
 pub use image_renderer::{Continuous, Image, ImageRenderer, RenderingError, Static, Tile};
 pub use map_observer::MapObserver;
 pub use resource_options::ResourceOptions;
+pub use tile_server_options::TileServerOptions;

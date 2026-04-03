@@ -54,33 +54,24 @@ inline std::unique_ptr<MapRenderer> MapRenderer_new(
             uint32_t width,
             uint32_t height,
             float pixelRatio,
-            const rust::Str baseUrl,
-            const rust::Str uriSchemeAlias,
-            const rust::Str apiKeyParameterName,
-            const rust::Str sourceTemplate,
-            const rust::Str styleTemplate,
-            const rust::Str spritesTemplate,
-            const rust::Str glyphsTemplate,
-            const rust::Str tileTemplate,
-            bool requiresApiKey,
             std::unique_ptr<mbgl::ResourceOptions> resourceOptions
 ) {
     mbgl::Size size = {width, height};
     auto mapObserver = std::make_shared<MapObserver>();
     auto frontend = std::make_unique<mbgl::HeadlessFrontend>(size, pixelRatio);
 
-    mbgl::TileServerOptions options = mbgl::TileServerOptions()
-        .withBaseURL((std::string)baseUrl)
-        .withUriSchemeAlias((std::string)uriSchemeAlias)
-        .withSourceTemplate((std::string)sourceTemplate, "", {})
-        .withStyleTemplate((std::string)styleTemplate, "maps", {})
-        .withSpritesTemplate((std::string)spritesTemplate, "", {})
-        .withGlyphsTemplate((std::string)glyphsTemplate, "fonts", {})
-        .withTileTemplate((std::string)tileTemplate, "tiles", {})
-        .withApiKeyParameterName((std::string)apiKeyParameterName)
-        .setRequiresApiKey(requiresApiKey);
+    // mbgl::TileServerOptions options = mbgl::TileServerOptions()
+    //     .withBaseURL((std::string)baseUrl)
+    //     .withUriSchemeAlias((std::string)uriSchemeAlias)
+    //     .withSourceTemplate((std::string)sourceTemplate, "", {})
+    //     .withStyleTemplate((std::string)styleTemplate, "maps", {})
+    //     .withSpritesTemplate((std::string)spritesTemplate, "", {})
+    //     .withGlyphsTemplate((std::string)glyphsTemplate, "fonts", {})
+    //     .withTileTemplate((std::string)tileTemplate, "tiles", {})
+    //     .withApiKeyParameterName((std::string)apiKeyParameterName)
+    //     .setRequiresApiKey(requiresApiKey);
 
-    resourceOptions->withTileServerOptions(options);
+    // resourceOptions->withTileServerOptions(options);
 
     mbgl::MapOptions mapOptions;
     mapOptions.withMapMode(mapMode).withSize(size).withPixelRatio(pixelRatio);

@@ -1,3 +1,4 @@
+use super::tile_server_options::TileServerOptions;
 use crate::renderer::bridge::resource_options::{self, *};
 use cxx::UniquePtr;
 use std::ffi::OsString;
@@ -39,6 +40,10 @@ impl ResourceOptions {
     pub fn with_maximum_cache_size(mut self, max_cache_size: u64) -> Self {
         withMaximumCacheSize(self.ptr.pin_mut(), max_cache_size);
         self
+    }
+
+    pub fn with_tile_server_options(mut self, tile_server_options: TileServerOptions) {
+        withTileServerOptions(self.ptr.pin_mut(), tile_server_options.into_ptr());
     }
 
     pub(crate) fn into_ptr(self) -> UniquePtr<resource_options::ResourceOptions> {

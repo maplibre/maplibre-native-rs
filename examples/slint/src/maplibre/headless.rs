@@ -4,6 +4,7 @@ use maplibre_native::ImageRenderer;
 use maplibre_native::ImageRendererBuilder;
 use maplibre_native::ResourceOptions;
 use maplibre_native::ScreenCoordinate;
+use maplibre_native::TileServerOptions;
 use std::cell::RefCell;
 use std::num::NonZeroU32;
 use std::path::Path;
@@ -51,7 +52,8 @@ impl MapLibre {
 }
 
 pub fn create_map(size: Size) -> Rc<RefCell<MapLibre>> {
-    let resource_options = ResourceOptions::new();
+    let resource_options =
+        ResourceOptions::new().with_tile_server_options(TileServerOptions::new());
 
     let mut renderer = ImageRendererBuilder::new()
         .with_size(

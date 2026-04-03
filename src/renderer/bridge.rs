@@ -104,7 +104,6 @@ impl Size {
     }
 }
 
-// ResourceOptions
 #[cxx::bridge()]
 pub mod resource_options {
 
@@ -112,11 +111,14 @@ pub mod resource_options {
     extern "C++" {
         // Opaque types
         type ResourceOptions;
+
+        // The name must be unique but for some reason this is required
+        #[rust_name = "CxxTileServerOptions"]
+        type TileServerOptions = super::tile_server_options::TileServerOptions;
     }
 
     #[namespace = "mln::bridge::resource_options"]
     unsafe extern "C++" {
-        // C++ Opaque types
         include!("resource_options.h");
 
         #[rust_name = "new"]
@@ -127,6 +129,56 @@ pub mod resource_options {
         fn withCachePath(obj: Pin<&mut ResourceOptions>, path: &[u8]);
 
         fn withMaximumCacheSize(obj: Pin<&mut ResourceOptions>, max_cache_size: u64);
+        fn withTileServerOptions(
+            obj: Pin<&mut ResourceOptions>,
+            tile_server_options: UniquePtr<CxxTileServerOptions>,
+        );
+    }
+}
+
+#[cxx::bridge()]
+pub mod tile_server_options {
+    #[namespace = "mbgl"]
+    extern "C++" {
+        // Opaque types
+        type TileServerOptions;
+    }
+
+    #[namespace = "mln::bridge::tile_server_options"]
+    unsafe extern "C++" {
+        include!("tile_server_options.h");
+
+        #[rust_name = "new_tile_server_options"]
+        fn new_() -> UniquePtr<TileServerOptions>;
+
+        fn withBaseUrl(obj: Pin<&mut TileServerOptions>, path: &[u8]);
+        fn withUriSchemeAlias(obj: Pin<&mut TileServerOptions>, path: &[u8]);
+        fn withSourceTemplate(
+            obj: Pin<&mut TileServerOptions>,
+            styleTemplate: &[u8],
+            domainName: &[u8],
+            versionPrefix: &[u8],
+        );
+        fn withSpritesTemplate(
+            obj: Pin<&mut TileServerOptions>,
+            spritesTemplate: &[u8],
+            domainName: &[u8],
+            versionPrefix: &[u8],
+        );
+        fn withGlyphsTemplate(
+            obj: Pin<&mut TileServerOptions>,
+            glyphsTemplate: &[u8],
+            domainName: &[u8],
+            versionPrefix: &[u8],
+        );
+        fn withTileTemplate(
+            obj: Pin<&mut TileServerOptions>,
+            tileTemplate: &[u8],
+            domainName: &[u8],
+            versionPrefix: &[u8],
+        );
+        fn withApiKeyParameterName(obj: Pin<&mut TileServerOptions>, apiKeyParameterName: &[u8]);
+        fn setRequiresApiKey(obj: Pin<&mut TileServerOptions>, apiKeyRequired: bool);
     }
 }
 
@@ -278,15 +330,6 @@ pub mod ffi {
             width: u32,
             height: u32,
             pixelRatio: f32,
-            baseUrl: &str,
-            uriSchemeAlias: &str,
-            apiKeyParameterName: &str,
-            sourceTemplate: &str,
-            styleTemplate: &str,
-            spritesTemplate: &str,
-            glyphsTemplate: &str,
-            tileTemplate: &str,
-            requiresApiKey: bool,
             resource_options: UniquePtr<CxxResourceOptions>,
         ) -> UniquePtr<MapRenderer>;
         fn MapRenderer_readStillImage(obj: Pin<&mut MapRenderer>) -> UniquePtr<BridgeImage>;
