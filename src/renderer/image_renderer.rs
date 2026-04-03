@@ -1,9 +1,9 @@
+use super::MapObserver;
 use crate::renderer::bridge::ffi;
 use crate::renderer::bridge::ffi::BridgeImage;
 use crate::renderer::MapDebugOptions;
-use super::MapObserver;
 use crate::{ScreenCoordinate, Size};
-use cxx::{UniquePtr};
+use cxx::UniquePtr;
 use image::{ImageBuffer, Rgba};
 use std::f64::consts::PI;
 use std::fmt::Debug;
