@@ -4,6 +4,7 @@ use cxx::UniquePtr;
 use std::ffi::OsString;
 use std::{fmt::Debug, path::PathBuf};
 
+/// Resource Options
 pub struct ResourceOptions {
     ptr: UniquePtr<resource_options::ResourceOptions>,
 }
@@ -15,15 +16,21 @@ impl Debug for ResourceOptions {
 }
 
 impl ResourceOptions {
+    /// Create new resource options object
+    #[must_use]
     pub fn new() -> Self {
         Self { ptr: new() }
     }
 
+    /// Set api key
+    #[must_use]
     pub fn with_api_key(mut self, key: &str) -> Self {
         withApiKey(self.ptr.pin_mut(), key);
         self
     }
 
+    /// Set cache path
+    #[must_use]
     pub fn with_cache_path(mut self, path: PathBuf) -> Self {
         // cxx.rs does not support OsString, but going via &[u8] is close enough
         let os_string = path.into_os_string();
@@ -31,21 +38,29 @@ impl ResourceOptions {
         self
     }
 
+    /// Set asset path
+    #[must_use]
     pub fn with_asset_path(mut self, path: PathBuf) -> Self {
         let os_string = path.into_os_string();
         withAssetPath(self.ptr.pin_mut(), os_string.as_encoded_bytes());
         self
     }
 
+    /// Set maximum cache size
+    #[must_use]
     pub fn with_maximum_cache_size(mut self, max_cache_size: u64) -> Self {
         withMaximumCacheSize(self.ptr.pin_mut(), max_cache_size);
         self
     }
 
+    /// Set tile server options
+    #[must_use]
     pub fn with_tile_server_options(mut self, tile_server_options: TileServerOptions) {
         withTileServerOptions(self.ptr.pin_mut(), tile_server_options.into_ptr());
     }
 
+    /// Get internal pointer by consuming this object
+    #[must_use]
     pub(crate) fn into_ptr(self) -> UniquePtr<resource_options::ResourceOptions> {
         self.ptr
     }

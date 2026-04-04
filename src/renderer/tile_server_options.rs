@@ -7,6 +7,7 @@ pub struct TileServerOptions {
 }
 
 impl TileServerOptions {
+    /// Create new tile server options object
     #[must_use]
     pub fn new() -> Self {
         Self {
@@ -14,6 +15,7 @@ impl TileServerOptions {
         }
     }
 
+    /// Set base url
     #[must_use]
     pub fn with_base_url(mut self, path: PathBuf) {
         tile_server_options::withBaseUrl(
@@ -22,6 +24,7 @@ impl TileServerOptions {
         );
     }
 
+    /// Set uri scheme alias
     #[must_use]
     pub fn with_uri_scheme_alias(mut self, path: PathBuf) -> Self {
         tile_server_options::withUriSchemeAlias(
@@ -31,6 +34,7 @@ impl TileServerOptions {
         self
     }
 
+    /// add source template
     #[must_use]
     pub fn with_source_template(
         mut self,
@@ -50,6 +54,7 @@ impl TileServerOptions {
         self
     }
 
+    /// Add sprites template
     #[must_use]
     pub fn with_sprites_template(
         mut self,
@@ -126,57 +131,9 @@ impl TileServerOptions {
         self
     }
 
+    /// Return internal pointer by consuming this object
     #[must_use]
     pub(crate) fn into_ptr(self) -> UniquePtr<tile_server_options::TileServerOptions> {
         self.ptr
     }
 }
-
-// /// Sets tile server base URL
-// ///
-// /// Default: <https://demotiles.maplibre.org>
-// #[must_use]
-// #[allow(clippy::needless_pass_by_value, reason = "false positive")]
-// pub fn with_base_url(mut self, base_url: url::Url) -> Self {
-//     self.base_url = base_url;
-//     self
-// }
-
-// /// Sets custom URI scheme alias
-// ///
-// /// Default: "maplibre"
-// #[must_use]
-// #[allow(clippy::needless_pass_by_value, reason = "false positive")]
-// pub fn with_uri_scheme_alias(mut self, uri_scheme_alias: impl ToString) -> Self {
-//     self.uri_scheme_alias = uri_scheme_alias.to_string();
-//     self
-// }
-
-// /// Sets source JSON URL template
-// ///
-// /// Default: "/tiles/{domain}.json"
-// #[must_use]
-// #[allow(clippy::needless_pass_by_value, reason = "false positive")]
-// pub fn with_source_template(mut self, source_template: impl ToString) -> Self {
-//     self.source_template = source_template.to_string();
-//     self
-// }
-// /// Sets style JSON URL template
-// ///
-// /// Default: "{path}.json"
-// #[must_use]
-// #[allow(clippy::needless_pass_by_value, reason = "false positive")]
-// pub fn with_style_template(mut self, style_template: impl ToString) -> Self {
-//     self.style_template = style_template.to_string();
-//     self
-// }
-
-// /// Sets sprite URL template
-// ///
-// /// Default: "/{path}/sprite{scale}.{format}"
-// #[must_use]
-// #[allow(clippy::needless_pass_by_value, reason = "false positive")]
-// pub fn with_sprites_template(mut self, sprites_template: impl ToString) -> Self {
-//     self.sprites_template = sprites_template.to_string();
-//     self
-// }
