@@ -19,46 +19,46 @@ void withBaseUrl(mbgl::TileServerOptions &tile_server_options, rust::Slice<const
 void withUriSchemeAlias(mbgl::TileServerOptions &tile_server_options, rust::Slice<const uint8_t> alias) {
     tile_server_options.withUriSchemeAlias(rustSliceToString(alias));
 }
-void withSourceTemplate(mbgl::TileServerOptions &tile_server_options, 
+void withSourceTemplate(mbgl::TileServerOptions &tile_server_options,
                         rust::Slice<const uint8_t> styleTemplate,
                         rust::Slice<const uint8_t> domainName,
                         rust::Slice<const uint8_t> versionPrefix
                     ) {
     tile_server_options.withSourceTemplate(rustSliceToString(styleTemplate),
-                                        rustSliceToString(domainName), 
+                                        rustSliceToString(domainName),
                                         std::optional<std::string>{rustSliceToString(versionPrefix)}
                                     );
 }
 
-void withSpritesTemplate(mbgl::TileServerOptions &tile_server_options, 
+void withSpritesTemplate(mbgl::TileServerOptions &tile_server_options,
                         rust::Slice<const uint8_t> spritesTemplate,
                         rust::Slice<const uint8_t> domainName,
                         rust::Slice<const uint8_t> versionPrefix
                     ) {
     tile_server_options.withSpritesTemplate(rustSliceToString(spritesTemplate),
-                                        rustSliceToString(domainName), 
+                                        rustSliceToString(domainName),
                                         std::optional<std::string>{rustSliceToString(versionPrefix)}
                                     );
 
 }
 
-void withGlyphsTemplate(mbgl::TileServerOptions &tile_server_options, 
+void withGlyphsTemplate(mbgl::TileServerOptions &tile_server_options,
                         rust::Slice<const uint8_t> glyphsTemplate,
                         rust::Slice<const uint8_t> domainName,
                         rust::Slice<const uint8_t> versionPrefix
                     ) {
     tile_server_options.withGlyphsTemplate(rustSliceToString(glyphsTemplate),
-                                        rustSliceToString(domainName), 
+                                        rustSliceToString(domainName),
                                         std::optional<std::string>{rustSliceToString(versionPrefix)}
-                                    );                   
+                                    );
 }
-void withTileTemplate(mbgl::TileServerOptions &tile_server_options, 
+void withTileTemplate(mbgl::TileServerOptions &tile_server_options,
                         rust::Slice<const uint8_t> tileTemplate,
                         rust::Slice<const uint8_t> domainName,
                         rust::Slice<const uint8_t> versionPrefix
                     ) {
     tile_server_options.withGlyphsTemplate(rustSliceToString(tileTemplate),
-                                        rustSliceToString(domainName), 
+                                        rustSliceToString(domainName),
                                         std::optional<std::string>{rustSliceToString(versionPrefix)}
                                     );
 }
