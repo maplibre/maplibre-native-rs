@@ -1,4 +1,5 @@
 use crate::renderer::bridge::ffi;
+use crate::renderer::bridge::map_observer;
 use crate::renderer::callbacks::{
     CameraDidChangeCallback, FailingLoadingMapCallback, FinishRenderingFrameCallback, VoidCallback,
 };
@@ -33,7 +34,7 @@ impl MapObserver {
     }
 
     /// Set callback to react on failing loading map
-    pub fn set_did_fail_loading_map_callback<F: Fn(ffi::MapLoadError, &str) + 'static>(
+    pub fn set_did_fail_loading_map_callback<F: Fn(map_observer::MapLoadError, &str) + 'static>(
         &self,
         callback: F,
     ) {
@@ -42,7 +43,9 @@ impl MapObserver {
     }
 
     /// Set a callback to react on camera changes
-    pub fn set_camera_changed_callback<F: Fn(ffi::MapObserverCameraChangeMode) + 'static>(
+    pub fn set_camera_changed_callback<
+        F: Fn(map_observer::MapObserverCameraChangeMode) + 'static,
+    >(
         &self,
         callback: F,
     ) {

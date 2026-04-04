@@ -1,7 +1,7 @@
 // Callback objects used in the bridge
 
-use crate::renderer::bridge::ffi::MapLoadError;
-use crate::renderer::bridge::ffi::MapObserverCameraChangeMode;
+use crate::renderer::bridge::map_observer::MapLoadError;
+use crate::renderer::bridge::map_observer::MapObserverCameraChangeMode;
 use std::fmt::Debug;
 
 macro_rules! callback {

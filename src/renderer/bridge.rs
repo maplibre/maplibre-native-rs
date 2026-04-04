@@ -184,22 +184,7 @@ pub mod tile_server_options {
 
 #[allow(clippy::borrow_as_ptr)]
 #[cxx::bridge(namespace = "mln::bridge")]
-pub mod ffi {
-    // CXX validates enum types against the C++ definition during compilation
-
-    // The mbgl enums must be defined in the same namespace than on the C++ side
-    #[namespace = "mbgl"]
-    #[repr(u32)]
-    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-    /// Map rendering mode configuration.
-    enum MapMode {
-        /// Continually updating map
-        Continuous,
-        /// Once-off still image of an arbitrary viewport
-        Static,
-        /// Once-off still image of a single tile
-        Tile,
-    }
+pub mod map_observer {
 
     #[namespace = "mln::bridge"]
     #[repr(u32)]
@@ -219,6 +204,87 @@ pub mod ffi {
         StyleLoadError,
         NotFoundError,
         UnknownError,
+    }
+
+    #[namespace = "mbgl"]
+    extern "C++" {
+        include!("mbgl/map/mode.hpp");
+        type MapLoadError;
+    }
+
+    // Declarations for C++ with implementations in Rust
+    extern "Rust" {
+        type VoidCallback;
+        type FinishRenderingFrameCallback;
+        type CameraDidChangeCallback;
+        type FailingLoadingMapCallback;
+
+        fn void_callback(callback: &VoidCallback);
+        fn finish_rendering_frame_callback(
+            callback: &FinishRenderingFrameCallback,
+            needsRepaint: bool,
+            placementChanged: bool,
+        );
+        fn camera_did_change_callback(
+            callback: &CameraDidChangeCallback,
+            mode: MapObserverCameraChangeMode,
+        );
+        fn failing_loading_map_callback(
+            callback: &FailingLoadingMapCallback,
+            error: MapLoadError,
+            what: &str,
+        );
+    }
+
+    // Declarations for Rust with implementations in C++
+    extern "C++" {
+        include!("map_observer.h"); // Required to find functions below
+
+        type MapObserverCameraChangeMode;
+
+        // C++ Opaque types
+        #[rust_name = "CxxMapObserver"]
+        type MapObserver = super::ffi::MapObserver; // Created custom map observer
+    }
+
+    unsafe extern "C++" {
+        // With `self: Pin<&mut MapObserver>` as first argument, it is a non static method of that object.
+        // cxx searches for such a method
+        fn setWillStartLoadingMapCallback(self: &CxxMapObserver, callback: Box<VoidCallback>);
+        fn setFinishLoadingStyleCallback(self: &CxxMapObserver, callback: Box<VoidCallback>);
+        fn setBecomeIdleCallback(self: &CxxMapObserver, callback: Box<VoidCallback>);
+        fn setFailLoadingMapCallback(
+            self: &CxxMapObserver,
+            callback: Box<FailingLoadingMapCallback>,
+        );
+        fn setFinishRenderingFrameCallback(
+            self: &CxxMapObserver,
+            callback: Box<FinishRenderingFrameCallback>,
+        );
+        fn setCameraDidChangeCallback(
+            self: &CxxMapObserver,
+            callback: Box<CameraDidChangeCallback>,
+        );
+    }
+}
+
+#[allow(clippy::borrow_as_ptr)]
+#[cxx::bridge(namespace = "mln::bridge")]
+pub mod ffi {
+    // CXX validates enum types against the C++ definition during compilation
+
+    // The mbgl enums must be defined in the same namespace than on the C++ side
+    #[namespace = "mbgl"]
+    #[repr(u32)]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    /// Map rendering mode configuration.
+    enum MapMode {
+        /// Continually updating map
+        Continuous,
+        /// Once-off still image of an arbitrary viewport
+        Static,
+        /// Once-off still image of a single tile
+        Tile,
     }
 
     #[namespace = "mbgl"]
@@ -302,7 +368,6 @@ pub mod ffi {
         type ResourceOptions = super::resource_options::ResourceOptions;
         pub type EventSeverity;
         pub type Event;
-        type MapLoadError;
     }
 
     #[namespace = "mbgl"]
@@ -314,11 +379,9 @@ pub mod ffi {
     // Declarations for Rust with implementations in C++
     unsafe extern "C++" {
         include!("map_renderer.h");
-        include!("map_observer.h"); // Required to find functions below
 
         // C++ Opaque types
         type BridgeImage;
-        type MapObserverCameraChangeMode;
         type MapObserver; // Created custom map observer
         type MapRenderer;
         // Left side must match a type in C++! Right side must be defined in Rust
@@ -352,44 +415,10 @@ pub mod ffi {
         fn MapRenderer_getStyle_loadURL(obj: Pin<&mut MapRenderer>, url: &str);
         fn MapRenderer_setSize(obj: Pin<&mut MapRenderer>, size: &Size);
         fn observer(self: Pin<&mut MapRenderer>) -> SharedPtr<MapObserver>;
-
-        // With `self: Pin<&mut MapObserver>` as first argument, it is a non static method of that object.
-        // cxx searches for such a method
-        fn setWillStartLoadingMapCallback(self: &MapObserver, callback: Box<VoidCallback>);
-        fn setFinishLoadingStyleCallback(self: &MapObserver, callback: Box<VoidCallback>);
-        fn setBecomeIdleCallback(self: &MapObserver, callback: Box<VoidCallback>);
-        fn setFailLoadingMapCallback(self: &MapObserver, callback: Box<FailingLoadingMapCallback>);
-        fn setFinishRenderingFrameCallback(
-            self: &MapObserver,
-            callback: Box<FinishRenderingFrameCallback>,
-        );
-        fn setCameraDidChangeCallback(self: &MapObserver, callback: Box<CameraDidChangeCallback>);
-
     }
 
     // Declarations for C++ with implementations in Rust
     extern "Rust" {
-        type VoidCallback;
-        type FinishRenderingFrameCallback;
-        type CameraDidChangeCallback;
-        type FailingLoadingMapCallback;
-
-        fn void_callback(callback: &VoidCallback);
-        fn finish_rendering_frame_callback(
-            callback: &FinishRenderingFrameCallback,
-            needsRepaint: bool,
-            placementChanged: bool,
-        );
-        fn camera_did_change_callback(
-            callback: &CameraDidChangeCallback,
-            mode: MapObserverCameraChangeMode,
-        );
-        fn failing_loading_map_callback(
-            callback: &FailingLoadingMapCallback,
-            error: MapLoadError,
-            what: &str,
-        );
-
         /// Bridge logging from C++ to Rust log crate
         fn log_from_cpp(severity: EventSeverity, event: Event, code: i64, message: &str);
     }
