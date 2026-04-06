@@ -52,8 +52,10 @@ impl MapLibre {
 }
 
 pub fn create_map(size: Size) -> Rc<RefCell<MapLibre>> {
-    let resource_options =
-        ResourceOptions::new().with_tile_server_options(TileServerOptions::new());
+    let resource_options = ResourceOptions::new()
+        .with_tile_server_options(TileServerOptions::new())
+        // .with_api_key(api_key)
+        .with_cache_path(Path::new(env!("CARGO_MANIFEST_DIR")).join("maplibre_database.sqlite"));
 
     let mut renderer = ImageRendererBuilder::new()
         .with_size(
@@ -61,7 +63,6 @@ pub fn create_map(size: Size) -> Rc<RefCell<MapLibre>> {
             NonZeroU32::new(size.height as u32).unwrap(),
         )
         .with_pixel_ratio(1.0)
-        .with_cache_path(Path::new(env!("CARGO_MANIFEST_DIR")).join("maplibre_database.sqlite"))
         .build_continuous_renderer();
     renderer.set_camera(0, 0, 0, 0., 0.); // setting the camera is important, otherwise map libre does nothing (no logs are comming and no map gets generated)
     renderer.load_style_from_url(&"https://demotiles.maplibre.org/style.json".parse().unwrap());

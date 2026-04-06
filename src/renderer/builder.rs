@@ -21,23 +21,11 @@ use std::path::PathBuf;
 #[derive(Debug)]
 pub struct ImageRendererBuilder {
     /// Image width in pixels
-    width: u32,
+    width: NonZeroU32,
     /// Image height in pixelsHash
-    height: u32,
+    height: NonZeroU32,
     /// Pixel ratio for high-DPI displays
     pixel_ratio: f32,
-
-    /// The maximum cache size in bytes
-    maximum_cache_size: u64,
-
-    /// Cache database file path
-    cache_path: Option<PathBuf>,
-    /// Assets root directory
-    asset_root: Option<PathBuf>,
-
-    /// API key for tile sources
-    // TODO: remove?
-    api_key: String,
 
     resource_options: Option<ResourceOptions>,
 }
@@ -46,28 +34,9 @@ impl Default for ImageRendererBuilder {
     #[allow(clippy::missing_panics_doc, reason = "infallible")]
     fn default() -> Self {
         Self {
-            width: 512,
-            height: 512,
+            width: NonZeroU32::new(512).unwrap(),
+            height: NonZeroU32::new(512).unwrap(),
             pixel_ratio: 1.0,
-
-            maximum_cache_size: 5000000,
-            cache_path: None,
-            asset_root: std::env::current_dir().ok(),
-
-            // base_url: "https://demotiles.maplibre.org"
-            //     .parse()
-            //     .expect("is a valid url"),
-            // uri_scheme_alias: "maplibre".to_string(),
-
-            // source_template: "/tiles/{domain}.json".to_string(),
-            // style_template: "{path}.json".to_string(),
-            // sprites_template: "/{path}/sprite{scale}.{format}".to_string(),
-            // glyphs_template: "/font/{fontstack}/{start}-{end}.pbf".to_string(),
-            // tile_template: "/{path}".to_string(),
-
-            // api_key_parameter_name: String::new(),
-            api_key: String::new(),
-            // requires_api_key: false,
             resource_options: None,
         }
     }
@@ -86,8 +55,8 @@ impl ImageRendererBuilder {
     #[must_use]
     #[allow(clippy::needless_pass_by_value, reason = "false positive")]
     pub fn with_size(mut self, width: NonZeroU32, height: NonZeroU32) -> Self {
-        self.width = width.get();
-        self.height = height.get();
+        self.width = width;
+        self.height = height;
         self
     }
 
@@ -101,42 +70,10 @@ impl ImageRendererBuilder {
         self
     }
 
-    /// Sets the maximum cache size in bytes
     #[must_use]
     #[allow(clippy::needless_pass_by_value, reason = "false positive")]
-    pub fn with_maximum_cache_size(mut self, maximum_cache_size: u64) -> Self {
-        self.maximum_cache_size = maximum_cache_size;
-        self
-    }
-
-    /// Sets cache database file path
-    ///
-    /// Default: no cache
-    #[must_use]
-    #[allow(clippy::needless_pass_by_value, reason = "false positive")]
-    pub fn with_cache_path(mut self, cache_path: impl Into<PathBuf>) -> Self {
-        self.cache_path = Some(cache_path.into());
-        self
-    }
-
-    /// Sets assets root directory
-    ///
-    /// Default: current working directory
-    #[must_use]
-    #[allow(clippy::needless_pass_by_value, reason = "false positive")]
-    pub fn with_asset_root(mut self, asset_root: impl Into<PathBuf>) -> Self {
-        self.asset_root = Some(asset_root.into());
-        self
-    }
-
-    /// Sets API key
-    ///
-    /// Default: ""
-    #[must_use]
-    #[allow(clippy::needless_pass_by_value, reason = "false positive")]
-    pub fn with_api_key(mut self, api_key: impl ToString) -> Self {
-        self.api_key = api_key.to_string();
-        self
+    pub fn with_resource_options(mut self, resource_options: ResourceOptions) {
+        self.resource_options = Some(resource_options)
     }
 
     /// Builds a static image renderer
@@ -167,8 +104,8 @@ impl<S> ImageRenderer<S> {
         let resource_options = opts.resource_options.unwrap_or(ResourceOptions::new());
         let map = ffi::MapRenderer_new(
             map_mode,
-            opts.width,
-            opts.height,
+            opts.width.get(),
+            opts.height.get(),
             opts.pixel_ratio,
             resource_options.into_ptr(),
         );

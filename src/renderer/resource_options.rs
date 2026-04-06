@@ -29,7 +29,7 @@ impl ResourceOptions {
         self
     }
 
-    /// Set cache path
+    /// Sets cache database file path
     #[must_use]
     pub fn with_cache_path(mut self, path: PathBuf) -> Self {
         // cxx.rs does not support OsString, but going via &[u8] is close enough
@@ -38,7 +38,7 @@ impl ResourceOptions {
         self
     }
 
-    /// Set asset path
+    /// Sets assets root directory
     #[must_use]
     pub fn with_asset_path(mut self, path: PathBuf) -> Self {
         let os_string = path.into_os_string();
@@ -46,7 +46,7 @@ impl ResourceOptions {
         self
     }
 
-    /// Set maximum cache size
+    /// Set maximum cache size in bytes
     #[must_use]
     pub fn with_maximum_cache_size(mut self, max_cache_size: u64) -> Self {
         withMaximumCacheSize(self.ptr.pin_mut(), max_cache_size);
@@ -55,7 +55,7 @@ impl ResourceOptions {
 
     /// Set tile server options
     #[must_use]
-    pub fn with_tile_server_options(mut self, tile_server_options: TileServerOptions) {
+    pub fn with_tile_server_options(mut self, tile_server_options: TileServerOptions) -> Self {
         withTileServerOptions(self.ptr.pin_mut(), tile_server_options.into_ptr());
     }
 
