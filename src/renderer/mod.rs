@@ -5,6 +5,7 @@ mod image_renderer;
 mod layer;
 mod map_observer;
 mod resource_options;
+mod style;
 mod tile_server_options;
 
 pub use bridge::ffi::{MapDebugOptions, MapMode};
