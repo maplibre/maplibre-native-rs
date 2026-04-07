@@ -298,9 +298,22 @@ fn build_local(
     const TARGET_NAME: &str = "mbgl-core";
     let maplibre_native_dir = clone_dir.join(name);
 
-    if !clone_dir.join(name).exists() {
+    // Some CI cache restores may leave an incomplete directory tree.
+    // Require files that prove this is a usable maplibre-native checkout.
+    let has_required_checkout_files = maplibre_native_dir.join("CMakeLists.txt").is_file()
+        && maplibre_native_dir.join("include").is_dir();
+
+    if maplibre_native_dir.exists() && !has_required_checkout_files {
+        println!(
+            "cargo:warning=Removing incomplete cached maplibre-native checkout at {}",
+            maplibre_native_dir.display()
+        );
+        fs::remove_dir_all(&maplibre_native_dir)?;
+    }
+
+    if !maplibre_native_dir.exists() {
         println!("cargo:warning=Cloning maplibre-native.");
-        Command::new("git")
+        let clone_status = Command::new("git")
             .current_dir(clone_dir)
             .args([
                 "clone",
@@ -310,21 +323,42 @@ fn build_local(
                 name,
             ])
             .status()?;
+        if !clone_status.success() {
+            return Err(format!(
+                "Failed to clone maplibre-native repository: {}",
+                clone_status
+            )
+            .into());
+        }
 
-        Command::new("git")
+        let checkout_status = Command::new("git")
             .current_dir(maplibre_native_dir.clone())
             .args(["checkout", MLN_COMMIT])
             .status()?;
+        if !checkout_status.success() {
+            return Err(format!(
+                "Failed to checkout maplibre-native commit {MLN_COMMIT}: {}",
+                checkout_status
+            )
+            .into());
+        }
     }
     // println!("cargo:warning=Building maplibre-native.");
     println!(
         "cargo:rerun-if-changed={}",
         maplibre_native_dir.as_os_str().to_str().unwrap()
     );
-    Command::new("git")
+    let submodule_status = Command::new("git")
         .current_dir(maplibre_native_dir.clone())
         .args(["submodule", "update", "--init", "--recursive"])
         .status()?;
+    if !submodule_status.success() {
+        return Err(format!(
+            "Failed to initialize maplibre-native submodules: {}",
+            submodule_status
+        )
+        .into());
+    }
 
     let mut config = cmake::Config::new(maplibre_native_dir.clone());
     //config.out_dir(maplibre_native_dir.clone().join("build"));
