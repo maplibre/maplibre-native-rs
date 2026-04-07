@@ -324,11 +324,9 @@ fn build_local(
             ])
             .status()?;
         if !clone_status.success() {
-            return Err(format!(
-                "Failed to clone maplibre-native repository: {}",
-                clone_status
-            )
-            .into());
+            return Err(
+                format!("Failed to clone maplibre-native repository: {clone_status}").into(),
+            );
         }
 
         let checkout_status = Command::new("git")
@@ -337,8 +335,7 @@ fn build_local(
             .status()?;
         if !checkout_status.success() {
             return Err(format!(
-                "Failed to checkout maplibre-native commit {MLN_COMMIT}: {}",
-                checkout_status
+                "Failed to checkout maplibre-native commit {MLN_COMMIT}: {checkout_status}"
             )
             .into());
         }
@@ -353,11 +350,9 @@ fn build_local(
         .args(["submodule", "update", "--init", "--recursive"])
         .status()?;
     if !submodule_status.success() {
-        return Err(format!(
-            "Failed to initialize maplibre-native submodules: {}",
-            submodule_status
-        )
-        .into());
+        return Err(
+            format!("Failed to initialize maplibre-native submodules: {submodule_status}").into(),
+        );
     }
 
     let mut config = cmake::Config::new(maplibre_native_dir.clone());
