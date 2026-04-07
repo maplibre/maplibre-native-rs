@@ -319,6 +319,8 @@ fn build_local(
                 "clone",
                 "--depth",
                 "1",
+                "--revision",
+                MLN_COMMIT,
                 "https://github.com/maplibre/maplibre-native.git",
                 name,
             ])
@@ -327,17 +329,6 @@ fn build_local(
             return Err(
                 format!("Failed to clone maplibre-native repository: {clone_status}").into(),
             );
-        }
-
-        let checkout_status = Command::new("git")
-            .current_dir(maplibre_native_dir.clone())
-            .args(["checkout", MLN_COMMIT])
-            .status()?;
-        if !checkout_status.success() {
-            return Err(format!(
-                "Failed to checkout maplibre-native commit {MLN_COMMIT}: {checkout_status}"
-            )
-            .into());
         }
     }
     // println!("cargo:warning=Building maplibre-native.");
