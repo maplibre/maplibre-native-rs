@@ -526,6 +526,10 @@ fn build_mln() {
         GraphicsRenderingAPI::OpenGL => {
             println!("cargo:rustc-link-lib=GL");
             println!("cargo:rustc-link-lib=EGL");
+            if cfg!(target_os = "linux") {
+                // GLX backend uses X11 symbols such as XInitThreads.
+                println!("cargo:rustc-link-lib=X11");
+            }
         }
         GraphicsRenderingAPI::Metal => {
             // macOS Metal framework dependencies
