@@ -408,6 +408,7 @@ fn build_local(
     })
 }
 
+#[allow(clippy::too_many_lines)]
 fn build_mln() {
     println!("cargo:rerun-if-env-changed=MLN_SYSTEM");
     println!("cargo:rerun-if-env-changed=MLN_PRECOMPILE");
