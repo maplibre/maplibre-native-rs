@@ -498,8 +498,11 @@ fn build_mln() {
         println!("cargo:rustc-link-lib=icui18n"); //sudo dnf install libicu-devel
         println!("cargo:rustc-link-lib=glslang"); //sudo dnf install libglslang-devel
         println!("cargo:rustc-link-lib=glslang-default-resource-limits"); //sudo dnf install libglslang-devel
-        println!("cargo:rustc-link-lib=SPIRV-Tools"); //sudo dnf install  spirv-tools-devel // Required by glslang spirv-tools-devel
+
+        // `SPIRV-Tools-opt` depends on symbols from `SPIRV-Tools`.
+        // Keep this order for static linking (notably on Linux/aarch64).
         println!("cargo:rustc-link-lib=SPIRV-Tools-opt"); //sudo dnf install  spirv-tools-devel // Required by glslang spirv-tools-devel
+        println!("cargo:rustc-link-lib=SPIRV-Tools"); //sudo dnf install  spirv-tools-devel // Required by glslang spirv-tools-devel
         println!("cargo:rustc-link-lib=png"); // sudo dnf install libpng-devel
         println!("cargo:rustc-link-lib=jpeg"); // sudo dnf install libjpeg-turbo-devel
         println!("cargo:rustc-link-lib=uv"); // sudo dnf install libuv-devel
