@@ -103,6 +103,7 @@ install-dependencies backend='vulkan':
       libwebp-dev \
       ccache \
       cmake \
+      xvfb \
       pkg-config # required for fontconfig detection
 
 # Install macOS dependencies via Homebrew

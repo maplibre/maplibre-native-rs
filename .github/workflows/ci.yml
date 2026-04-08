@@ -62,7 +62,12 @@ jobs:
         with: { tool: 'just' }
       - run: just env-info install-dependencies '${{ matrix.backend }}'
       - run: rustup update stable && rustup default stable
-      - run: just ci-test ${{ matrix.backend }}
+      - name: Run CI tests (Linux OpenGL via Xvfb)
+        if: startsWith(matrix.runs-on, 'ubuntu') && matrix.backend == 'opengl'
+        run: xvfb-run -a --server-args="-screen 0 1280x1024x24" just ci-test ${{ matrix.backend }}
+      - name: Run CI tests
+        if: ${{ !(startsWith(matrix.runs-on, 'ubuntu') && matrix.backend == 'opengl') }}
+        run: just ci-test ${{ matrix.backend }}
 
   test-msrv:
     name: Test MSRV ${{ matrix.runs-on }} - ${{ matrix.backend }}
@@ -101,7 +106,12 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: ${{ steps.msrv.outputs.value }}
-      - run: just ci_mode=0 ci-test-msrv ${{ matrix.backend }}  # Ignore warnings in MSRV
+      - name: Run CI tests (MSRV, Linux OpenGL via Xvfb)
+        if: startsWith(matrix.runs-on, 'ubuntu') && matrix.backend == 'opengl'
+        run: xvfb-run -a --server-args="-screen 0 1280x1024x24" just ci_mode=0 ci-test-msrv ${{ matrix.backend }}  # Ignore warnings in MSRV
+      - name: Run CI tests (MSRV)
+        if: ${{ !(startsWith(matrix.runs-on, 'ubuntu') && matrix.backend == 'opengl') }}
+        run: just ci_mode=0 ci-test-msrv ${{ matrix.backend }}  # Ignore warnings in MSRV
 
   # This final step is needed to mark the whole workflow as successful
   # Don't change its name - it is used by the merge protection rules
