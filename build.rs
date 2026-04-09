@@ -39,7 +39,13 @@ const BRIDGE_FILES: &[&str] = &[
     "src/cpp/renderer_observer.h",
     "src/cpp/map_observer.h",
     "src/cpp/rust_log_observer.h",
+    "src/cpp/sources/sources.h",
+    "src/cpp/sources/sources.cpp",
+    "src/cpp/layers/layers.h",
+    "src/cpp/layers/layers.cpp",
 ];
+
+const BRIDGE_INCLUDE_DIRS: &[&str] = &["include", "src/cpp"];
 
 /// Supported graphics rendering APIs.
 #[derive(PartialEq, Eq, Clone, Copy)]
@@ -409,8 +415,9 @@ fn build_local(
     .map(|s| maplibre_native_dir.clone().join(s))
     .collect();
     // maplibre-rs include dirs
-    include_dirs.push(Path::new("include").to_path_buf());
-    include_dirs.push(Path::new("src/cpp").to_path_buf());
+    for i in BRIDGE_INCLUDE_DIRS {
+        include_dirs.push(Path::new(i).to_path_buf());
+    }
 
     Ok(Info {
         lib_name: format!("{TARGET_NAME}{}", if amalgam_lib { "-amalgam" } else { "" }),

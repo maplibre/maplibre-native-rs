@@ -20,5 +20,12 @@ pub use callbacks::{
 pub use image_renderer::{Continuous, Image, ImageRenderer, RenderingError, Static, Tile};
 pub use map_observer::MapObserver;
 pub use resource_options::ResourceOptions;
+pub use style::GeoJsonSource;
+pub use style::SourceId;
 pub use style::Style;
+pub use style::StyleLayer;
+pub use style::StyleSource;
+pub use style::StyleSourceRef;
+pub use style::SymbolLayer;
+pub use style::{Latitude, Longitude};
 pub use tile_server_options::TileServerOptions;

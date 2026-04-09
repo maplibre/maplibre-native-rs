@@ -105,6 +105,41 @@ impl Size {
 }
 
 #[cxx::bridge()]
+pub mod sources {
+    #[namespace = "mbgl::style"]
+    extern "C++" {
+        include!("mbgl/style/sources/geojson_source.hpp");
+        // Opaque types
+        type GeoJSONSource;
+    }
+
+    #[namespace = "mln::bridge::style::sources::geojson"]
+    unsafe extern "C++" {
+        include!("sources/sources.h");
+
+        fn create(id: &str) -> UniquePtr<GeoJSONSource>;
+        fn setPoint(source: &UniquePtr<GeoJSONSource>, latitude: f64, longitude: f64);
+    }
+}
+
+#[cxx::bridge()]
+pub mod layers {
+    #[namespace = "mbgl::style"]
+    extern "C++" {
+        include!("mbgl/style/layers/symbol_layer.hpp");
+        // Opaque types
+        type SymbolLayer;
+    }
+
+    #[namespace = "mln::bridge::style::layers"]
+    unsafe extern "C++" {
+        include!("layers/layers.h");
+
+        fn create_symbol_layer(layer_id: &str, source_id: &str) -> UniquePtr<SymbolLayer>;
+    }
+}
+
+#[cxx::bridge()]
 pub mod resource_options {
 
     #[namespace = "mbgl"]
@@ -376,6 +411,14 @@ pub mod ffi {
         type Size = super::Size;
     }
 
+    #[namespace = "mbgl::style"]
+    extern "C++" {
+        #[rust_name = "CxxGeoJSONSource"]
+        type GeoJSONSource = super::sources::GeoJSONSource;
+        #[rust_name = "CxxSymbolLayer"]
+        type SymbolLayer = super::layers::SymbolLayer;
+    }
+
     // Declarations for Rust with implementations in C++
     unsafe extern "C++" {
         include!("map_renderer.h");
@@ -395,25 +438,25 @@ pub mod ffi {
             pixelRatio: f32,
             resource_options: UniquePtr<CxxResourceOptions>,
         ) -> UniquePtr<MapRenderer>;
-        fn MapRenderer_readStillImage(obj: Pin<&mut MapRenderer>) -> UniquePtr<BridgeImage>;
+        fn readStillImage(self: Pin<&mut MapRenderer>) -> UniquePtr<BridgeImage>;
         fn get(self: &BridgeImage) -> *const u8;
         fn size(self: &BridgeImage) -> Size;
         fn bufferLength(self: &BridgeImage) -> usize;
-        fn MapRenderer_render_once(obj: Pin<&mut MapRenderer>);
-        fn MapRenderer_render(obj: Pin<&mut MapRenderer>) -> UniquePtr<CxxString>;
-        fn MapRenderer_setDebugFlags(obj: Pin<&mut MapRenderer>, flags: MapDebugOptions);
-        fn MapRenderer_setCamera(
-            obj: Pin<&mut MapRenderer>,
+        fn render_once(self: Pin<&mut MapRenderer>);
+        fn render(self: Pin<&mut MapRenderer>) -> UniquePtr<CxxString>;
+        fn setDebugFlags(self: Pin<&mut MapRenderer>, flags: MapDebugOptions);
+        fn setCamera(
+            self: Pin<&mut MapRenderer>,
             lat: f64,
             lon: f64,
             zoom: f64,
             bearing: f64,
             pitch: f64,
         );
-        fn MapRenderer_moveBy(obj: Pin<&mut MapRenderer>, delta: &ScreenCoordinate);
-        fn MapRenderer_scaleBy(obj: Pin<&mut MapRenderer>, scale: f64, pos: &ScreenCoordinate);
-        fn MapRenderer_getStyle_loadURL(obj: Pin<&mut MapRenderer>, url: &str);
-        fn MapRenderer_setSize(obj: Pin<&mut MapRenderer>, size: &Size);
+        fn moveBy(self: Pin<&mut MapRenderer>, delta: &ScreenCoordinate);
+        fn scaleBy(self: Pin<&mut MapRenderer>, scale: f64, pos: &ScreenCoordinate);
+        fn style_load_from_url(self: Pin<&mut MapRenderer>, url: &str);
+        fn setSize(self: Pin<&mut MapRenderer>, size: &Size);
         fn observer(self: Pin<&mut MapRenderer>) -> SharedPtr<MapObserver>;
         fn style_add_image(
             self: Pin<&mut MapRenderer>,
@@ -423,6 +466,11 @@ pub mod ffi {
             single_distance_field: bool,
         );
         fn style_remove_image(self: Pin<&mut MapRenderer>, id: &str);
+        fn style_add_geojson_source(
+            self: Pin<&mut MapRenderer>,
+            source: UniquePtr<CxxGeoJSONSource>,
+        );
+        fn style_add_symbol_layer(self: Pin<&mut MapRenderer>, layer: UniquePtr<CxxSymbolLayer>);
     }
 
     // Declarations for C++ with implementations in Rust

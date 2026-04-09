@@ -6,7 +6,7 @@ use maplibre_native::Width;
 use slint::ComponentHandle;
 use std::rc::Rc;
 mod headless;
-use headless::MapLibre;
+pub use headless::MapLibre;
 pub use headless::create_map;
 use maplibre_native::{X, Y};
 use std::cell::RefCell;
