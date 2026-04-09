@@ -78,6 +78,7 @@ impl<'a, S> Style<'a, S> {
             .style_remove_image(id);
     }
 
+    /// Add a source to the current map style and return the source id required for the layer
     pub fn add_source<T: Into<StyleSource>>(&mut self, source: T) -> SourceId {
         match source.into() {
             StyleSource::GeoJson(source) => {
@@ -91,6 +92,7 @@ impl<'a, S> Style<'a, S> {
         }
     }
 
+    /// Add a new layer
     pub fn add_layer<T: Into<StyleLayer>>(&mut self, layer: T) {
         match layer.into() {
             StyleLayer::Symbol(layer) => self
