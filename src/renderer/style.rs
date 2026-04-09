@@ -61,6 +61,8 @@ impl<'a, S> Style<'a, S> {
     }
 
     pub fn add_image(&mut self, id: &str, image: &DynamicImage, single_distance_field: bool) {
+        use image::EncodableLayout;
+        let image = image.to_rgba8();
         self.image_renderer.instance.pin_mut().style_add_image(
             id,
             image.as_bytes(),
