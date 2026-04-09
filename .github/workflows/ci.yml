@@ -27,7 +27,7 @@ jobs:
       - if: github.event_name != 'release' && github.event_name != 'workflow_dispatch'
         uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
       - run: rustup update stable && rustup default stable && rustup component add rustfmt && rustup component add clippy
-      - uses: taiki-e/install-action@f916cfac5d8efd040e250d0cd6b967616504b3a4 # v2.68.32
+      - uses: taiki-e/install-action@7a562dfa955aa2e4d5b0fd6ebd57ff9715c07b0b # v2.73.0
         with: { tool: 'just' }
       - run: just env-info install-dependencies 'vulkan'
       - run: just ci-lint
@@ -58,11 +58,16 @@ jobs:
         with: { persist-credentials: false }
       - if: github.event_name != 'release' && github.event_name != 'workflow_dispatch'
         uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
-      - uses: taiki-e/install-action@f916cfac5d8efd040e250d0cd6b967616504b3a4 # v2.68.32
+      - uses: taiki-e/install-action@7a562dfa955aa2e4d5b0fd6ebd57ff9715c07b0b # v2.73.0
         with: { tool: 'just' }
       - run: just env-info install-dependencies '${{ matrix.backend }}'
       - run: rustup update stable && rustup default stable
-      - run: just ci-test ${{ matrix.backend }}
+      - name: Run CI tests (Linux OpenGL via Xvfb)
+        if: startsWith(matrix.runs-on, 'ubuntu') && matrix.backend == 'opengl'
+        run: xvfb-run -a --server-args="-screen 0 1280x1024x24" just ci-test ${{ matrix.backend }}
+      - name: Run CI tests
+        if: ${{ !(startsWith(matrix.runs-on, 'ubuntu') && matrix.backend == 'opengl') }}
+        run: just ci-test ${{ matrix.backend }}
 
   test-msrv:
     name: Test MSRV ${{ matrix.runs-on }} - ${{ matrix.backend }}
@@ -91,7 +96,7 @@ jobs:
         with: { persist-credentials: false }
       - if: github.event_name != 'release' && github.event_name != 'workflow_dispatch'
         uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
-      - uses: taiki-e/install-action@f916cfac5d8efd040e250d0cd6b967616504b3a4 # v2.68.32
+      - uses: taiki-e/install-action@7a562dfa955aa2e4d5b0fd6ebd57ff9715c07b0b # v2.73.0
         with: { tool: 'just' }
       - run: just env-info install-dependencies '${{ matrix.backend }}'
       - name: Read MSRV
@@ -101,7 +106,12 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: ${{ steps.msrv.outputs.value }}
-      - run: just ci_mode=0 ci-test-msrv ${{ matrix.backend }}  # Ignore warnings in MSRV
+      - name: Run CI tests (MSRV, Linux OpenGL via Xvfb)
+        if: startsWith(matrix.runs-on, 'ubuntu') && matrix.backend == 'opengl'
+        run: xvfb-run -a --server-args="-screen 0 1280x1024x24" just ci_mode=0 ci-test-msrv ${{ matrix.backend }}  # Ignore warnings in MSRV
+      - name: Run CI tests (MSRV)
+        if: ${{ !(startsWith(matrix.runs-on, 'ubuntu') && matrix.backend == 'opengl') }}
+        run: just ci_mode=0 ci-test-msrv ${{ matrix.backend }}  # Ignore warnings in MSRV
 
   # This final step is needed to mark the whole workflow as successful
   # Don't change its name - it is used by the merge protection rules

@@ -32,10 +32,7 @@ public:
         : frontend(std::move(frontendInstance)),
           mapObserverInstance(mapObserverInstance),
           map(std::move(mapInstance)) {}
-    ~MapRenderer() {
-        if (frontend)
-            frontend->reset(); // Reset renderer and therefore detach renderer observer
-    }
+    ~MapRenderer() {}
 
     std::shared_ptr<MapObserver> observer() {
         return mapObserverInstance;

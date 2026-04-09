@@ -307,33 +307,53 @@ fn build_local(
     const TARGET_NAME: &str = "mbgl-core";
     let maplibre_native_dir = clone_dir.join(name);
 
-    if !clone_dir.join(name).exists() {
+    // Some CI cache restores may leave an incomplete directory tree.
+    // Require files that prove this is a usable maplibre-native checkout.
+    let has_required_checkout_files = maplibre_native_dir.join("CMakeLists.txt").is_file()
+        && maplibre_native_dir.join("include").is_dir();
+
+    if maplibre_native_dir.exists() && !has_required_checkout_files {
+        println!(
+            "cargo:warning=Removing incomplete cached maplibre-native checkout at {}",
+            maplibre_native_dir.display()
+        );
+        fs::remove_dir_all(&maplibre_native_dir)?;
+    }
+
+    if !maplibre_native_dir.exists() {
         println!("cargo:warning=Cloning maplibre-native.");
-        Command::new("git")
+        let clone_status = Command::new("git")
             .current_dir(clone_dir)
             .args([
                 "clone",
                 "--depth",
                 "1",
+                "--revision",
+                MLN_COMMIT,
                 "https://github.com/maplibre/maplibre-native.git",
                 name,
             ])
             .status()?;
-
-        Command::new("git")
-            .current_dir(maplibre_native_dir.clone())
-            .args(["checkout", MLN_COMMIT])
-            .status()?;
+        if !clone_status.success() {
+            return Err(
+                format!("Failed to clone maplibre-native repository: {clone_status}").into(),
+            );
+        }
     }
     // println!("cargo:warning=Building maplibre-native.");
     println!(
         "cargo:rerun-if-changed={}",
         maplibre_native_dir.as_os_str().to_str().unwrap()
     );
-    Command::new("git")
+    let submodule_status = Command::new("git")
         .current_dir(maplibre_native_dir.clone())
         .args(["submodule", "update", "--init", "--recursive"])
         .status()?;
+    if !submodule_status.success() {
+        return Err(
+            format!("Failed to initialize maplibre-native submodules: {submodule_status}").into(),
+        );
+    }
 
     let mut config = cmake::Config::new(maplibre_native_dir.clone());
     //config.out_dir(maplibre_native_dir.clone().join("build"));
@@ -399,6 +419,7 @@ fn build_local(
     })
 }
 
+#[allow(clippy::too_many_lines)]
 fn build_mln() {
     println!("cargo:rerun-if-env-changed=MLN_SYSTEM");
     println!("cargo:rerun-if-env-changed=MLN_PRECOMPILE");
@@ -489,8 +510,11 @@ fn build_mln() {
         println!("cargo:rustc-link-lib=icui18n"); //sudo dnf install libicu-devel
         println!("cargo:rustc-link-lib=glslang"); //sudo dnf install libglslang-devel
         println!("cargo:rustc-link-lib=glslang-default-resource-limits"); //sudo dnf install libglslang-devel
-        println!("cargo:rustc-link-lib=SPIRV-Tools"); //sudo dnf install  spirv-tools-devel // Required by glslang spirv-tools-devel
+
+        // `SPIRV-Tools-opt` depends on symbols from `SPIRV-Tools`.
+        // Keep this order for static linking (notably on Linux/aarch64).
         println!("cargo:rustc-link-lib=SPIRV-Tools-opt"); //sudo dnf install  spirv-tools-devel // Required by glslang spirv-tools-devel
+        println!("cargo:rustc-link-lib=SPIRV-Tools"); //sudo dnf install  spirv-tools-devel // Required by glslang spirv-tools-devel
         println!("cargo:rustc-link-lib=png"); // sudo dnf install libpng-devel
         println!("cargo:rustc-link-lib=jpeg"); // sudo dnf install libjpeg-turbo-devel
         println!("cargo:rustc-link-lib=uv"); // sudo dnf install libuv-devel
@@ -503,6 +527,10 @@ fn build_mln() {
         GraphicsRenderingAPI::OpenGL => {
             println!("cargo:rustc-link-lib=GL");
             println!("cargo:rustc-link-lib=EGL");
+            if cfg!(target_os = "linux") {
+                // GLX backend uses X11 symbols such as XInitThreads.
+                println!("cargo:rustc-link-lib=X11");
+            }
         }
         GraphicsRenderingAPI::Metal => {
             // macOS Metal framework dependencies
