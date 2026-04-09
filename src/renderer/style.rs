@@ -28,4 +28,11 @@ impl<'a, S> Style<'a, S> {
             single_distance_field,
         );
     }
+
+    pub fn remove_image(&mut self, id: &str) {
+        self.image_renderer
+            .instance
+            .pin_mut()
+            .style_remove_image(id);
+    }
 }

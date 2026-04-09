@@ -422,6 +422,7 @@ pub mod ffi {
             size: Size,
             single_distance_field: bool,
         );
+        fn style_remove_image(self: Pin<&mut MapRenderer>, id: &str);
     }
 
     // Declarations for C++ with implementations in Rust

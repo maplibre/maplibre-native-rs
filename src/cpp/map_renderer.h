@@ -46,7 +46,10 @@ public:
             
         const float pixelRatio = 1.0;
         map->getStyle().addImage(std::make_unique<mbgl::style::Image>(std::string(id), std::move(image), pixelRatio, single_distance_field));
-        
+    }
+
+    void style_remove_image(rust::Str id) {
+        map->getStyle().removeImage(std::string(id));
     }
 
 
