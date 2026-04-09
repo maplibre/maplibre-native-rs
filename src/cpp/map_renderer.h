@@ -1,6 +1,7 @@
 #pragma once
 
 #include <mbgl/gfx/headless_frontend.hpp>
+#include <mbgl/style/image.hpp>
 #include <mbgl/map/map.hpp>
 #include <mbgl/map/map_options.hpp>
 #include <mbgl/style/style.hpp>
@@ -40,6 +41,16 @@ public:
         return mapObserverInstance;
     }
 
+    void style_add_image(rust::Str id, rust::Slice<const unsigned char> data, mbgl::Size size, bool single_distance_field) {
+        mbgl::PremultipliedImage image(size, data.data(), data.size());          
+            
+        const float pixelRatio = 1.0;
+        map->getStyle().addImage(std::make_unique<mbgl::style::Image>(std::string(id), std::move(image), pixelRatio, single_distance_field));
+        
+    }
+
+
+
 public:
     mbgl::util::RunLoop runLoop;
     // Due to CXX limitations, make all these public and access them from the regular functions below
@@ -59,19 +70,6 @@ inline std::unique_ptr<MapRenderer> MapRenderer_new(
     mbgl::Size size = {width, height};
     auto mapObserver = std::make_shared<MapObserver>();
     auto frontend = std::make_unique<mbgl::HeadlessFrontend>(size, pixelRatio);
-
-    // mbgl::TileServerOptions options = mbgl::TileServerOptions()
-    //     .withBaseURL((std::string)baseUrl)
-    //     .withUriSchemeAlias((std::string)uriSchemeAlias)
-    //     .withSourceTemplate((std::string)sourceTemplate, "", {})
-    //     .withStyleTemplate((std::string)styleTemplate, "maps", {})
-    //     .withSpritesTemplate((std::string)spritesTemplate, "", {})
-    //     .withGlyphsTemplate((std::string)glyphsTemplate, "fonts", {})
-    //     .withTileTemplate((std::string)tileTemplate, "tiles", {})
-    //     .withApiKeyParameterName((std::string)apiKeyParameterName)
-    //     .setRequiresApiKey(requiresApiKey);
-
-    // resourceOptions->withTileServerOptions(options);
 
     mbgl::MapOptions mapOptions;
     mapOptions.withMapMode(mapMode).withSize(size).withPixelRatio(pixelRatio);

@@ -16,7 +16,9 @@ pub use builder::ImageRendererBuilder;
 pub use callbacks::{
     CameraDidChangeCallback, FailingLoadingMapCallback, FinishRenderingFrameCallback, VoidCallback,
 };
+// pub use image::Image;
 pub use image_renderer::{Continuous, Image, ImageRenderer, RenderingError, Static, Tile};
 pub use map_observer::MapObserver;
 pub use resource_options::ResourceOptions;
+pub use style::Style;
 pub use tile_server_options::TileServerOptions;

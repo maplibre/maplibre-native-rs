@@ -415,6 +415,13 @@ pub mod ffi {
         fn MapRenderer_getStyle_loadURL(obj: Pin<&mut MapRenderer>, url: &str);
         fn MapRenderer_setSize(obj: Pin<&mut MapRenderer>, size: &Size);
         fn observer(self: Pin<&mut MapRenderer>) -> SharedPtr<MapObserver>;
+        fn style_add_image(
+            self: Pin<&mut MapRenderer>,
+            id: &str,
+            data: &[u8],
+            size: Size,
+            single_distance_field: bool,
+        );
     }
 
     // Declarations for C++ with implementations in Rust

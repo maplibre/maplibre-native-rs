@@ -1,7 +1,6 @@
 use super::tile_server_options::TileServerOptions;
 use crate::renderer::bridge::resource_options::{self, *};
 use cxx::UniquePtr;
-use std::ffi::OsString;
 use std::{fmt::Debug, path::PathBuf};
 
 /// Resource Options
@@ -57,6 +56,7 @@ impl ResourceOptions {
     #[must_use]
     pub fn with_tile_server_options(mut self, tile_server_options: TileServerOptions) -> Self {
         withTileServerOptions(self.ptr.pin_mut(), tile_server_options.into_ptr());
+        self
     }
 
     /// Get internal pointer by consuming this object

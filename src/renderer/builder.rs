@@ -1,12 +1,10 @@
 //! Image renderer configuration and builder
 
-use crate::renderer::bridge::{ffi, resource_options};
+use crate::renderer::bridge::ffi;
 use crate::renderer::{Continuous, ImageRenderer, MapMode, Static, Tile};
 use crate::ResourceOptions;
-use std::ffi::OsString;
 use std::marker::PhantomData;
 use std::num::NonZeroU32;
-use std::path::PathBuf;
 
 /// Builder for configuring [`ImageRenderer`] instances
 ///
@@ -70,10 +68,12 @@ impl ImageRendererBuilder {
         self
     }
 
+    /// Set Resource Options
     #[must_use]
     #[allow(clippy::needless_pass_by_value, reason = "false positive")]
-    pub fn with_resource_options(mut self, resource_options: ResourceOptions) {
-        self.resource_options = Some(resource_options)
+    pub fn with_resource_options(mut self, resource_options: ResourceOptions) -> Self {
+        self.resource_options = Some(resource_options);
+        self
     }
 
     /// Builds a static image renderer
