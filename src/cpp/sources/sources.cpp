@@ -9,6 +9,6 @@ namespace mln::bridge::style::sources::geojson {
     }
 
     void setPoint(const std::unique_ptr<mbgl::style::GeoJSONSource>& source, double latitude, double longitude) {
-        source->setGeoJSON(mbgl::Geometry<double>{mbgl::Point<double>{latitude, longitude}});
+        source->setGeoJSON(mbgl::Geometry<double>{mbgl::Point<double>{longitude, latitude}});
     }
 }
