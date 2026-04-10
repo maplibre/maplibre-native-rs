@@ -347,10 +347,6 @@ fn build_local(
     }
 
     let mut config = cmake::Config::new(maplibre_native_dir.clone());
-    //config.out_dir(maplibre_native_dir.clone().join("build"));
-    // config.very_verbose(true);
-
-    // println!("cargo:warning=Building target {TARGET_NAME}");
     config.build_target(TARGET_NAME);
     match GraphicsRenderingAPI::from_selected_features() {
         GraphicsRenderingAPI::Metal => {
