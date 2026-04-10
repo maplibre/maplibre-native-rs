@@ -8,10 +8,22 @@ use std::rc::Rc;
 mod headless;
 pub use headless::MapLibre;
 pub use headless::create_map;
+use image::ImageReader;
+use maplibre_native::Style;
+use maplibre_native::{GeoJsonSource, Latitude, Longitude, SymbolLayer};
 use maplibre_native::{X, Y};
 use std::cell::RefCell;
+use std::path::Path;
 
 pub fn init(ui: &MainWindow, map: &Rc<RefCell<MapLibre>>) {
+    loop {
+        map.borrow_mut().renderer().render_once();
+        if map.borrow_mut().style_loaded() {
+            style(map);
+            break;
+        }
+    }
+
     ui.on_map_size_changed({
         let map = Rc::downgrade(map);
         move |size| {
@@ -84,4 +96,28 @@ pub fn init(ui: &MainWindow, map: &Rc<RefCell<MapLibre>>) {
                 .scale_by(scale, pos);
         }
     });
+}
+
+fn style(map: &Rc<RefCell<MapLibre>>) {
+    let mut map_borrow = map.borrow_mut();
+    let mut style = Style::get_ref(map_borrow.renderer());
+
+    let image = ImageReader::open(
+        Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("ui")
+            .join("icons")
+            .join("Marker.png"),
+    )
+    .unwrap()
+    .decode()
+    .unwrap();
+    let image_id = style.add_image("The id", &image, true);
+
+    let mut geo_json_source = GeoJsonSource::new("geojsonsourceid");
+    geo_json_source.set_point(Latitude(46.62381), Longitude(11.11785));
+    let source_id = style.add_source(geo_json_source);
+
+    let layer = SymbolLayer::new("Layer id", &source_id);
+    layer.set_icon_image(image_id);
+    style.add_layer(layer);
 }

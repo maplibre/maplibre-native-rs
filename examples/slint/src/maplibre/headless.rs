@@ -32,6 +32,10 @@ impl MapLibre {
         }
     }
 
+    pub fn style_loaded(&mut self) -> bool {
+        self.flags.borrow().style_loaded
+    }
+
     pub fn updated(&mut self) -> bool {
         let updated = self.flags.borrow().frame_updated;
         self.flags.borrow_mut().frame_updated = false;
