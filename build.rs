@@ -177,13 +177,13 @@ fn mln_release_from_manifest() -> String {
         .and_then(|metadata| metadata.get("mln"))
         .and_then(|mln| mln.get("release"))
         .and_then(toml::Value::as_str)
-        .map(str::to_owned)
         .unwrap_or_else(|| {
             panic!(
                 "Missing string key [package.metadata.mln].release in {}",
                 manifest_path.display()
             )
         })
+        .to_owned()
 }
 
 /// Extracts the headers from the downloaded tarball

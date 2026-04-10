@@ -29,10 +29,10 @@ check:
 ci-lint: env-info test-fmt clippy
 
 # Run all tests as expected by CI
-ci-test backend mln-build-method: (env-info mln-build-method) (build backend) (test backend) (test-doc backend) (test-example_slint) && assert-git-is-clean
+ci-test backend: (env-info) (build backend) (test backend) (test-doc backend) (test-example_slint) && assert-git-is-clean
 
 # Run minimal subset of tests to ensure compatibility with MSRV
-ci-test-msrv backend mln-build-method: (ci-test backend mln-build-method)  # for now, same as ci-test
+ci-test-msrv backend: (ci-test backend)  # for now, same as ci-test
 
 # Clean all build artifacts
 clean:
@@ -48,7 +48,7 @@ docs backend *args='--open':
     DOCS_RS=1 cargo doc --no-deps {{args}} --workspace --features {{backend}}
 
 # Print environment info
-env-info mln-build-method='from-source':
+env-info:
     @echo "Running {{if ci_mode == '1' {'in CI mode'} else {'in dev mode'} }} on {{os()}} / {{arch()}}"
     echo "PWD $(pwd)"
     {{just_executable()}} --version
@@ -58,7 +58,7 @@ env-info mln-build-method='from-source':
     @echo "RUSTFLAGS='$RUSTFLAGS'"
     @echo "RUSTDOCFLAGS='$RUSTDOCFLAGS'"
     @echo "RUST_BACKTRACE='$RUST_BACKTRACE'"
-    @echo {{if mln-build-method == 'from-source' {'MLN_PRECOMPILE=0'} else {'MLN_PRECOMPILE=1'}}}
+    @echo "MLN_PRECOMPILE='$MLN_PRECOMPILE'"
 
 # Reformat all code `cargo fmt`. If nightly is available, use it for better results
 fmt:
