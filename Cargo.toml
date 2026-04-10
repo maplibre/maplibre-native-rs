@@ -13,7 +13,10 @@ exclude = []
 
 [package.metadata.mln]
 repo = "maplibre/maplibre-native"
-release = "core-aeaadc06b4e0614f4f243db4dce210c22dde9f9c"
+# This version is used only if maplibre-native-rs is build with prebuilt
+# maplibre-native binaries. It is not used when building maplibre-native from source.
+# When building from source, the version of maplibre-native is specified in the `build.rs` file
+release = "core-9b6325a14e2cf1cc29ab28c1855ad376f1ba4903"
 
 [features]
 default = ["log", "pool"]
@@ -37,6 +40,7 @@ cxx-build.workspace = true
 downloader.workspace = true
 flate2.workspace = true
 tar.workspace = true
+toml = "0.8"
 walkdir.workspace = true
 
 [dev-dependencies]

@@ -84,15 +84,21 @@ just install-dependencies vulkan
 
 Since we wrap the [Maplibre native library](https://maplibre.org/projects/native/), we need this and its headers to be included.
 
+By default the library will be downloaded and build locally during the build process of maplibre-native-rs.
+
 We can get the library and headers from two places:
-- <details><summary>default: downloaded from the releases page</summary>
+- <details><summary>default: library will be downloaded and build locally during the build process of maplibre-native-rs</summary>
+
+  The specific version is controllable from the `build.rs` file.
+  
+- <details><summary>downloaded from the releases page</summary>
 
   The specific version of [MapLibre Native](https://maplibre.org/projects/native/) used is controlled by `package.metadata.mln.release` in `Cargo.toml`.
   This dependency is automatically updated via a GitHub workflow on the 1st of each month repository.
   A pull request is created if an update is available.
 
   </details>
-- <details><summary>if the env vars <code>MLN_CORE_LIBRARY_PATH</code> and <code>MLN_CORE_HEADERS_PATH</code> are set: from local disk via the environment variables</summary>
+- <details><summary>if the env vars <code>MLN_PRECOMPILE</code><code>MLN_CORE_LIBRARY_PATH</code> and <code>MLN_CORE_HEADERS_PATH</code> are set: from local disk via the environment variables</summary>
 
   If you don't want to allow network access during buildscript execution, we allow you to download the release and tell us where you have downloaded the contents.
   You can also build from source by following the steps that maplibre-native does in CI to produce the artefacts.
