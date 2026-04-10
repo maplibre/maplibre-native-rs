@@ -265,8 +265,8 @@ fn bundle_precompiled() -> Info {
     let (cpp_root, include_dirs) = resolve_mln_core(&root);
 
     println!(
-         "cargo:warning=Using precompiled maplibre-native static library from {}",
-         cpp_root.display()
+        "cargo:warning=Using precompiled maplibre-native static library from {}",
+        cpp_root.display()
     );
     println!(
         "cargo:rustc-link-search=native={}",
