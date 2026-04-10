@@ -71,7 +71,7 @@ pub fn create_map(size: Size) -> Rc<RefCell<MapLibre>> {
         .with_pixel_ratio(1.0)
         .with_resource_options(resource_options)
         .build_continuous_renderer();
-    renderer.set_camera(0, 0, 0, 0., 0.); // setting the camera is important, otherwise map libre does nothing (no logs are comming and no map gets generated)
+    renderer.set_camera(0., 0., 0., 0., 0.); // setting the camera is important, otherwise map libre does nothing (no logs are comming and no map gets generated)
     renderer.load_style_from_url(&"https://demotiles.maplibre.org/style.json".parse().unwrap());
 
     let map = Rc::new(RefCell::new(MapLibre::new(renderer)));

@@ -204,11 +204,11 @@ impl ImagePtr {
 }
 
 impl ImageRenderer<Continuous> {
-    /// Set the camera
+    /// Set the camera position using geographic coordinates.
+    ///
     /// Important: Without setting the camera initially no image will be generated!
-    pub fn set_camera(&mut self, x: u32, y: u32, zoom: u8, bearing: f64, pitch: f64) {
-        let (lat, lon) = coords_to_lat_lon(f64::from(zoom), x, y);
-        self.instance.pin_mut().setCamera(lat, lon, f64::from(zoom), bearing, pitch);
+    pub fn set_camera(&mut self, lat: f64, lon: f64, zoom: f64, bearing: f64, pitch: f64) {
+        self.instance.pin_mut().setCamera(lat, lon, zoom, bearing, pitch);
     }
 
     /// Get access to the map observer to setup callbacks
