@@ -1,6 +1,9 @@
-use crate::renderer::bridge::ffi::{self, Size};
+//! Style abstractions for sources, layers, and images.
+
+use crate::renderer::bridge::ffi::Size;
 use crate::ImageRenderer;
 use image::DynamicImage;
+use std::fmt;
 
 mod geojson_source;
 pub use geojson_source::GeoJsonSource;
@@ -9,10 +12,13 @@ pub use geojson_source::Longitude;
 
 /// Shared interface for style sources that expose a stable source ID.
 pub trait StyleSourceRef {
+    /// Returns the stable source ID.
     fn source_id(&self) -> &str;
 }
 
+/// Shared interface for style images that expose a stable image ID.
 pub trait StyleImageRef {
+    /// Returns the stable image ID.
     fn image_id(&self) -> &str;
 }
 
@@ -22,6 +28,7 @@ pub struct SourceId(String);
 
 impl SourceId {
     #[must_use]
+    /// Returns the source ID as a string.
     pub fn as_str(&self) -> &str {
         &self.0
     }
@@ -33,11 +40,13 @@ impl StyleSourceRef for SourceId {
     }
 }
 
+/// A stable image ID handle that can be used after an image object is moved.
 #[derive(Clone, Debug)]
 pub struct ImageId(String);
 
 impl ImageId {
     #[must_use]
+    /// Returns the image ID as a string.
     pub fn as_str(&self) -> &str {
         &self.0
     }
@@ -49,12 +58,32 @@ impl StyleImageRef for ImageId {
     }
 }
 
+/// A style source for rendering data layers.
 pub enum StyleSource {
+    /// A GeoJSON source.
     GeoJson(GeoJsonSource),
 }
 
+impl fmt::Debug for StyleSource {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::GeoJson(src) => f.debug_tuple("GeoJson").field(src).finish(),
+        }
+    }
+}
+
+/// A style layer for rendering.
 pub enum StyleLayer {
+    /// A symbol layer.
     Symbol(SymbolLayer),
+}
+
+impl fmt::Debug for StyleLayer {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Symbol(layer) => f.debug_tuple("Symbol").field(layer).finish(),
+        }
+    }
 }
 
 mod symbol_layer;
@@ -80,6 +109,7 @@ impl<'a, S> Style<'a, S> {
             .style_load_from_url(url);
     }
 
+    /// Adds an image to the style with the given ID and options.
     pub fn add_image(
         &mut self,
         id: &str,
@@ -97,6 +127,7 @@ impl<'a, S> Style<'a, S> {
         ImageId(id.to_owned())
     }
 
+    /// Removes an image from the style by ID.
     pub fn remove_image(&mut self, id: &str) {
         self.image_renderer
             .instance

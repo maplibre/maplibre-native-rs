@@ -1,5 +1,5 @@
-use super::tile_server_options::TileServerOptions;
-use crate::renderer::bridge::resource_options::{self, *};
+use crate::renderer::bridge::resource_options;
+use crate::renderer::tile_server_options::TileServerOptions;
 use cxx::UniquePtr;
 use std::{fmt::Debug, path::PathBuf};
 
@@ -18,13 +18,15 @@ impl ResourceOptions {
     /// Create new resource options object
     #[must_use]
     pub fn new() -> Self {
-        Self { ptr: new() }
+        Self {
+            ptr: resource_options::new(),
+        }
     }
 
     /// Set api key
     #[must_use]
     pub fn with_api_key(mut self, key: &str) -> Self {
-        withApiKey(self.ptr.pin_mut(), key);
+        resource_options::withApiKey(self.ptr.pin_mut(), key);
         self
     }
 
@@ -33,7 +35,7 @@ impl ResourceOptions {
     pub fn with_cache_path(mut self, path: PathBuf) -> Self {
         // cxx.rs does not support OsString, but going via &[u8] is close enough
         let os_string = path.into_os_string();
-        withCachePath(self.ptr.pin_mut(), os_string.as_encoded_bytes());
+        resource_options::withCachePath(self.ptr.pin_mut(), os_string.as_encoded_bytes());
         self
     }
 
@@ -41,21 +43,21 @@ impl ResourceOptions {
     #[must_use]
     pub fn with_asset_path(mut self, path: PathBuf) -> Self {
         let os_string = path.into_os_string();
-        withAssetPath(self.ptr.pin_mut(), os_string.as_encoded_bytes());
+        resource_options::withAssetPath(self.ptr.pin_mut(), os_string.as_encoded_bytes());
         self
     }
 
     /// Set maximum cache size in bytes
     #[must_use]
     pub fn with_maximum_cache_size(mut self, max_cache_size: u64) -> Self {
-        withMaximumCacheSize(self.ptr.pin_mut(), max_cache_size);
+        resource_options::withMaximumCacheSize(self.ptr.pin_mut(), max_cache_size);
         self
     }
 
     /// Set tile server options
     #[must_use]
     pub fn with_tile_server_options(mut self, tile_server_options: TileServerOptions) -> Self {
-        withTileServerOptions(self.ptr.pin_mut(), tile_server_options.into_ptr());
+        resource_options::withTileServerOptions(self.ptr.pin_mut(), tile_server_options.into_ptr());
         self
     }
 

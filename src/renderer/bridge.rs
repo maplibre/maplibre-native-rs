@@ -12,6 +12,7 @@ use std::ops::Sub;
 ///
 /// By default, logs are generated asynchronously except for Error level messages.
 /// In crash scenarios, pending async log entries may be lost.
+#[allow(dead_code)]
 pub fn set_log_thread_enabled(enable: bool) {
     ffi::Log_useLogThread(enable);
 }
@@ -105,11 +106,16 @@ impl Size {
 }
 
 #[cxx::bridge()]
+/// FFI bindings for map source operations.
+///
+/// This module provides C++/Rust interoperability for various source types.
+/// Currently supports GeoJSON sources, with extensibility for additional source types.
 pub mod sources {
     #[namespace = "mbgl::style"]
     extern "C++" {
         include!("mbgl/style/sources/geojson_source.hpp");
         // Opaque types
+        /// A GeoJSON source for MapLibre rendering.
         type GeoJSONSource;
     }
 
@@ -117,24 +123,46 @@ pub mod sources {
     unsafe extern "C++" {
         include!("sources/sources.h");
 
+        /// Creates a new GeoJSON source with the given ID.
         fn create(id: &str) -> UniquePtr<GeoJSONSource>;
+        /// Sets a point for the GeoJSON source.
         fn setPoint(source: &UniquePtr<GeoJSONSource>, latitude: f64, longitude: f64);
     }
 }
 
+impl std::fmt::Debug for sources::GeoJSONSource {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("GeoJSONSource").finish()
+    }
+}
+
 #[cxx::bridge()]
+/// FFI bindings for map layer operations.
+///
+/// This module provides C++/Rust interoperability for various layer types.
+/// Currently supports symbol layers, with extensibility for additional layer types like fill, line, and background layers.
 pub mod layers {
     // Must have the same namespace than on the C++ side
     #[namespace = "mbgl::style"]
+    /// Symbol anchor position type.
     pub enum SymbolAnchorType {
+        /// Center anchor point.
         Center,
+        /// Left anchor point.
         Left,
+        /// Right anchor point.
         Right,
+        /// Top anchor point.
         Top,
+        /// Bottom anchor point.
         Bottom,
+        /// Top-left anchor point.
         TopLeft,
+        /// Top-right anchor point.
         TopRight,
+        /// Bottom-left anchor point.
         BottomLeft,
+        /// Bottom-right anchor point.
         BottomRight,
     }
 
@@ -143,8 +171,10 @@ pub mod layers {
         include!("mbgl/style/layers/symbol_layer.hpp");
         include!("mbgl/style/types.hpp");
         // Opaque types
+        /// A symbol layer for rendering labels and icons on the map.
         type SymbolLayer;
 
+        /// Symbol anchor position type.
         type SymbolAnchorType;
     }
 
@@ -152,18 +182,38 @@ pub mod layers {
     unsafe extern "C++" {
         include!("layers/layers.h");
 
-        fn create_symbol_layer(layer_id: &str, source_id: &str) -> UniquePtr<SymbolLayer>;
+        /// Creates a new symbol layer.
+        pub(crate) fn create_symbol_layer(
+            layer_id: &str,
+            source_id: &str,
+        ) -> UniquePtr<SymbolLayer>;
+        /// Sets the icon image for a layer by image ID.
         fn setIconImage(layer: &UniquePtr<SymbolLayer>, image_id: &str);
+        /// Sets the anchor point for layer icons.
         fn setIconAnchor(layer: &UniquePtr<SymbolLayer>, anchor: SymbolAnchorType);
     }
 }
 
+impl std::fmt::Debug for layers::SymbolLayer {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SymbolLayer").finish()
+    }
+}
+
+impl std::fmt::Debug for layers::SymbolAnchorType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SymbolAnchorType").finish()
+    }
+}
+
 #[cxx::bridge()]
+/// Resource and configuration options for MapLibre.
 pub mod resource_options {
 
     #[namespace = "mbgl"]
     extern "C++" {
         // Opaque types
+        /// Resource configuration options.
         type ResourceOptions;
 
         // The name must be unique but for some reason this is required
@@ -190,11 +240,19 @@ pub mod resource_options {
     }
 }
 
+impl std::fmt::Debug for resource_options::ResourceOptions {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ResourceOptions").finish()
+    }
+}
+
 #[cxx::bridge()]
+/// Tile server configuration options.
 pub mod tile_server_options {
     #[namespace = "mbgl"]
     extern "C++" {
         // Opaque types
+        /// Tile server configuration.
         type TileServerOptions;
     }
 
@@ -236,27 +294,40 @@ pub mod tile_server_options {
     }
 }
 
+impl std::fmt::Debug for tile_server_options::TileServerOptions {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TileServerOptions").finish()
+    }
+}
+
 #[allow(clippy::borrow_as_ptr)]
 #[cxx::bridge(namespace = "mln::bridge")]
+/// Map observer callbacks and related types.
 pub mod map_observer {
 
     #[namespace = "mln::bridge"]
     #[repr(u32)]
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-    // Map Load error
-    enum MapObserverCameraChangeMode {
+    /// Camera change mode for map observer callbacks.
+    pub enum MapObserverCameraChangeMode {
+        /// Camera changed immediately without animation.
         Immediate,
+        /// Camera changed using an animated transition.
         Animated,
     }
 
     #[namespace = "mbgl"]
     #[repr(u32)]
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-    // Map Load error
-    enum MapLoadError {
+    /// Map loading error types.
+    pub enum MapLoadError {
+        /// Style parsing error.
         StyleParseError,
+        /// Style loading error.
         StyleLoadError,
+        /// Resource not found.
         NotFoundError,
+        /// Unknown error.
         UnknownError,
     }
 
@@ -304,17 +375,23 @@ pub mod map_observer {
     unsafe extern "C++" {
         // With `self: Pin<&mut MapObserver>` as first argument, it is a non static method of that object.
         // cxx searches for such a method
+        /// Sets the callback for when loading of the map will start.
         fn setWillStartLoadingMapCallback(self: &CxxMapObserver, callback: Box<VoidCallback>);
+        /// Sets the callback for when the style has finished loading.
         fn setFinishLoadingStyleCallback(self: &CxxMapObserver, callback: Box<VoidCallback>);
+        /// Sets the callback for when the map becomes idle.
         fn setBecomeIdleCallback(self: &CxxMapObserver, callback: Box<VoidCallback>);
+        /// Sets the callback for when loading of the map fails.
         fn setFailLoadingMapCallback(
             self: &CxxMapObserver,
             callback: Box<FailingLoadingMapCallback>,
         );
+        /// Sets the callback for when a frame finishes rendering.
         fn setFinishRenderingFrameCallback(
             self: &CxxMapObserver,
             callback: Box<FinishRenderingFrameCallback>,
         );
+        /// Sets the callback for when the camera finishes changing.
         fn setCameraDidChangeCallback(
             self: &CxxMapObserver,
             callback: Box<CameraDidChangeCallback>,
@@ -324,6 +401,7 @@ pub mod map_observer {
 
 #[allow(clippy::borrow_as_ptr)]
 #[cxx::bridge(namespace = "mln::bridge")]
+/// Core FFI definitions and types for the MapLibre bridge.
 pub mod ffi {
     // CXX validates enum types against the C++ definition during compilation
 
@@ -332,7 +410,7 @@ pub mod ffi {
     #[repr(u32)]
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     /// Map rendering mode configuration.
-    enum MapMode {
+    pub enum MapMode {
         /// Continually updating map
         Continuous,
         /// Once-off still image of an arbitrary viewport
@@ -345,7 +423,7 @@ pub mod ffi {
     #[repr(u32)]
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     /// Debug visualization options for map rendering.
-    enum MapDebugOptions {
+    pub enum MapDebugOptions {
         /// No debug visualization.
         NoDebug = 0,
         /// Edges of tile boundaries are shown as thick, red lines.
@@ -379,9 +457,13 @@ pub mod ffi {
     #[repr(u8)]
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
     pub enum EventSeverity {
+        /// Debug severity level.
         Debug = 0,
+        /// Info severity level.
         Info = 1,
+        /// Warning severity level.
         Warning = 2,
+        /// Error severity level.
         Error = 3,
     }
 
@@ -390,50 +472,70 @@ pub mod ffi {
     #[repr(u8)]
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
     pub enum Event {
+        /// General event.
         General = 0,
+        /// Setup event.
         Setup = 1,
+        /// Shader event.
         Shader = 2,
+        /// Style parsing event.
         ParseStyle = 3,
+        /// Tile parsing event.
         ParseTile = 4,
+        /// Render event.
         Render = 5,
+        /// Style event.
         Style = 6,
+        /// Database event.
         Database = 7,
+        /// HTTP request event.
         HttpRequest = 8,
+        /// Sprite event.
         Sprite = 9,
+        /// Image event.
         Image = 10,
+        /// OpenGL event.
         OpenGL = 11,
+        /// JNI event.
         JNI = 12,
+        /// Android event.
         Android = 13,
+        /// Crash event.
         Crash = 14,
+        /// Glyph event.
         Glyph = 15,
+        /// Timing event.
         Timing = 16,
     }
 
     #[namespace = "mbgl"]
     extern "C++" {
-        include!("mbgl/map/mode.hpp");
-        include!("mbgl/map/map_observer.hpp");
-        include!("mbgl/util/geo.hpp");
-
         type MapMode;
         type MapDebugOptions;
         // The name must be unique but for some reason this is required
+        /// Resource configuration options.
         #[rust_name = "CxxResourceOptions"]
         type ResourceOptions = super::resource_options::ResourceOptions;
+        /// Event severity enumeration.
         pub type EventSeverity;
+        /// Event type enumeration.
         pub type Event;
     }
 
     #[namespace = "mbgl"]
     extern "C++" {
+        /// Screen coordinate type.
         type ScreenCoordinate = super::ScreenCoordinate;
+        /// Size type.
         type Size = super::Size;
     }
 
     #[namespace = "mbgl::style"]
     extern "C++" {
+        /// GeoJSON source opaque type.
         #[rust_name = "CxxGeoJSONSource"]
         type GeoJSONSource = super::sources::GeoJSONSource;
+        /// Symbol layer opaque type.
         #[rust_name = "CxxSymbolLayer"]
         type SymbolLayer = super::layers::SymbolLayer;
     }
@@ -443,12 +545,13 @@ pub mod ffi {
         include!("map_renderer.h");
 
         // C++ Opaque types
+        /// Bridge image for rendering output.
         type BridgeImage;
+        /// Map observer for handling map events.
         type MapObserver; // Created custom map observer
+        /// Map renderer for rendering map content.
         type MapRenderer;
-        // Left side must match a type in C++! Right side must be defined in Rust
-        // example: type VoidCallback = super::VoidTrVoidCallbackampoline;
-
+        /// Creates a new map renderer instance.
         #[allow(clippy::too_many_arguments)]
         fn MapRenderer_new(
             mapMode: MapMode,
@@ -457,13 +560,21 @@ pub mod ffi {
             pixelRatio: f32,
             resource_options: UniquePtr<CxxResourceOptions>,
         ) -> UniquePtr<MapRenderer>;
+        /// Reads the current still image from the renderer.
         fn readStillImage(self: Pin<&mut MapRenderer>) -> UniquePtr<BridgeImage>;
+        /// Gets the pixel data pointer from a bridge image.
         fn get(self: &BridgeImage) -> *const u8;
+        /// Gets the size of a bridge image.
         fn size(self: &BridgeImage) -> Size;
+        /// Gets the buffer length of a bridge image.
         fn bufferLength(self: &BridgeImage) -> usize;
+        /// Renders a single frame.
         fn render_once(self: Pin<&mut MapRenderer>);
+        /// Renders continuously.
         fn render(self: Pin<&mut MapRenderer>) -> UniquePtr<CxxString>;
+        /// Sets debug visualization flags.
         fn setDebugFlags(self: Pin<&mut MapRenderer>, flags: MapDebugOptions);
+        /// Sets the camera position and orientation.
         fn setCamera(
             self: Pin<&mut MapRenderer>,
             lat: f64,
@@ -472,11 +583,17 @@ pub mod ffi {
             bearing: f64,
             pitch: f64,
         );
+        /// Moves the camera by the given delta.
         fn moveBy(self: Pin<&mut MapRenderer>, delta: &ScreenCoordinate);
+        /// Scales the camera based on the given scale factor.
         fn scaleBy(self: Pin<&mut MapRenderer>, scale: f64, pos: &ScreenCoordinate);
+        /// Loads a style from a URL.
         fn style_load_from_url(self: Pin<&mut MapRenderer>, url: &str);
+        /// Sets the renderer size.
         fn setSize(self: Pin<&mut MapRenderer>, size: &Size);
+        /// Gets the map observer.
         fn observer(self: Pin<&mut MapRenderer>) -> SharedPtr<MapObserver>;
+        /// Adds an image to the style.
         fn style_add_image(
             self: Pin<&mut MapRenderer>,
             id: &str,
@@ -484,11 +601,14 @@ pub mod ffi {
             size: Size,
             single_distance_field: bool,
         );
+        /// Removes an image from the style.
         fn style_remove_image(self: Pin<&mut MapRenderer>, id: &str);
+        /// Adds a GeoJSON source to the style.
         fn style_add_geojson_source(
             self: Pin<&mut MapRenderer>,
             source: UniquePtr<CxxGeoJSONSource>,
         );
+        /// Adds a symbol layer to the style.
         fn style_add_symbol_layer(self: Pin<&mut MapRenderer>, layer: UniquePtr<CxxSymbolLayer>);
     }
 
@@ -501,7 +621,27 @@ pub mod ffi {
     unsafe extern "C++" {
         include!("rust_log_observer.h");
 
+        /// Enables or disables logging from a separate thread.
+        #[allow(dead_code)]
         fn Log_useLogThread(enable: bool);
+    }
+}
+
+impl std::fmt::Debug for ffi::BridgeImage {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("BridgeImage").finish()
+    }
+}
+
+impl std::fmt::Debug for ffi::MapObserver {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("MapObserver").finish()
+    }
+}
+
+impl std::fmt::Debug for ffi::MapRenderer {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("MapRenderer").finish()
     }
 }
 

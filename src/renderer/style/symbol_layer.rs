@@ -1,8 +1,16 @@
 use crate::renderer::bridge::layers::{self, SymbolAnchorType};
 use cxx::UniquePtr;
+use std::fmt;
 
+/// A symbol layer for rendering labels and icons on the map.
 pub struct SymbolLayer {
     layer: UniquePtr<layers::SymbolLayer>,
+}
+
+impl fmt::Debug for SymbolLayer {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("SymbolLayer").finish()
+    }
 }
 
 impl SymbolLayer {

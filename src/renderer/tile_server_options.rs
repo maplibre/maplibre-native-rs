@@ -1,9 +1,19 @@
+//! Tile server options builder.
+
 use crate::renderer::bridge::tile_server_options;
 use cxx::UniquePtr;
+use std::fmt;
 use std::path::PathBuf;
 
+/// Configuration options for a tile server.
 pub struct TileServerOptions {
     ptr: UniquePtr<tile_server_options::TileServerOptions>,
+}
+
+impl fmt::Debug for TileServerOptions {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("TileServerOptions").finish()
+    }
 }
 
 impl TileServerOptions {

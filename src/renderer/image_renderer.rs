@@ -271,9 +271,3 @@ pub enum RenderingError {
     #[error("Invalid image data received from renderer")]
     InvalidImageData,
 }
-
-impl Debug for MapObserver {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "MapObserver")
-    }
-}

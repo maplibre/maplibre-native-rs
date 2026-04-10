@@ -1,3 +1,7 @@
+//! Map observer wrapper and callback registration helpers.
+
+use std::fmt::Debug;
+
 use crate::renderer::bridge::ffi;
 use crate::renderer::bridge::map_observer;
 use crate::renderer::callbacks::{
@@ -8,6 +12,12 @@ use cxx::SharedPtr;
 /// Object to modify the map observer callbacks
 pub struct MapObserver {
     instance: SharedPtr<ffi::MapObserver>,
+}
+
+impl Debug for MapObserver {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("MapObserver").finish()
+    }
 }
 
 impl MapObserver {

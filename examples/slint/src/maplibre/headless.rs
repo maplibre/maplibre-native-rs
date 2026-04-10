@@ -4,7 +4,7 @@ use maplibre_native::ImageRenderer;
 use maplibre_native::ImageRendererBuilder;
 use maplibre_native::ResourceOptions;
 use maplibre_native::ScreenCoordinate;
-use maplibre_native::TileServerOptions;
+use maplibre_native::tile_server_options::TileServerOptions;
 use std::cell::RefCell;
 use std::num::NonZeroU32;
 use std::path::Path;
