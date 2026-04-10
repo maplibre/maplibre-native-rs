@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cassert>
+#include <cstdint>
 #include <mbgl/gfx/headless_frontend.hpp>
 #include <mbgl/map/map.hpp>
 #include <mbgl/map/map_options.hpp>
@@ -20,6 +22,9 @@
 namespace mln {
 namespace bridge {
 
+struct Texture;
+struct TextureView;
+
 constexpr size_t BYTES_PER_PIXEL = 4; // rgba
 
 class MapRenderer {
@@ -34,6 +39,10 @@ public:
 
     std::shared_ptr<MapObserver> observer() {
         return mapObserverInstance;
+    }
+
+    inline std::unique_ptr<Texture> getTexture() {
+        return std::make_unique<Texture>(this->frontend->getTexture());
     }
 
 public:
@@ -96,6 +105,85 @@ inline std::unique_ptr<MapRenderer> MapRenderer_new(
 
     return std::make_unique<MapRenderer>(std::move(frontend), mapObserver, std::move(map));
 }
+
+struct Texture {
+public:
+    Texture() = delete;
+    Texture(WGPUTexture texture): mTexture(texture) {
+        assert(mTexture);
+    }
+
+    std::unique_ptr<TextureView> createView(WGPUTextureFormat format, WGPUTextureViewDimension dimension, WGPUTextureUsage usage, WGPUTextureAspect aspect, uint32_t base_mip_level, uint32_t mip_level_count, uint32_t base_array_layer, uint32_t array_layer_count) const {
+        const auto desc = WGPUTextureViewDescriptor {
+            .nextInChain = nullptr,
+            .label = WGPUStringView {nullptr, 0},
+            .format = format,
+            .dimension = dimension,
+            .baseMipLevel = base_mip_level,
+            .mipLevelCount = mip_level_count,
+            .baseArrayLayer = base_array_layer,
+            .arrayLayerCount = array_layer_count,
+            .aspect = aspect,
+            .usage = usage,
+        };
+        return std::make_unique<TextureView>(wgpuTextureCreateView(mTexture, &desc));
+    }
+
+    ~Texture() {
+        destroy();
+    }
+
+    void destroy() const {
+        wgpuTextureDestroy(mTexture);
+        //mTexture = nullptr;
+    }
+
+    WGPUExtent3D getExtend3d() const {
+        return WGPUExtent3D {
+            0, // TODO: where do I get this information?
+            0,// TODO: where do I get this information?
+            wgpuTextureGetDepthOrArrayLayers(mTexture)
+        };
+    }
+
+    uint32_t getMipLevelCount() const {
+        return wgpuTextureGetMipLevelCount(mTexture);
+    }
+    uint32_t getSampleCount() const {
+        return wgpuTextureGetSampleCount(mTexture);
+    }
+
+    WGPUTextureDimension getDimension() const {
+        return wgpuTextureGetDimension(mTexture);
+    }
+
+    WGPUTextureFormat getFormat() const {
+        return wgpuTextureGetFormat(mTexture);
+    }
+
+    WGPUTextureUsage getUsage() const {
+        return wgpuTextureGetUsage(mTexture);
+    }
+private:
+    WGPUTexture mTexture;
+};
+
+struct TextureView {
+public:
+    TextureView() = delete;
+    explicit TextureView(WGPUTextureView textureView): mTextureView(textureView) {
+        assert(mTextureView);
+    }
+
+    ~TextureView() {
+        if (mTextureView) {
+            wgpuTextureViewRelease(mTextureView);
+        }
+    }
+
+private:
+    WGPUTextureView mTextureView;
+};
 
 struct BridgeImage {
     public:

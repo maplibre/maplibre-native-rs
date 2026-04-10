@@ -36,7 +36,7 @@ const BRIDGE_FILES: &[&str] = &[
 ];
 
 /// Supported graphics rendering APIs.
-#[derive(PartialEq, Eq, Clone, Copy)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
 enum GraphicsRenderingAPI {
     /// [Apple's Metal API](https://developer.apple.com/metal/) (macOS/iOS only)
     Metal,
@@ -44,6 +44,8 @@ enum GraphicsRenderingAPI {
     OpenGL,
     /// [Vulkan API](https://www.vulkan.org/)
     Vulkan,
+    /// [WGPU API](https://github.com/gfx-rs/wgpu)
+    WGPU,
 }
 impl GraphicsRenderingAPI {
     /// Selects the rendering API based on enabled cargo features and platform.
@@ -55,37 +57,42 @@ impl GraphicsRenderingAPI {
         let with_opengl = env::var("CARGO_FEATURE_OPENGL").is_ok();
         let with_metal = env::var("CARGO_FEATURE_METAL").is_ok();
         let with_vulkan = env::var("CARGO_FEATURE_VULKAN").is_ok();
+        let with_wgpu = env::var("CARGO_FEATURE_WGPU").is_ok();
 
         let target_os = env::var("CARGO_CFG_TARGET_OS").expect("CARGO_CFG_TARGET_OS not set");
         let is_macos = target_os == "ios" || target_os == "macos";
 
-        match (with_metal, with_vulkan, with_opengl) {
-            (true, false, false) => Self::Metal,
-            (false, true, false) => Self::Vulkan,
-            (false, false, true) => Self::OpenGL,
-            (false, false, false) => {
-                if is_macos {
-                    Self::Metal
-                } else {
-                    Self::Vulkan
+        if !with_wgpu {
+            match (with_metal, with_vulkan, with_opengl) {
+                (true, false, false) => Self::Metal,
+                (false, true, false) => Self::Vulkan,
+                (false, false, true) => Self::OpenGL,
+                (false, false, false) => {
+                    if is_macos {
+                        Self::Metal
+                    } else {
+                        Self::WGPU
+                    }
+                }
+                (_, _, _) => {
+                    // TODO: modify for better defaults
+                    // This might not be the best logic, but it can change at any moment because it's a fallback with a warning
+                    // Current logic: if opengl is enabled, always use that, otherwise pick metal on macOS and vulkan on other platforms
+                    println!("cargo::warning=Features 'metal', 'opengl', and 'vulkan' are mutually exclusive.");
+
+                    let default_choice = if with_opengl {
+                        Self::OpenGL
+                    } else if is_macos {
+                        Self::Metal
+                    } else {
+                        Self::WGPU
+                    };
+                    println!("cargo::warning=Using only '{default_choice}', but this default selection may change in future releases.");
+                    default_choice
                 }
             }
-            (_, _, _) => {
-                // TODO: modify for better defaults
-                // This might not be the best logic, but it can change at any moment because it's a fallback with a warning
-                // Current logic: if opengl is enabled, always use that, otherwise pick metal on macOS and vulkan on other platforms
-                println!("cargo::warning=Features 'metal', 'opengl', and 'vulkan' are mutually exclusive.");
-
-                let default_choice = if with_opengl {
-                    Self::OpenGL
-                } else if is_macos {
-                    Self::Metal
-                } else {
-                    Self::Vulkan
-                };
-                println!("cargo::warning=Using only '{default_choice}', but this default selection may change in future releases.");
-                default_choice
-            }
+        } else {
+            Self::WGPU
         }
     }
 }
@@ -95,6 +102,7 @@ impl std::fmt::Display for GraphicsRenderingAPI {
             Self::Metal => f.write_str("metal"),
             Self::OpenGL => f.write_str("opengl"),
             Self::Vulkan => f.write_str("vulkan"),
+            Self::WGPU => f.write_str("webgpu-wgpu"),
         }
     }
 }
@@ -543,6 +551,15 @@ fn build_mln() {
     println!("cargo:rustc-link-lib=curl");
     println!("cargo:rustc-link-lib=z");
     match GraphicsRenderingAPI::from_selected_features() {
+        GraphicsRenderingAPI::WGPU => {
+            // TODO: check to use vulkan!
+            println!("cargo:rustc-link-lib=X11");
+            println!("cargo:rustc-link-lib=GL");
+            println!("cargo:rustc-link-lib=EGL");
+            println!("cargo:rustc-link-arg=-Wl,-rpath,/home/martin/GIT/maplibre-native/vendor/wgpu-native/target/x86_64-unknown-linux-gnu/release");
+            println!("cargo:rustc-link-search=/home/martin/GIT/maplibre-native/vendor/wgpu-native/target/x86_64-unknown-linux-gnu/release");
+            println!("cargo:rustc-link-lib=wgpu_native");
+        }
         GraphicsRenderingAPI::Vulkan => {}
         GraphicsRenderingAPI::OpenGL => {
             println!("cargo:rustc-link-lib=GL");

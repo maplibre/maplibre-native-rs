@@ -1,5 +1,6 @@
 use crate::renderer::bridge::ffi;
 use crate::renderer::bridge::ffi::BridgeImage;
+use crate::renderer::bridge::TextureInterface;
 use crate::renderer::callbacks::{
     CameraDidChangeCallback, FailingLoadingMapCallback, FinishRenderingFrameCallback, VoidCallback,
 };
@@ -306,6 +307,25 @@ impl ImageRenderer<Continuous> {
     /// Reading rendered image
     pub fn read_still_image(&mut self) -> ImagePtr {
         ImagePtr::new(ffi::MapRenderer_readStillImage(self.instance.pin_mut()))
+    }
+
+    pub fn get_texture(&mut self) -> wgpu::Texture {
+        let t = self.instance.pin_mut().getTexture();
+        assert!(!t.is_null());
+
+        let desc = wgpu::TextureDescriptor {
+            /// Debug label of the texture. This will show up in graphics debuggers for easy identification.
+            label: None,
+            size: t.getExtend3d().0,
+            mip_level_count: t.getMipLevelCount(),
+            sample_count: t.getSampleCount(),
+            dimension: t.getDimension().0,
+            format: t.getFormat().0,
+            usage: t.getUsage().0,
+            view_formats: &[],
+        };
+
+        wgpu::Texture::from_custom(TextureInterface(t), &desc)
     }
 }
 
