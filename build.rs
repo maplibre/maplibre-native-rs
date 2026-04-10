@@ -24,8 +24,6 @@ use downloader::{Download, Downloader};
 
 // Used when building locally
 const MLN_COMMIT: &str = "35cf39b72f45cfea55a34ffe7358ade5c950a3c5";
-// Used when using prebuild library
-const MLN_RELEASE: &str = "core-9b6325a14e2cf1cc29ab28c1855ad376f1ba4903";
 
 // Files of the bridge
 const BRIDGE_FILES: &[&str] = &[
@@ -162,6 +160,42 @@ fn download_static(out_dir: &Path, revision: &str) -> (PathBuf, PathBuf) {
     (library_file, headers_file)
 }
 
+/// Reads `[package.metadata.mln].release` from the crate's `Cargo.toml`.
+fn mln_release_from_manifest() -> String {
+    let manifest_dir =
+        PathBuf::from(env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR is not set"));
+    let manifest_path = manifest_dir.join("Cargo.toml");
+    println!("cargo:rerun-if-changed={}", manifest_path.display());
+
+    let manifest_str = fs::read_to_string(&manifest_path).unwrap_or_else(|err| {
+        panic!(
+            "Failed to read manifest at {}: {err}",
+            manifest_path.display()
+        )
+    });
+
+    let manifest: toml::Value = manifest_str.parse().unwrap_or_else(|err| {
+        panic!(
+            "Failed to parse manifest as TOML at {}: {err}",
+            manifest_path.display()
+        )
+    });
+
+    manifest
+        .get("package")
+        .and_then(|package| package.get("metadata"))
+        .and_then(|metadata| metadata.get("mln"))
+        .and_then(|mln| mln.get("release"))
+        .and_then(toml::Value::as_str)
+        .unwrap_or_else(|| {
+            panic!(
+                "Missing string key [package.metadata.mln].release in {}",
+                manifest_path.display()
+            )
+        })
+        .to_owned()
+}
+
 /// Extracts the headers from the downloaded tarball
 fn extract_headers(headers_from: &Path, headers_to: &Path) {
     println!(
@@ -188,6 +222,7 @@ fn extract_headers(headers_from: &Path, headers_to: &Path) {
 fn resolve_mln_core(root: &Path) -> (PathBuf, Vec<PathBuf>) {
     let out_dir =
         PathBuf::from(env::var_os("OUT_DIR").expect("OUT_DIR is not set")).join("maplibre-native");
+    let mln_release = mln_release_from_manifest();
 
     println!("cargo:rerun-if-env-changed=MLN_CORE_LIBRARY_PATH");
     println!("cargo:rerun-if-env-changed=MLN_CORE_LIBRARY_HEADERS_PATH");
@@ -201,7 +236,7 @@ fn resolve_mln_core(root: &Path) -> (PathBuf, Vec<PathBuf>) {
       (Some(_), None) => panic!("MLN_CORE_LIBRARY_HEADERS_PATH is not set. To compile from a local library/headers, both MLN_CORE_LIBRARY_PATH and MLN_CORE_LIBRARY_HEADERS_PATH must be set."),
       (None, Some(_)) => panic!("MLN_CORE_LIBRARY_PATH is not set. To compile from a local library/headers, both MLN_CORE_LIBRARY_PATH and MLN_CORE_LIBRARY_HEADERS_PATH must be set."),
       // Default => to downloading the static library
-      (None, None) => download_static(&out_dir, MLN_RELEASE),
+    (None, None) => download_static(&out_dir, &mln_release),
      };
     assert!(
         library_file.is_file(),
@@ -279,10 +314,10 @@ fn bundle_precompiled() -> Info {
     let root = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
     let (cpp_root, include_dirs) = resolve_mln_core(&root);
 
-    // println!(
-    //     "cargo:warning=Using precompiled maplibre-native static library from {}",
-    //     cpp_root.display()
-    // );
+    println!(
+        "cargo:warning=Using precompiled maplibre-native static library from {}",
+        cpp_root.display()
+    );
     println!(
         "cargo:rustc-link-search=native={}",
         cpp_root.parent().unwrap().display()
@@ -362,10 +397,6 @@ fn build_local(
     }
 
     let mut config = cmake::Config::new(maplibre_native_dir.clone());
-    //config.out_dir(maplibre_native_dir.clone().join("build"));
-    // config.very_verbose(true);
-
-    // println!("cargo:warning=Building target {TARGET_NAME}");
     config.build_target(TARGET_NAME);
     match GraphicsRenderingAPI::from_selected_features() {
         GraphicsRenderingAPI::Metal => {
