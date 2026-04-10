@@ -13,7 +13,10 @@ exclude = []
 
 [package.metadata.mln]
 repo = "maplibre/maplibre-native"
-release = "core-aeaadc06b4e0614f4f243db4dce210c22dde9f9c"
+# This version is used only if maplibre-native-rs is build with prebuilt
+# maplibre-native binaries. It is not used when building maplibre-native from source.
+# When building from source, the version of maplibre-native is specified in the `build.rs` file
+release = "core-9b6325a14e2cf1cc29ab28c1855ad376f1ba4903"
 
 [features]
 default = ["log", "pool"]
@@ -40,6 +43,7 @@ cxx-build.workspace = true
 downloader.workspace = true
 flate2.workspace = true
 tar.workspace = true
+toml = "0.8"
 walkdir.workspace = true
 
 [dev-dependencies]
@@ -68,14 +72,14 @@ license = "MIT OR Apache-2.0"
 axum = "0.8"
 clap = { version = "4.5.27", features = ["derive", "env", "unstable-markdown"] }
 cmake = "0.1"
-cxx = "1.0.138"
-cxx-build = "1.0.138" # TODO: required to be a dependency and not only a build dependency?
-downloader = "0.2.8"
+cxx = "1.0"
+cxx-build = "1.0" # TODO: required to be a dependency and not only a build dependency?
+downloader = "0.2"
 env_logger = "0.11"
-flate2 = "1.1.1"
+flate2 = "1.1"
 futures = "0.3"
 image = "0.25"
-insta = "1.43.2"
+insta = "1.43"
 log = "0.4"
 maplibre_native = { path = ".", version = "0.4.2" }
 tar = "0.4.44"
@@ -96,3 +100,9 @@ pedantic = { level = "warn", priority = -1 }
 [profile.dev.package]
 insta.opt-level = 3
 similar.opt-level = 3
+
+# To debug the build script
+# Use `cargo build -v 2>&1 | grep build-script-build`
+# to find the location of the build script
+[profile.dev.build-override]
+debug = true

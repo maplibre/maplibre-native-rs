@@ -12,8 +12,11 @@ use std::path::PathBuf;
 /// # Examples
 ///
 /// ```
+/// use maplibre_native::ImageRendererBuilder;
+/// use std::num::NonZeroU32;
+///
 /// let renderer = ImageRendererBuilder::new()
-///     .with_size(1024, 768)
+///     .with_size(NonZeroU32::new(1024).unwrap(), NonZeroU32::new(768).unwrap())
 ///     .with_pixel_ratio(2.0)
 ///     .build_static_renderer();
 /// ```
