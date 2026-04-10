@@ -23,7 +23,7 @@ use std::{env, fs};
 use downloader::{Download, Downloader};
 
 // Used when building locally
-const MLN_COMMIT: &str = "35cf39b72f45cfea55a34ffe7358ade5c950a3c5";
+const MLN_COMMIT: &str = "0e297db5fe7aff90e63ea6e590df0d076b36741e";
 
 // Files of the bridge
 const BRIDGE_FILES: &[&str] = &[
@@ -364,7 +364,7 @@ fn build_local(
                 "1",
                 "--revision",
                 MLN_COMMIT,
-                "https://github.com/maplibre/maplibre-native.git",
+                "https://github.com/Murmele/maplibre-native.git",
                 name,
             ])
             .status()?;
@@ -400,7 +400,11 @@ fn build_local(
         }
         GraphicsRenderingAPI::Vulkan => {
             config.configure_arg("-DMLN_WITH_VULKAN=ON");
-        } //GraphicsRenderingAPI::WebGPU => config.configure_arg("-DMLN_WITH_WEBGPU=ON").configure_arg("-DMLN_WEBGPU_IMPL_WGPU=ON"),
+        }
+        GraphicsRenderingAPI::WGPU => {
+            config.configure_arg("-DMLN_WITH_WEBGPU=ON");
+            config.configure_arg("-DMLN_WEBGPU_IMPL_WGPU=ON");
+        }
     }
     if amalgam_lib {
         config.configure_arg("-DMLN_CREATE_AMALGAMATION:BOOL=ON");
