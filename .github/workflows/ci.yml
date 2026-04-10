@@ -26,13 +26,15 @@ jobs:
         with: { persist-credentials: false }
       - if: github.event_name != 'release' && github.event_name != 'workflow_dispatch'
         uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+      - run: echo "MLN_PRECOMPILE=0" >> $GITHUB_ENV
+      - run: echo "MLN_CORE_LIBRARY_USE_AMALGAM=0" >> $GITHUB_ENV
       - run: rustup update stable && rustup default stable && rustup component add rustfmt && rustup component add clippy
       - uses: taiki-e/install-action@7a562dfa955aa2e4d5b0fd6ebd57ff9715c07b0b # v2.73.0
         with: { tool: 'just' }
       - run: just env-info install-dependencies 'vulkan'
       - run: just ci-lint
   test:
-    name: Test ${{ matrix.runs-on }} - ${{ matrix.backend }}
+    name: Test ${{ matrix.runs-on }} - ${{ matrix.backend }} - Precompiled ${{ matrix.precompiled }}
     runs-on: ${{ matrix.runs-on }}
     permissions:
       contents: read
@@ -43,16 +45,30 @@ jobs:
           # Linux x86
           - runs-on: ubuntu-latest
             backend: vulkan
+            precompiled: 0
+            amalgam: 0
+          - runs-on: ubuntu-latest
+            backend: vulkan
+            precompiled: 1
+            amalgam: 1
           - runs-on: ubuntu-latest
             backend: opengl
+            precompiled: 0
+            amalgam: 0
           # Linux ARM
           - runs-on: ubuntu-24.04-arm
             backend: vulkan
+            precompiled: 0
+            amalgam: 0
           # macOS ARM
           #- runs-on: macos-latest
           #  backend: metal
+          #  precompiled: 0
+          #  amalgam: 0
           #- runs-on: macos-latest
           #  backend: vulkan
+          #  precompiled: 0
+          #  amalgam: 0
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with: { persist-credentials: false }
@@ -60,12 +76,19 @@ jobs:
         uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
       - uses: taiki-e/install-action@7a562dfa955aa2e4d5b0fd6ebd57ff9715c07b0b # v2.73.0
         with: { tool: 'just' }
+      - run: echo "MLN_PRECOMPILE=${{ matrix.precompiled }}" >> $GITHUB_ENV
+      - run: echo "MLN_CORE_LIBRARY_USE_AMALGAM=${{ matrix.amalgam }}" >> $GITHUB_ENV
       - run: just env-info install-dependencies '${{ matrix.backend }}'
       - run: rustup update stable && rustup default stable
-      - run: just ci-test ${{ matrix.backend }}
+      - name: Run CI tests (Linux OpenGL via Xvfb)
+        if: startsWith(matrix.runs-on, 'ubuntu') && matrix.backend == 'opengl'
+        run: xvfb-run -a --server-args="-screen 0 1280x1024x24" just ci-test ${{ matrix.backend }}
+      - name: Run CI tests
+        if: ${{ !(startsWith(matrix.runs-on, 'ubuntu') && matrix.backend == 'opengl') }}
+        run: just ci-test ${{ matrix.backend }}
 
   test-msrv:
-    name: Test MSRV ${{ matrix.runs-on }} - ${{ matrix.backend }}
+    name: Test MSRV ${{ matrix.runs-on }} - ${{ matrix.backend }} - Precompiled ${{ matrix.precompiled }}
     runs-on: ${{ matrix.runs-on }}
     permissions:
       contents: read
@@ -76,16 +99,26 @@ jobs:
           # Linux x86
           - runs-on: ubuntu-latest
             backend: vulkan
+            precompiled: 0
+            amalgam: 0
           - runs-on: ubuntu-latest
             backend: opengl
+            precompiled: 0
+            amalgam: 0
           # Linux ARM
           - runs-on: ubuntu-24.04-arm
             backend: opengl
+            precompiled: 0
+            amalgam: 0
           # macOS ARM
           #- runs-on: macos-latest
           #  backend: metal
+          #  precompiled: 0
+          #  amalgam: 0
           #- runs-on: macos-latest
           #  backend: vulkan
+          #  precompiled: 0
+          #  amalgam: 0
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with: { persist-credentials: false }
@@ -93,6 +126,8 @@ jobs:
         uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
       - uses: taiki-e/install-action@7a562dfa955aa2e4d5b0fd6ebd57ff9715c07b0b # v2.73.0
         with: { tool: 'just' }
+      - run: echo "MLN_PRECOMPILE=${{ matrix.precompiled }}" >> $GITHUB_ENV
+      - run: echo "MLN_CORE_LIBRARY_USE_AMALGAM=${{ matrix.amalgam }}" >> $GITHUB_ENV
       - run: just env-info install-dependencies '${{ matrix.backend }}'
       - name: Read MSRV
         id: msrv
@@ -101,7 +136,12 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: ${{ steps.msrv.outputs.value }}
-      - run: just ci_mode=0 ci-test-msrv ${{ matrix.backend }}  # Ignore warnings in MSRV
+      - name: Run CI tests (MSRV, Linux OpenGL via Xvfb)
+        if: startsWith(matrix.runs-on, 'ubuntu') && matrix.backend == 'opengl'
+        run: xvfb-run -a --server-args="-screen 0 1280x1024x24" just ci_mode=0 ci-test-msrv ${{ matrix.backend }}  # Ignore warnings in MSRV
+      - name: Run CI tests (MSRV)
+        if: ${{ !(startsWith(matrix.runs-on, 'ubuntu') && matrix.backend == 'opengl') }}
+        run: just ci_mode=0 ci-test-msrv ${{ matrix.backend }}  # Ignore warnings in MSRV
 
   # This final step is needed to mark the whole workflow as successful
   # Don't change its name - it is used by the merge protection rules
