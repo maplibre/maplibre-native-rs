@@ -90,7 +90,7 @@ We can get the library and headers from two places:
 - <details><summary>default: library will be downloaded and build locally during the build process of maplibre-native-rs</summary>
 
   The specific version is controllable from the `build.rs` file.
-  
+
 - <details><summary>downloaded from the releases page</summary>
 
   The specific version of [MapLibre Native](https://maplibre.org/projects/native/) used is controlled by `package.metadata.mln.release` in `Cargo.toml`.
