@@ -1,4 +1,4 @@
-use crate::renderer::bridge::layers;
+use crate::renderer::bridge::layers::{self, SymbolAnchorType};
 use cxx::UniquePtr;
 
 pub struct SymbolLayer {
@@ -13,8 +13,14 @@ impl SymbolLayer {
         }
     }
 
+    /// Set the icon used as marker
     pub fn set_icon_image<T: super::StyleImageRef>(&self, image_id: T) {
         layers::setIconImage(&self.layer, image_id.image_id());
+    }
+
+    /// Set the anchor point of the image
+    pub fn set_icon_anchor(&self, anchor: SymbolAnchorType) {
+        layers::setIconAnchor(&self.layer, anchor);
     }
 
     pub(crate) fn into_inner(self) -> UniquePtr<layers::SymbolLayer> {

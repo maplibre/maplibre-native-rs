@@ -2,6 +2,7 @@
 #include <mbgl/style/layers/symbol_layer.hpp>
 #include <mbgl/style/property_value.hpp>
 #include <mbgl/style/expression/image.hpp>
+#include <mbgl/style/types.hpp>
 #include <memory>
 #include <string>
 
@@ -12,5 +13,9 @@ namespace mln::bridge::style::layers {
 
     void setIconImage(const std::unique_ptr<mbgl::style::SymbolLayer>& layer, rust::Str image_id) {
         layer->setIconImage(mbgl::style::PropertyValue(mbgl::style::expression::Image(std::string(image_id))));
+    }
+
+    void setIconAnchor(const std::unique_ptr<mbgl::style::SymbolLayer>& layer, mbgl::style::SymbolAnchorType anchor) {
+        layer->setIconAnchor(mbgl::style::PropertyValue(anchor));
     }
 }

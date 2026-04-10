@@ -124,11 +124,28 @@ pub mod sources {
 
 #[cxx::bridge()]
 pub mod layers {
+    // Must have the same namespace than on the C++ side
+    #[namespace = "mbgl::style"]
+    pub enum SymbolAnchorType {
+        Center,
+        Left,
+        Right,
+        Top,
+        Bottom,
+        TopLeft,
+        TopRight,
+        BottomLeft,
+        BottomRight,
+    }
+
     #[namespace = "mbgl::style"]
     extern "C++" {
         include!("mbgl/style/layers/symbol_layer.hpp");
+        include!("mbgl/style/types.hpp");
         // Opaque types
         type SymbolLayer;
+
+        type SymbolAnchorType;
     }
 
     #[namespace = "mln::bridge::style::layers"]
@@ -137,6 +154,7 @@ pub mod layers {
 
         fn create_symbol_layer(layer_id: &str, source_id: &str) -> UniquePtr<SymbolLayer>;
         fn setIconImage(layer: &UniquePtr<SymbolLayer>, image_id: &str);
+        fn setIconAnchor(layer: &UniquePtr<SymbolLayer>, anchor: SymbolAnchorType);
     }
 }
 

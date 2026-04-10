@@ -3,6 +3,7 @@ use crate::MapAdapter;
 use maplibre_native::Height;
 use maplibre_native::ScreenCoordinate;
 use maplibre_native::Width;
+use maplibre_native::layers::SymbolAnchorType;
 use slint::ComponentHandle;
 use std::rc::Rc;
 mod headless;
@@ -119,5 +120,6 @@ fn style(map: &Rc<RefCell<MapLibre>>) {
 
     let layer = SymbolLayer::new("Layer id", &source_id);
     layer.set_icon_image(image_id);
+    layer.set_icon_anchor(SymbolAnchorType::Bottom);
     style.add_layer(layer);
 }
