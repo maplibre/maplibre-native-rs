@@ -264,10 +264,10 @@ fn bundle_precompiled() -> Info {
     let root = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
     let (cpp_root, include_dirs) = resolve_mln_core(&root);
 
-    // println!(
-    //     "cargo:warning=Using precompiled maplibre-native static library from {}",
-    //     cpp_root.display()
-    // );
+    println!(
+         "cargo:warning=Using precompiled maplibre-native static library from {}",
+         cpp_root.display()
+    );
     println!(
         "cargo:rustc-link-search=native={}",
         cpp_root.parent().unwrap().display()
