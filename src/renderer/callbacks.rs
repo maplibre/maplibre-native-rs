@@ -30,7 +30,7 @@ pub fn void_callback(callback: &VoidCallback) {
 }
 
 callback!(FinishRenderingFrameCallback, Fn(bool, bool));
-/// finish_rendering_frame_callback
+/// `finish_rendering_frame_callback`
 pub fn finish_rendering_frame_callback(
     callback: &FinishRenderingFrameCallback,
     needs_repaint: bool,
@@ -40,7 +40,7 @@ pub fn finish_rendering_frame_callback(
 }
 
 callback!(FailingLoadingMapCallback, Fn(MapLoadError, &str));
-/// failing_loading_map_callback
+/// `failing_loading_map_callback`
 pub fn failing_loading_map_callback(
     callback: &FailingLoadingMapCallback,
     error: MapLoadError,
@@ -50,7 +50,7 @@ pub fn failing_loading_map_callback(
 }
 
 callback!(CameraDidChangeCallback, Fn(MapObserverCameraChangeMode));
-/// camera_did_change_callback
+/// `camera_did_change_callback`
 pub fn camera_did_change_callback(
     callback: &CameraDidChangeCallback,
     mode: MapObserverCameraChangeMode,

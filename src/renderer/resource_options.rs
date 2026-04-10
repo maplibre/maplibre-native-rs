@@ -14,13 +14,15 @@ impl Debug for ResourceOptions {
     }
 }
 
-impl ResourceOptions {
+impl Default for ResourceOptions {
     /// Create new resource options object
     #[must_use]
-    pub fn new() -> Self {
+    fn default() -> Self {
         Self { ptr: resource_options::new() }
     }
+}
 
+impl ResourceOptions {
     /// Set api key
     #[must_use]
     pub fn with_api_key(mut self, key: &str) -> Self {

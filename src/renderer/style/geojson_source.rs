@@ -3,21 +3,21 @@ use cxx::UniquePtr;
 use std::fmt;
 
 /// Latitude coordinate value.
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct Latitude(pub f64);
 
 /// Longitude coordinate value.
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct Longitude(pub f64);
 
-/// A GeoJSON source for rendering geographic data.
+/// A `GeoJSON` source for rendering geographic data.
 pub struct GeoJsonSource {
     source_id: String,
     source: UniquePtr<sources::GeoJSONSource>,
 }
 
 impl GeoJsonSource {
-    /// Creates a new GeoJSON source with the given ID.
+    #[must_use]
     pub fn new(id: &str) -> Self {
         Self { source_id: id.to_owned(), source: sources::create(id) }
     }

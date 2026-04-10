@@ -10,6 +10,14 @@ pub struct TileServerOptions {
     ptr: UniquePtr<tile_server_options::TileServerOptions>,
 }
 
+impl Default for TileServerOptions {
+    /// Create new tile server options object
+    #[must_use]
+    fn default() -> Self {
+        Self { ptr: tile_server_options::new_tile_server_options() }
+    }
+}
+
 impl fmt::Debug for TileServerOptions {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("TileServerOptions").finish()
@@ -17,19 +25,14 @@ impl fmt::Debug for TileServerOptions {
 }
 
 impl TileServerOptions {
-    /// Create new tile server options object
-    #[must_use]
-    pub fn new() -> Self {
-        Self { ptr: tile_server_options::new_tile_server_options() }
-    }
-
     /// Set base url
     #[must_use]
-    pub fn with_base_url(mut self, path: PathBuf) {
+    pub fn with_base_url(mut self, path: PathBuf) -> Self {
         tile_server_options::withBaseUrl(
             self.ptr.pin_mut(),
             path.into_os_string().into_encoded_bytes().as_slice(),
         );
+        self
     }
 
     /// Set uri scheme alias

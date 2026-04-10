@@ -3,7 +3,6 @@ use crate::renderer::callbacks::{
     void_callback, CameraDidChangeCallback, FailingLoadingMapCallback,
     FinishRenderingFrameCallback, VoidCallback,
 };
-use cxx;
 use std::ops::Sub;
 
 // https://maplibre.org/maplibre-native/docs/book/design/ten-thousand-foot-view.html
@@ -177,6 +176,7 @@ pub mod layers {
         include!("layers/layers.h");
 
         /// Creates a new symbol layer.
+        #[must_use]
         pub(crate) fn create_symbol_layer(
             layer_id: &str,
             source_id: &str,
