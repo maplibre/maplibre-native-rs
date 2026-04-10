@@ -30,7 +30,7 @@ const MLN_RELEASE: &str = "core-9b6325a14e2cf1cc29ab28c1855ad376f1ba4903";
 // Files of the bridge
 const BRIDGE_FILES: &[&str] = &[
     "src/renderer/bridge.rs",
-    "src/renderer/bridge.cpp",
+    "src/cpp/bridge.cpp",
     "src/cpp/resource_options.h",
     "src/cpp/resource_options.cpp",
     "src/cpp/tile_server_options.h",
