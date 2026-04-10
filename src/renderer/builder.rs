@@ -113,10 +113,6 @@ impl<S> ImageRenderer<S> {
             resource_options.into_ptr(),
         );
 
-        Self {
-            instance: map,
-            style_specified: false,
-            _marker: PhantomData,
-        }
+        Self { instance: map, style_specified: false, _marker: PhantomData }
     }
 }

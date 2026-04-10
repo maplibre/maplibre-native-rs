@@ -27,20 +27,17 @@ impl MapObserver {
 
     /// React on start loading map
     pub fn set_will_start_loading_map_callback<F: Fn() + 'static>(&self, callback: F) {
-        self.instance
-            .setWillStartLoadingMapCallback(Box::new(VoidCallback::new(callback)));
+        self.instance.setWillStartLoadingMapCallback(Box::new(VoidCallback::new(callback)));
     }
 
     /// Set a callback to react when style loading finished
     pub fn set_did_finish_loading_style_callback<F: Fn() + 'static>(&self, callback: F) {
-        self.instance
-            .setFinishLoadingStyleCallback(Box::new(VoidCallback::new(callback)));
+        self.instance.setFinishLoadingStyleCallback(Box::new(VoidCallback::new(callback)));
     }
 
     /// Set a callback when the map gets idle
     pub fn set_did_become_idle_callback<F: Fn() + 'static>(&self, callback: F) {
-        self.instance
-            .setBecomeIdleCallback(Box::new(VoidCallback::new(callback)));
+        self.instance.setBecomeIdleCallback(Box::new(VoidCallback::new(callback)));
     }
 
     /// Set callback to react on failing loading map
@@ -48,8 +45,7 @@ impl MapObserver {
         &self,
         callback: F,
     ) {
-        self.instance
-            .setFailLoadingMapCallback(Box::new(FailingLoadingMapCallback::new(callback)));
+        self.instance.setFailLoadingMapCallback(Box::new(FailingLoadingMapCallback::new(callback)));
     }
 
     /// Set a callback to react on camera changes
@@ -59,8 +55,7 @@ impl MapObserver {
         &self,
         callback: F,
     ) {
-        self.instance
-            .setCameraDidChangeCallback(Box::new(CameraDidChangeCallback::new(callback)));
+        self.instance.setCameraDidChangeCallback(Box::new(CameraDidChangeCallback::new(callback)));
     }
 
     /// Set a callback to react on finished rendering frames

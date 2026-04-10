@@ -66,10 +66,7 @@ impl ScreenCoordinate {
 impl Sub for ScreenCoordinate {
     type Output = Self;
     fn sub(self, rhs: Self) -> Self::Output {
-        Self {
-            x: self.x - rhs.x,
-            y: self.y - rhs.y,
-        }
+        Self { x: self.x - rhs.x, y: self.y - rhs.y }
     }
 }
 
@@ -86,10 +83,7 @@ impl Size {
     #[must_use]
     #[allow(clippy::needless_pass_by_value)]
     pub fn new(width: Width, height: Height) -> Self {
-        Self {
-            width: width.0,
-            heigth: height.0,
-        }
+        Self { width: width.0, heigth: height.0 }
     }
 
     /// get width

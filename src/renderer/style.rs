@@ -103,10 +103,7 @@ impl<'a, S> Style<'a, S> {
 
     /// Apply the style from the url to the map
     pub fn load_url(&mut self, url: &str) {
-        self.image_renderer
-            .instance
-            .pin_mut()
-            .style_load_from_url(url);
+        self.image_renderer.instance.pin_mut().style_load_from_url(url);
     }
 
     /// Adds an image to the style with the given ID and options.
@@ -129,10 +126,7 @@ impl<'a, S> Style<'a, S> {
 
     /// Removes an image from the style by ID.
     pub fn remove_image(&mut self, id: &str) {
-        self.image_renderer
-            .instance
-            .pin_mut()
-            .style_remove_image(id);
+        self.image_renderer.instance.pin_mut().style_remove_image(id);
     }
 
     /// Add a source to the current map style and return the source id required for the layer
@@ -152,11 +146,9 @@ impl<'a, S> Style<'a, S> {
     /// Add a new layer
     pub fn add_layer<T: Into<StyleLayer>>(&mut self, layer: T) {
         match layer.into() {
-            StyleLayer::Symbol(layer) => self
-                .image_renderer
-                .instance
-                .pin_mut()
-                .style_add_symbol_layer(layer.into_inner()),
+            StyleLayer::Symbol(layer) => {
+                self.image_renderer.instance.pin_mut().style_add_symbol_layer(layer.into_inner())
+            }
         }
     }
 }

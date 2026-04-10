@@ -16,9 +16,7 @@ impl fmt::Debug for SymbolLayer {
 impl SymbolLayer {
     /// Create a new symbol layer with the given layer and source IDs.
     pub fn new<S: super::StyleSourceRef>(layer_id: &str, source: &S) -> Self {
-        Self {
-            layer: layers::create_symbol_layer(layer_id, source.source_id()),
-        }
+        Self { layer: layers::create_symbol_layer(layer_id, source.source_id()) }
     }
 
     /// Set the icon used as marker

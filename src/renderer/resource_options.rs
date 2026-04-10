@@ -18,9 +18,7 @@ impl ResourceOptions {
     /// Create new resource options object
     #[must_use]
     pub fn new() -> Self {
-        Self {
-            ptr: resource_options::new(),
-        }
+        Self { ptr: resource_options::new() }
     }
 
     /// Set api key

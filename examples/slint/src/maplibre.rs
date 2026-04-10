@@ -30,11 +30,7 @@ pub fn init(ui: &MainWindow, map: &Rc<RefCell<MapLibre>>) {
         move |size| {
             let size =
                 maplibre_native::Size::new(Width(size.width as u32), Height(size.height as u32));
-            map.upgrade()
-                .unwrap()
-                .borrow_mut()
-                .renderer()
-                .set_map_size(size);
+            map.upgrade().unwrap().borrow_mut().renderer().set_map_size(size);
         }
     });
 
@@ -90,11 +86,7 @@ pub fn init(ui: &MainWindow, map: &Rc<RefCell<MapLibre>>) {
             const STEP: f64 = 1.2;
             let pos = ScreenCoordinate::new(X(x.into()), Y(y.into()));
             let scale = if delta > 0. { STEP } else { 1.0 / STEP };
-            map.upgrade()
-                .unwrap()
-                .borrow_mut()
-                .renderer()
-                .scale_by(scale, pos);
+            map.upgrade().unwrap().borrow_mut().renderer().scale_by(scale, pos);
         }
     });
 }
@@ -104,10 +96,7 @@ fn style(map: &Rc<RefCell<MapLibre>>) {
     let mut style = Style::get_ref(map_borrow.renderer());
 
     let image = ImageReader::open(
-        Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("ui")
-            .join("icons")
-            .join("Marker.png"),
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("ui").join("icons").join("Marker.png"),
     )
     .unwrap()
     .decode()

@@ -118,9 +118,7 @@ impl<S> ImageRenderer<S> {
             ));
         };
         self.style_specified = true;
-        self.instance
-            .pin_mut()
-            .style_load_from_url(&format!("file://{path}"));
+        self.instance.pin_mut().style_load_from_url(&format!("file://{path}"));
         Ok(self)
     }
 
@@ -149,9 +147,7 @@ impl ImageRenderer<Static> {
             return Err(RenderingError::StyleNotSpecified);
         }
 
-        self.instance
-            .pin_mut()
-            .setCamera(lat, lon, zoom, bearing, pitch);
+        self.instance.pin_mut().setCamera(lat, lon, zoom, bearing, pitch);
         let data = self.instance.pin_mut().render();
         let bytes = data.as_bytes();
 
@@ -172,9 +168,7 @@ impl ImageRenderer<Tile> {
         }
 
         let (lat, lon) = coords_to_lat_lon(f64::from(zoom), x, y);
-        self.instance
-            .pin_mut()
-            .setCamera(lat, lon, f64::from(zoom), 0.0, 0.0);
+        self.instance.pin_mut().setCamera(lat, lon, f64::from(zoom), 0.0, 0.0);
 
         let data = self.instance.pin_mut().render();
         let bytes = data.as_bytes();
@@ -214,9 +208,7 @@ impl ImageRenderer<Continuous> {
     /// Important: Without setting the camera initially no image will be generated!
     pub fn set_camera(&mut self, x: u32, y: u32, zoom: u8, bearing: f64, pitch: f64) {
         let (lat, lon) = coords_to_lat_lon(f64::from(zoom), x, y);
-        self.instance
-            .pin_mut()
-            .setCamera(lat, lon, f64::from(zoom), bearing, pitch);
+        self.instance.pin_mut().setCamera(lat, lon, f64::from(zoom), bearing, pitch);
     }
 
     /// Get access to the map observer to setup callbacks
@@ -255,9 +247,7 @@ fn coords_to_lat_lon(zoom: f64, x: u32, y: u32) -> (f64, f64) {
     // https://github.com/oldmammuth/slippy_map_tilenames/blob/058678480f4b50b622cda7a48b98647292272346/src/lib.rs#L114
     let zz = 2_f64.powf(zoom);
     let lng = (f64::from(x) + 0.5) / zz * 360_f64 - 180_f64;
-    let lat = ((PI * (1_f64 - 2_f64 * (f64::from(y) + 0.5) / zz)).sinh())
-        .atan()
-        .to_degrees();
+    let lat = ((PI * (1_f64 - 2_f64 * (f64::from(y) + 0.5) / zz)).sinh()).atan().to_degrees();
     (lat, lng)
 }
 

@@ -20,9 +20,7 @@ impl TileServerOptions {
     /// Create new tile server options object
     #[must_use]
     pub fn new() -> Self {
-        Self {
-            ptr: tile_server_options::new_tile_server_options(),
-        }
+        Self { ptr: tile_server_options::new_tile_server_options() }
     }
 
     /// Set base url
@@ -54,10 +52,7 @@ impl TileServerOptions {
     ) -> Self {
         tile_server_options::withSourceTemplate(
             self.ptr.pin_mut(),
-            style_template
-                .into_os_string()
-                .into_encoded_bytes()
-                .as_slice(),
+            style_template.into_os_string().into_encoded_bytes().as_slice(),
             domain_name.as_bytes(),
             version_prefix.as_bytes(),
         );
@@ -74,10 +69,7 @@ impl TileServerOptions {
     ) -> Self {
         tile_server_options::withSpritesTemplate(
             self.ptr.pin_mut(),
-            sprites_template
-                .into_os_string()
-                .into_encoded_bytes()
-                .as_slice(),
+            sprites_template.into_os_string().into_encoded_bytes().as_slice(),
             domain_name.as_bytes(),
             version_prefix.as_bytes(),
         );
@@ -94,10 +86,7 @@ impl TileServerOptions {
     ) -> Self {
         tile_server_options::withGlyphsTemplate(
             self.ptr.pin_mut(),
-            glyphs_template
-                .into_os_string()
-                .into_encoded_bytes()
-                .as_slice(),
+            glyphs_template.into_os_string().into_encoded_bytes().as_slice(),
             domain_name.as_bytes(),
             version_prefix.as_bytes(),
         );
@@ -114,10 +103,7 @@ impl TileServerOptions {
     ) -> Self {
         tile_server_options::withTileTemplate(
             self.ptr.pin_mut(),
-            tile_template
-                .into_os_string()
-                .into_encoded_bytes()
-                .as_slice(),
+            tile_template.into_os_string().into_encoded_bytes().as_slice(),
             domain_name.as_bytes(),
             version_prefix.as_bytes(),
         );

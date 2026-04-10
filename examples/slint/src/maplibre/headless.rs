@@ -25,11 +25,7 @@ pub struct MapLibre {
 
 impl MapLibre {
     pub fn new(renderer: ImageRenderer<Continuous>) -> Self {
-        Self {
-            renderer,
-            flags: Rc::default(),
-            last_pos: ScreenCoordinate::default(),
-        }
+        Self { renderer, flags: Rc::default(), last_pos: ScreenCoordinate::default() }
     }
 
     pub fn style_loaded(&mut self) -> bool {
