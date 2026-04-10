@@ -12,7 +12,10 @@ use std::time::Instant;
 
 use clap::Parser;
 use env_logger::Env;
-use maplibre_native::{Image, ImageRenderer, ImageRendererBuilder, MapDebugOptions, Static, Tile};
+use maplibre_native::{
+    tile_server_options::TileServerOptions, Image, ImageRenderer, ImageRendererBuilder,
+    MapDebugOptions, ResourceOptions, Static, Tile,
+};
 
 /// Command-line tool to render a map via [`mapLibre-native`](https://github.com/maplibre/maplibre-native)
 #[derive(Parser, Debug)]
@@ -148,10 +151,13 @@ impl From<DebugMode> for MapDebugOptions {
 
 impl Args {
     fn load(self) -> Renderer {
-        let map = ImageRendererBuilder::new()
-            .with_api_key(self.apikey.unwrap_or_default())
+        let resource_options = ResourceOptions::new()
+            .with_api_key(&self.apikey.unwrap_or_default())
             .with_cache_path(self.cache)
-            .with_asset_root(self.asset_root)
+            .with_asset_path(self.asset_root);
+
+        let map = ImageRendererBuilder::new()
+            .with_resource_options(resource_options)
             .with_pixel_ratio(self.ratio)
             .with_size(self.width, self.height);
 
