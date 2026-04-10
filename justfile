@@ -59,6 +59,7 @@ env-info:
     @echo "RUSTDOCFLAGS='$RUSTDOCFLAGS'"
     @echo "RUST_BACKTRACE='$RUST_BACKTRACE'"
     @echo "MLN_PRECOMPILE='$MLN_PRECOMPILE'"
+    @echo "MLN_CORE_LIBRARY_USE_AMALGAM='$MLN_CORE_LIBRARY_USE_AMALGAM'"
 
 # Reformat all code `cargo fmt`. If nightly is available, use it for better results
 fmt:
