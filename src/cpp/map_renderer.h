@@ -44,8 +44,8 @@ public:
     }
 
     void style_add_image(rust::Str id, rust::Slice<const unsigned char> data, mbgl::Size size, bool single_distance_field) {
-        mbgl::PremultipliedImage image(size, data.data(), data.size());          
-            
+        mbgl::PremultipliedImage image(size, data.data(), data.size());
+
         const float pixelRatio = 1.0;
         map->getStyle().addImage(std::make_unique<mbgl::style::Image>(std::string(id), std::move(image), pixelRatio, single_distance_field));
     }

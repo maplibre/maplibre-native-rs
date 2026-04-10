@@ -13,6 +13,10 @@ impl SymbolLayer {
         }
     }
 
+    pub fn set_icon_image<T: super::StyleImageRef>(&self, image_id: T) {
+        layers::setIconImage(&self.layer, image_id.image_id());
+    }
+
     pub(crate) fn into_inner(self) -> UniquePtr<layers::SymbolLayer> {
         self.layer
     }

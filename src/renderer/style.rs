@@ -12,6 +12,10 @@ pub trait StyleSourceRef {
     fn source_id(&self) -> &str;
 }
 
+pub trait StyleImageRef {
+    fn image_id(&self) -> &str;
+}
+
 /// Stable source ID handle that can be used after a source object is moved.
 #[derive(Clone, Debug)]
 pub struct SourceId(String);
@@ -25,6 +29,22 @@ impl SourceId {
 
 impl StyleSourceRef for SourceId {
     fn source_id(&self) -> &str {
+        self.as_str()
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct ImageId(String);
+
+impl ImageId {
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl StyleImageRef for ImageId {
+    fn image_id(&self) -> &str {
         self.as_str()
     }
 }
@@ -60,7 +80,12 @@ impl<'a, S> Style<'a, S> {
             .style_load_from_url(url);
     }
 
-    pub fn add_image(&mut self, id: &str, image: &DynamicImage, single_distance_field: bool) {
+    pub fn add_image(
+        &mut self,
+        id: &str,
+        image: &DynamicImage,
+        single_distance_field: bool,
+    ) -> ImageId {
         use image::EncodableLayout;
         let image = image.to_rgba8();
         self.image_renderer.instance.pin_mut().style_add_image(
@@ -69,6 +94,7 @@ impl<'a, S> Style<'a, S> {
             Size::new(super::Width(image.width()), super::Height(image.height())),
             single_distance_field,
         );
+        ImageId(id.to_owned())
     }
 
     pub fn remove_image(&mut self, id: &str) {

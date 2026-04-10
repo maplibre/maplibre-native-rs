@@ -136,6 +136,7 @@ pub mod layers {
         include!("layers/layers.h");
 
         fn create_symbol_layer(layer_id: &str, source_id: &str) -> UniquePtr<SymbolLayer>;
+        fn setIconImage(layer: &UniquePtr<SymbolLayer>, image_id: &str);
     }
 }
 
