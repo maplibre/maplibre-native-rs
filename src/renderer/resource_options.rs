@@ -16,7 +16,6 @@ impl Debug for ResourceOptions {
 
 impl Default for ResourceOptions {
     /// Create new resource options object
-    #[must_use]
     fn default() -> Self {
         Self { ptr: resource_options::new() }
     }

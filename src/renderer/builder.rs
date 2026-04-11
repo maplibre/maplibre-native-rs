@@ -104,7 +104,7 @@ impl ImageRendererBuilder {
 impl<S> ImageRenderer<S> {
     /// Creates a new renderer instance
     fn new(map_mode: MapMode, opts: ImageRendererBuilder) -> Self {
-        let resource_options = opts.resource_options.unwrap_or(ResourceOptions::new());
+        let resource_options = opts.resource_options.unwrap_or(ResourceOptions::default());
         let map = ffi::MapRenderer_new(
             map_mode,
             opts.width.get(),

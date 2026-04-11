@@ -151,7 +151,7 @@ impl From<DebugMode> for MapDebugOptions {
 
 impl Args {
     fn load(self) -> Renderer {
-        let resource_options = ResourceOptions::new()
+        let resource_options = ResourceOptions::default()
             .with_api_key(&self.apikey.unwrap_or_default())
             .with_cache_path(self.cache)
             .with_asset_path(self.asset_root);

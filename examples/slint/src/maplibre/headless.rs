@@ -52,7 +52,7 @@ impl MapLibre {
 }
 
 pub fn create_map(size: Size) -> Rc<RefCell<MapLibre>> {
-    let resource_options = ResourceOptions::new()
+    let resource_options = ResourceOptions::default()
         .with_tile_server_options(TileServerOptions::new())
         // .with_api_key(api_key)
         .with_cache_path(Path::new(env!("CARGO_MANIFEST_DIR")).join("maplibre_database.sqlite"));
