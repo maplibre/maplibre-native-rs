@@ -28,12 +28,22 @@ const MLN_COMMIT: &str = "35cf39b72f45cfea55a34ffe7358ade5c950a3c5";
 // Files of the bridge
 const BRIDGE_FILES: &[&str] = &[
     "src/renderer/bridge.rs",
-    "src/renderer/bridge.cpp",
-    "include/map_renderer.h",
-    "include/renderer_observer.h",
-    "include/map_observer.h",
-    "include/rust_log_observer.h",
+    "src/cpp/bridge.cpp",
+    "src/cpp/resource_options.h",
+    "src/cpp/resource_options.cpp",
+    "src/cpp/tile_server_options.h",
+    "src/cpp/tile_server_options.cpp",
+    "src/cpp/map_renderer.h",
+    "src/cpp/renderer_observer.h",
+    "src/cpp/map_observer.h",
+    "src/cpp/rust_log_observer.h",
+    "src/cpp/sources/sources.h",
+    "src/cpp/sources/sources.cpp",
+    "src/cpp/layers/layers.h",
+    "src/cpp/layers/layers.cpp",
 ];
+
+const BRIDGE_INCLUDE_DIRS: &[&str] = &["include", "src/cpp"];
 
 /// Supported graphics rendering APIs.
 #[derive(PartialEq, Eq, Clone, Copy)]
@@ -158,17 +168,11 @@ fn mln_release_from_manifest() -> String {
     println!("cargo:rerun-if-changed={}", manifest_path.display());
 
     let manifest_str = fs::read_to_string(&manifest_path).unwrap_or_else(|err| {
-        panic!(
-            "Failed to read manifest at {}: {err}",
-            manifest_path.display()
-        )
+        panic!("Failed to read manifest at {}: {err}", manifest_path.display())
     });
 
     let manifest: toml::Value = manifest_str.parse().unwrap_or_else(|err| {
-        panic!(
-            "Failed to parse manifest as TOML at {}: {err}",
-            manifest_path.display()
-        )
+        panic!("Failed to parse manifest as TOML at {}: {err}", manifest_path.display())
     });
 
     manifest
@@ -201,9 +205,7 @@ fn extract_headers(headers_from: &Path, headers_to: &Path) {
     }
     let mut archive = tar::Archive::new(&mut tar);
     archive.set_overwrite(true);
-    archive
-        .unpack(headers_to)
-        .expect("Failed to extract headers");
+    archive.unpack(headers_to).expect("Failed to extract headers");
 }
 
 /// Get local directory or download maplibre-native into the `OUT_DIR`
@@ -252,10 +254,7 @@ fn resolve_mln_core(root: &Path) -> (PathBuf, Vec<PathBuf>) {
     // Returning the downloaded file, bypassing CMakeLists.txt check
     let include_dirs = vec![
         root.join("include"),
-        extracted_path
-            .join("vendor")
-            .join("maplibre-native-base")
-            .join("include"),
+        extracted_path.join("vendor").join("maplibre-native-base").join("include"),
         extracted_path
             .join("vendor")
             .join("maplibre-native-base")
@@ -276,14 +275,19 @@ fn resolve_mln_core(root: &Path) -> (PathBuf, Vec<PathBuf>) {
 /// Gather include directories and build the C++ bridge using `cxx_build`.
 fn build_bridge(lib_name: &str, include_dirs: &[PathBuf]) {
     // println!("cargo:warning=Include_dirs: {:?}", include_dirs);
+    let mut build = cxx_build::bridge("src/renderer/bridge.rs");
+    build.includes(include_dirs).flag_if_supported("-std=c++20");
+
     for f in BRIDGE_FILES {
         println!("cargo:rerun-if-changed={f}");
+        #[allow(clippy::case_sensitive_file_extension_comparisons)]
+        if f.ends_with(".cpp") {
+            println!("cargo:warning=Source file: {f}");
+            build.file(f);
+        }
     }
-    cxx_build::bridge("src/renderer/bridge.rs")
-        .includes(include_dirs)
-        .file("src/renderer/bridge.cpp")
-        .flag_if_supported("-std=c++20")
-        .compile("maplibre_rust_map_renderer_bindings");
+
+    build.compile("maplibre_rust_map_renderer_bindings");
 
     // Link mbgl-core after the bridge - or else `cargo test` won't be able to find the symbols.
     println!("cargo:rustc-link-lib=static={lib_name}");
@@ -303,10 +307,7 @@ fn bundle_precompiled() -> Info {
         "cargo:warning=Using precompiled maplibre-native static library from {}",
         cpp_root.display()
     );
-    println!(
-        "cargo:rustc-link-search=native={}",
-        cpp_root.parent().unwrap().display()
-    );
+    println!("cargo:rustc-link-search=native={}", cpp_root.parent().unwrap().display());
 
     // These `cargo:rustc-link-lib` must be done before curl and GL,
     // especially on Linux before 1.90 (1.90 introduced new linker on Linux)
@@ -318,11 +319,7 @@ fn bundle_precompiled() -> Info {
         .replacen("lib", "", 1)
         .replace(".a", "");
 
-    Info {
-        lib_name,
-        include_dirs,
-        cpp_root,
-    }
+    Info { lib_name, include_dirs, cpp_root }
 }
 
 fn build_local(
@@ -362,22 +359,19 @@ fn build_local(
             .status()?;
         if !clone_status.success() {
             return Err(
-                format!("Failed to clone maplibre-native repository: {clone_status}").into(),
+                format!("Failed to clone maplibre-native repository: {clone_status}").into()
             );
         }
     }
     // println!("cargo:warning=Building maplibre-native.");
-    println!(
-        "cargo:rerun-if-changed={}",
-        maplibre_native_dir.as_os_str().to_str().unwrap()
-    );
+    println!("cargo:rerun-if-changed={}", maplibre_native_dir.as_os_str().to_str().unwrap());
     let submodule_status = Command::new("git")
         .current_dir(maplibre_native_dir.clone())
         .args(["submodule", "update", "--init", "--recursive"])
         .status()?;
     if !submodule_status.success() {
         return Err(
-            format!("Failed to initialize maplibre-native submodules: {submodule_status}").into(),
+            format!("Failed to initialize maplibre-native submodules: {submodule_status}").into()
         );
     }
 
@@ -402,17 +396,10 @@ fn build_local(
         config.configure_arg("-DMLN_WITH_X11=ON");
     }
     let dest = config.build();
+    println!("cargo:rustc-link-search=native={}", dest.join("build").display());
     println!(
         "cargo:rustc-link-search=native={}",
-        dest.join("build").display()
-    );
-    println!(
-        "cargo:rustc-link-search=native={}",
-        dest.join("build")
-            .join("vendor")
-            .join("maplibre-tile-spec")
-            .join("cpp")
-            .display()
+        dest.join("build").join("vendor").join("maplibre-tile-spec").join("cpp").display()
     );
     // println!("cargo:warning=Building maplibre-native done.");
 
@@ -430,7 +417,10 @@ fn build_local(
     .into_iter()
     .map(|s| maplibre_native_dir.clone().join(s))
     .collect();
-    include_dirs.push(Path::new("include").to_path_buf());
+    // maplibre-rs include dirs
+    for i in BRIDGE_INCLUDE_DIRS {
+        include_dirs.push(Path::new(i).to_path_buf());
+    }
 
     Ok(Info {
         lib_name: format!("{TARGET_NAME}{}", if amalgam_lib { "-amalgam" } else { "" }),
@@ -444,12 +434,8 @@ fn build_mln() {
     println!("cargo:rerun-if-env-changed=MLN_SYSTEM");
     println!("cargo:rerun-if-env-changed=MLN_PRECOMPILE");
     println!("cargo:rerun-if-env-changed=MLN_CORE_LIBRARY_USE_AMALGAM");
-    let amalgam_lib = !env::var("MLN_CORE_LIBRARY_USE_AMALGAM")
-        .unwrap_or("0".to_string())
-        .eq("0");
-    let precompiled = !env::var("MLN_PRECOMPILE")
-        .unwrap_or("0".to_string())
-        .eq("0");
+    let amalgam_lib = !env::var("MLN_CORE_LIBRARY_USE_AMALGAM").unwrap_or("0".to_string()).eq("0");
+    let precompiled = !env::var("MLN_PRECOMPILE").unwrap_or("0".to_string()).eq("0");
     let system_lib = !env::var("MLN_SYSTEM").unwrap_or("0".to_string()).eq("0");
 
     // Add system library search paths for macOS

@@ -2,7 +2,9 @@ use crate::Size;
 use maplibre_native::Continuous;
 use maplibre_native::ImageRenderer;
 use maplibre_native::ImageRendererBuilder;
+use maplibre_native::ResourceOptions;
 use maplibre_native::ScreenCoordinate;
+use maplibre_native::tile_server_options::TileServerOptions;
 use std::cell::RefCell;
 use std::num::NonZeroU32;
 use std::path::Path;
@@ -23,11 +25,11 @@ pub struct MapLibre {
 
 impl MapLibre {
     pub fn new(renderer: ImageRenderer<Continuous>) -> Self {
-        Self {
-            renderer,
-            flags: Rc::default(),
-            last_pos: ScreenCoordinate::default(),
-        }
+        Self { renderer, flags: Rc::default(), last_pos: ScreenCoordinate::default() }
+    }
+
+    pub fn style_loaded(&mut self) -> bool {
+        self.flags.borrow().style_loaded
     }
 
     pub fn updated(&mut self) -> bool {
@@ -50,16 +52,22 @@ impl MapLibre {
 }
 
 pub fn create_map(size: Size) -> Rc<RefCell<MapLibre>> {
+    let resource_options = ResourceOptions::default()
+        .with_tile_server_options(TileServerOptions::default())
+        // .with_api_key(api_key)
+        .with_cache_path(Path::new(env!("CARGO_MANIFEST_DIR")).join("maplibre_database.sqlite"));
+
     let mut renderer = ImageRendererBuilder::new()
         .with_size(
             NonZeroU32::new(size.width as u32).unwrap(),
             NonZeroU32::new(size.height as u32).unwrap(),
         )
         .with_pixel_ratio(1.0)
-        .with_cache_path(Path::new(env!("CARGO_MANIFEST_DIR")).join("maplibre_database.sqlite"))
+        .with_resource_options(resource_options)
         .build_continuous_renderer();
     renderer.set_camera(0, 0, 0, 0., 0.); // setting the camera is important, otherwise map libre does nothing (no logs are comming and no map gets generated)
     renderer.load_style_from_url(&"https://demotiles.maplibre.org/style.json".parse().unwrap());
+
     let map = Rc::new(RefCell::new(MapLibre::new(renderer)));
 
     let map_observer = map.borrow_mut().renderer().map_observer();

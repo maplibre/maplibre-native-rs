@@ -1,16 +1,26 @@
-mod bridge;
+pub(crate) mod bridge;
 mod builder;
-mod callbacks;
+pub mod callbacks;
 mod image_renderer;
-
-pub use bridge::ffi::{MapDebugOptions, MapMode};
-pub use bridge::set_log_thread_enabled;
-pub use bridge::{Height, Width, X, Y};
-pub use bridge::{ScreenCoordinate, Size};
+mod map_observer;
+mod resource_options;
+pub mod style;
+pub mod tile_server_options;
+pub use bridge::{
+    ffi::{MapDebugOptions, MapMode},
+    layers,
+    map_observer::{MapLoadError, MapObserverCameraChangeMode},
+    Height, ScreenCoordinate, Size, Width, X, Y,
+};
 pub use builder::ImageRendererBuilder;
-pub use callbacks::{
-    CameraDidChangeCallback, FailingLoadingMapCallback, FinishRenderingFrameCallback, VoidCallback,
-};
-pub use image_renderer::{
-    Continuous, Image, ImageRenderer, MapObserver, RenderingError, Static, Tile,
-};
+pub use image_renderer::{Continuous, Image, ImageRenderer, RenderingError, Static, Tile};
+pub use map_observer::MapObserver;
+pub use resource_options::ResourceOptions;
+pub use style::GeoJsonSource;
+pub use style::SourceId;
+pub use style::Style;
+pub use style::StyleLayer;
+pub use style::StyleSource;
+pub use style::StyleSourceRef;
+pub use style::SymbolLayer;
+pub use style::{Latitude, Longitude};

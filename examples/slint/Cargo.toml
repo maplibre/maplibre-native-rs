@@ -10,6 +10,7 @@ opengl = ["maplibre_native/opengl"]
 metal = ["maplibre_native/metal"]
 
 [dependencies]
+image = { workspace = true }
 maplibre_native = { path = "../.." }
 slint = { version = "1.15", features = ["backend-android-activity-06"] }
 

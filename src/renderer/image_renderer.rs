@@ -1,11 +1,9 @@
+use super::MapObserver;
 use crate::renderer::bridge::ffi;
 use crate::renderer::bridge::ffi::BridgeImage;
-use crate::renderer::callbacks::{
-    CameraDidChangeCallback, FailingLoadingMapCallback, FinishRenderingFrameCallback, VoidCallback,
-};
 use crate::renderer::MapDebugOptions;
 use crate::{ScreenCoordinate, Size};
-use cxx::{SharedPtr, UniquePtr};
+use cxx::UniquePtr;
 use image::{ImageBuffer, Rgba};
 use std::f64::consts::PI;
 use std::fmt::Debug;
@@ -92,7 +90,7 @@ impl<S> ImageRenderer<S> {
     /// Set the style URL for the map.
     pub fn load_style_from_url(&mut self, url: &url::Url) -> &mut Self {
         self.style_specified = true;
-        ffi::MapRenderer_getStyle_loadURL(self.instance.pin_mut(), url.as_ref());
+        self.instance.pin_mut().style_load_from_url(url.as_str());
         self
     }
 
@@ -120,13 +118,13 @@ impl<S> ImageRenderer<S> {
             ));
         };
         self.style_specified = true;
-        ffi::MapRenderer_getStyle_loadURL(self.instance.pin_mut(), &format!("file://{path}"));
+        self.instance.pin_mut().style_load_from_url(&format!("file://{path}"));
         Ok(self)
     }
 
     /// Set debug visualization flags for the map renderer.
     pub fn set_debug_flags(&mut self, flags: MapDebugOptions) -> &mut Self {
-        ffi::MapRenderer_setDebugFlags(self.instance.pin_mut(), flags);
+        self.instance.pin_mut().setDebugFlags(flags);
         self
     }
 }
@@ -149,8 +147,8 @@ impl ImageRenderer<Static> {
             return Err(RenderingError::StyleNotSpecified);
         }
 
-        ffi::MapRenderer_setCamera(self.instance.pin_mut(), lat, lon, zoom, bearing, pitch);
-        let data = ffi::MapRenderer_render(self.instance.pin_mut());
+        self.instance.pin_mut().setCamera(lat, lon, zoom, bearing, pitch);
+        let data = self.instance.pin_mut().render();
         let bytes = data.as_bytes();
 
         let image = Image::from_raw(bytes).ok_or(RenderingError::InvalidImageData)?;
@@ -170,70 +168,12 @@ impl ImageRenderer<Tile> {
         }
 
         let (lat, lon) = coords_to_lat_lon(f64::from(zoom), x, y);
-        ffi::MapRenderer_setCamera(self.instance.pin_mut(), lat, lon, f64::from(zoom), 0.0, 0.0);
+        self.instance.pin_mut().setCamera(lat, lon, f64::from(zoom), 0.0, 0.0);
 
-        let data = ffi::MapRenderer_render(self.instance.pin_mut());
+        let data = self.instance.pin_mut().render();
         let bytes = data.as_bytes();
         let image = Image::from_raw(bytes).ok_or(RenderingError::InvalidImageData)?;
         Ok(image)
-    }
-}
-
-/// Object to modify the map observer callbacks
-pub struct MapObserver {
-    instance: SharedPtr<ffi::MapObserver>,
-}
-
-impl MapObserver {
-    fn new(instance: SharedPtr<ffi::MapObserver>) -> Self {
-        Self { instance }
-    }
-
-    /// React on start loading map
-    pub fn set_will_start_loading_map_callback<F: Fn() + 'static>(&self, callback: F) {
-        self.instance
-            .setWillStartLoadingMapCallback(Box::new(VoidCallback::new(callback)));
-    }
-
-    /// Set a callback to react when style loading finished
-    pub fn set_did_finish_loading_style_callback<F: Fn() + 'static>(&self, callback: F) {
-        self.instance
-            .setFinishLoadingStyleCallback(Box::new(VoidCallback::new(callback)));
-    }
-
-    /// Set a callback when the map gets idle
-    pub fn set_did_become_idle_callback<F: Fn() + 'static>(&self, callback: F) {
-        self.instance
-            .setBecomeIdleCallback(Box::new(VoidCallback::new(callback)));
-    }
-
-    /// Set callback to react on failing loading map
-    pub fn set_did_fail_loading_map_callback<F: Fn(ffi::MapLoadError, &str) + 'static>(
-        &self,
-        callback: F,
-    ) {
-        self.instance
-            .setFailLoadingMapCallback(Box::new(FailingLoadingMapCallback::new(callback)));
-    }
-
-    /// Set a callback to react on camera changes
-    pub fn set_camera_changed_callback<F: Fn(ffi::MapObserverCameraChangeMode) + 'static>(
-        &self,
-        callback: F,
-    ) {
-        self.instance
-            .setCameraDidChangeCallback(Box::new(CameraDidChangeCallback::new(callback)));
-    }
-
-    /// Set a callback to react on finished rendering frames
-    pub fn set_finish_rendering_frame_callback<
-        F: Fn(/*needs_repaint:*/ bool, /*placement_changed:*/ bool) + 'static,
-    >(
-        &self,
-        callback: F,
-    ) {
-        self.instance
-            .setFinishRenderingFrameCallback(Box::new(FinishRenderingFrameCallback::new(callback)));
     }
 }
 
@@ -268,14 +208,7 @@ impl ImageRenderer<Continuous> {
     /// Important: Without setting the camera initially no image will be generated!
     pub fn set_camera(&mut self, x: u32, y: u32, zoom: u8, bearing: f64, pitch: f64) {
         let (lat, lon) = coords_to_lat_lon(f64::from(zoom), x, y);
-        ffi::MapRenderer_setCamera(
-            self.instance.pin_mut(),
-            lat,
-            lon,
-            f64::from(zoom),
-            bearing,
-            pitch,
-        );
+        self.instance.pin_mut().setCamera(lat, lon, f64::from(zoom), bearing, pitch);
     }
 
     /// Get access to the map observer to setup callbacks
@@ -285,27 +218,27 @@ impl ImageRenderer<Continuous> {
 
     /// Move map by
     pub fn move_by(&mut self, delta: ScreenCoordinate) {
-        ffi::MapRenderer_moveBy(self.instance.pin_mut(), &delta);
+        self.instance.pin_mut().moveBy(&delta);
     }
 
     /// Scale map (zooming)
     pub fn scale_by(&mut self, scale: f64, pos: ScreenCoordinate) {
-        ffi::MapRenderer_scaleBy(self.instance.pin_mut(), scale, &pos);
+        self.instance.pin_mut().scaleBy(scale, &pos);
     }
 
     /// Set the map size. It determines also the rendered image size
     pub fn set_map_size(&mut self, size: Size) {
-        ffi::MapRenderer_setSize(self.instance.pin_mut(), &size);
+        self.instance.pin_mut().setSize(&size);
     }
 
     /// Trigger render loop once (animations)
     pub fn render_once(&mut self) {
-        ffi::MapRenderer_render_once(self.instance.pin_mut());
+        self.instance.pin_mut().render_once();
     }
 
     /// Reading rendered image
     pub fn read_still_image(&mut self) -> ImagePtr {
-        ImagePtr::new(ffi::MapRenderer_readStillImage(self.instance.pin_mut()))
+        ImagePtr::new(self.instance.pin_mut().readStillImage())
     }
 }
 
@@ -314,9 +247,7 @@ fn coords_to_lat_lon(zoom: f64, x: u32, y: u32) -> (f64, f64) {
     // https://github.com/oldmammuth/slippy_map_tilenames/blob/058678480f4b50b622cda7a48b98647292272346/src/lib.rs#L114
     let zz = 2_f64.powf(zoom);
     let lng = (f64::from(x) + 0.5) / zz * 360_f64 - 180_f64;
-    let lat = ((PI * (1_f64 - 2_f64 * (f64::from(y) + 0.5) / zz)).sinh())
-        .atan()
-        .to_degrees();
+    let lat = ((PI * (1_f64 - 2_f64 * (f64::from(y) + 0.5) / zz)).sinh()).atan().to_degrees();
     (lat, lng)
 }
 
@@ -329,10 +260,4 @@ pub enum RenderingError {
     /// The renderer returned invalid or corrupted image data.
     #[error("Invalid image data received from renderer")]
     InvalidImageData,
-}
-
-impl Debug for MapObserver {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "MapObserver")
-    }
 }
