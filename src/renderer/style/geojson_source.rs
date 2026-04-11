@@ -17,6 +17,7 @@ pub struct GeoJsonSource {
 }
 
 impl GeoJsonSource {
+    /// Create a new `GeoJSON` source
     #[must_use]
     pub fn new(id: &str) -> Self {
         Self { source_id: id.to_owned(), source: sources::create(id) }
@@ -34,7 +35,10 @@ impl GeoJsonSource {
 
 impl fmt::Debug for GeoJsonSource {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("GeoJsonSource").field("source_id", &self.source_id).finish()
+        f.debug_struct("GeoJsonSource")
+            .field("source_id", &self.source_id)
+            .field("Pointer", &self.source.as_ptr())
+            .finish()
     }
 }
 

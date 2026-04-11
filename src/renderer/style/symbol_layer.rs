@@ -9,7 +9,7 @@ pub struct SymbolLayer {
 
 impl fmt::Debug for SymbolLayer {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("SymbolLayer").finish()
+        f.debug_struct("SymbolLayer").field("Pointer", &self.layer.as_ptr()).finish()
     }
 }
 
@@ -20,7 +20,7 @@ impl SymbolLayer {
     }
 
     /// Set the icon used as marker
-    pub fn set_icon_image<T: super::StyleImageRef>(&self, image_id: T) {
+    pub fn set_icon_image<T: super::StyleImageRef>(&self, image_id: &T) {
         layers::setIconImage(&self.layer, image_id.image_id());
     }
 

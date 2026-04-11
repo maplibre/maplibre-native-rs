@@ -13,8 +13,7 @@ use std::time::Instant;
 use clap::Parser;
 use env_logger::Env;
 use maplibre_native::{
-    tile_server_options::TileServerOptions, Image, ImageRenderer, ImageRendererBuilder,
-    MapDebugOptions, ResourceOptions, Static, Tile,
+    Image, ImageRenderer, ImageRendererBuilder, MapDebugOptions, ResourceOptions, Static, Tile,
 };
 
 /// Command-line tool to render a map via [`mapLibre-native`](https://github.com/maplibre/maplibre-native)

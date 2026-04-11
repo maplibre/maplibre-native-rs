@@ -19,7 +19,7 @@ impl Default for TileServerOptions {
 
 impl fmt::Debug for TileServerOptions {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("TileServerOptions").finish()
+        f.debug_struct("TileServerOptions").field("Pointer", &self.ptr.as_ptr()).finish()
     }
 }
 

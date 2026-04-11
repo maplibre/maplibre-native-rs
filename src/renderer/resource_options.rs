@@ -10,7 +10,7 @@ pub struct ResourceOptions {
 
 impl Debug for ResourceOptions {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Resource Options")
+        f.debug_struct("Resource Options").field("Pointer", &self.ptr.as_ptr()).finish()
     }
 }
 

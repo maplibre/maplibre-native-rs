@@ -60,7 +60,7 @@ impl StyleImageRef for ImageId {
 
 /// A style source for rendering data layers.
 pub enum StyleSource {
-    /// A GeoJSON source.
+    /// A `GeoJSON` source.
     GeoJson(GeoJsonSource),
 }
 
@@ -147,7 +147,7 @@ impl<'a, S> Style<'a, S> {
     pub fn add_layer<T: Into<StyleLayer>>(&mut self, layer: T) {
         match layer.into() {
             StyleLayer::Symbol(layer) => {
-                self.image_renderer.instance.pin_mut().style_add_symbol_layer(layer.into_inner())
+                self.image_renderer.instance.pin_mut().style_add_symbol_layer(layer.into_inner());
             }
         }
     }

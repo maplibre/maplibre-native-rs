@@ -108,7 +108,7 @@ fn style(map: &Rc<RefCell<MapLibre>>) {
     let source_id = style.add_source(geo_json_source);
 
     let layer = SymbolLayer::new("Layer id", &source_id);
-    layer.set_icon_image(image_id);
+    layer.set_icon_image(&image_id);
     layer.set_icon_anchor(SymbolAnchorType::Bottom);
     style.add_layer(layer);
 }
