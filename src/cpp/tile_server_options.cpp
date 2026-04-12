@@ -57,7 +57,7 @@ void withTileTemplate(mbgl::TileServerOptions &tile_server_options,
                         rust::Slice<const uint8_t> domainName,
                         rust::Slice<const uint8_t> versionPrefix
                     ) {
-    tile_server_options.withGlyphsTemplate(rustSliceToString(tileTemplate),
+    tile_server_options.withTileTemplate(rustSliceToString(tileTemplate),
                                         rustSliceToString(domainName),
                                         std::optional<std::string>{rustSliceToString(versionPrefix)}
                                     );
