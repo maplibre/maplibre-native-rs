@@ -2,7 +2,7 @@ use super::MapObserver;
 use crate::renderer::bridge::ffi;
 use crate::renderer::bridge::ffi::BridgeImage;
 use crate::renderer::MapDebugOptions;
-use crate::{ScreenCoordinate, Size};
+use crate::{Latitude, Longitude, ScreenCoordinate, Size};
 use cxx::UniquePtr;
 use image::{ImageBuffer, Rgba};
 use std::f64::consts::PI;
@@ -168,7 +168,7 @@ impl ImageRenderer<Tile> {
         }
 
         let (lat, lon) = coords_to_lat_lon(f64::from(zoom), x, y);
-        self.instance.pin_mut().setCamera(lat, lon, f64::from(zoom), 0.0, 0.0);
+        self.instance.pin_mut().setCamera(lat.0, lon.0, f64::from(zoom), 0.0, 0.0);
 
         let data = self.instance.pin_mut().render();
         let bytes = data.as_bytes();
@@ -207,8 +207,15 @@ impl ImageRenderer<Continuous> {
     /// Set the camera position using geographic coordinates.
     ///
     /// Important: Without setting the camera initially no image will be generated!
-    pub fn set_camera(&mut self, lat: f64, lon: f64, zoom: f64, bearing: f64, pitch: f64) {
-        self.instance.pin_mut().setCamera(lat, lon, zoom, bearing, pitch);
+    pub fn set_camera(
+        &mut self,
+        latitude: Latitude,
+        longitude: Longitude,
+        zoom: f64,
+        bearing: f64,
+        pitch: f64,
+    ) {
+        self.instance.pin_mut().setCamera(latitude.0, longitude.0, zoom, bearing, pitch);
     }
 
     /// Get access to the map observer to setup callbacks
@@ -243,12 +250,12 @@ impl ImageRenderer<Continuous> {
 }
 
 #[allow(clippy::cast_precision_loss)]
-fn coords_to_lat_lon(zoom: f64, x: u32, y: u32) -> (f64, f64) {
+fn coords_to_lat_lon(zoom: f64, x: u32, y: u32) -> (Latitude, Longitude) {
     // https://github.com/oldmammuth/slippy_map_tilenames/blob/058678480f4b50b622cda7a48b98647292272346/src/lib.rs#L114
     let zz = 2_f64.powf(zoom);
     let lng = (f64::from(x) + 0.5) / zz * 360_f64 - 180_f64;
     let lat = ((PI * (1_f64 - 2_f64 * (f64::from(y) + 0.5) / zz)).sinh()).atan().to_degrees();
-    (lat, lng)
+    (Latitude(lat), Longitude(lng))
 }
 
 /// Errors that can occur during map rendering operations.
@@ -260,4 +267,25 @@ pub enum RenderingError {
     /// The renderer returned invalid or corrupted image data.
     #[error("Invalid image data received from renderer")]
     InvalidImageData,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{coords_to_lat_lon, Latitude, Longitude};
+
+    #[test]
+    fn converts_tile_zero_to_geographic_center() {
+        let (lat, lon) = coords_to_lat_lon(0.0, 0, 0);
+        assert!(matches!(lat, Latitude(v) if v.abs() < f64::EPSILON));
+        assert!(matches!(lon, Longitude(v) if v.abs() < f64::EPSILON));
+    }
+
+    #[test]
+    fn tile_coordinate_conversion_returns_typed_coordinates() {
+        let (lat, lon) = coords_to_lat_lon(1.0, 1, 1);
+        let Latitude(lat) = lat;
+        let Longitude(lon) = lon;
+        assert!((-90.0..=90.0).contains(&lat));
+        assert!((-180.0..=180.0).contains(&lon));
+    }
 }
