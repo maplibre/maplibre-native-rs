@@ -188,7 +188,7 @@ public:
 
     void destroy() const {
         wgpuTextureDestroy(mTexture);
-        //mTexture = nullptr;
+        mTexture = nullptr;
     }
 
     WGPUExtent3D getExtend3d() const {

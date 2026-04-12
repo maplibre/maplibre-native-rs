@@ -30,7 +30,7 @@ component MapWidget {
     out property<Size> map-size: { width: map.width, height: map.height };
     callback map-size-changed(Size);
     changed map-size => {
-        debug("Map size changed", map-size);
+        // debug("Map size changed", map-size);
         map-size-changed(map-size);
     }
 
