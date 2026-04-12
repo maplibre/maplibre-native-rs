@@ -49,18 +49,18 @@ pub fn init(ui: &MainWindow, map: &Rc<RefCell<MapLibre>>) {
             let mut map = map.borrow_mut();
             map.renderer().render_once();
             if map.updated() {
-                // let image = map.renderer().get_texture();
+                let image = map.renderer().get_texture();
                 // let image = map.renderer().read_still_image();
-                // let size = image.size();
+                let size = image.size();
                 // let img = slint::SharedPixelBuffer::<slint::Rgba8Pixel>::clone_from_slice(
                 //     image.buffer(),
                 //     size.width(),
                 //     size.height(),
                 // );
-                // println!("New image: ({}, {})", size.width(), size.height());
-                // if let Ok(image) = image.try_into() {
-                //     ui_handle.upgrade().unwrap().global::<MapAdapter>().set_map_texture(image); // TODO: check if the image really changed, otherwise we don't need to clone!
-                // }
+                println!("New image: ({}, {})", size.width, size.height);
+                if let Ok(image) = image.try_into() {
+                    ui_handle.upgrade().unwrap().global::<MapAdapter>().set_map_texture(image); // TODO: check if the image really changed, otherwise we don't need to clone!
+                }
             }
         }
     });

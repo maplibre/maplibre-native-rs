@@ -254,12 +254,12 @@ impl ImageRenderer<Continuous> {
         let desc = wgpu::TextureDescriptor {
             /// Debug label of the texture. This will show up in graphics debuggers for easy identification.
             label: None,
-            size: t.getExtend3d().0,
+            size: t.getExtend3d().try_into().unwrap(),
             mip_level_count: t.getMipLevelCount(),
             sample_count: t.getSampleCount(),
-            dimension: t.getDimension().0,
-            format: t.getFormat().0,
-            usage: t.getUsage().0,
+            dimension: t.getDimension().try_into().unwrap(),
+            format: t.getFormat().try_into().unwrap(),
+            usage: t.getUsage().try_into().unwrap(),
             view_formats: &[],
         };
 

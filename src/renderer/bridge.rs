@@ -462,6 +462,229 @@ impl TryFrom<ffi::WGPUTextureFormat> for ::wgpu::TextureFormat {
     }
 }
 
+#[cfg(feature = "wgpu")]
+impl From<::wgpu::TextureDimension> for ffi::WGPUTextureDimension {
+    fn from(v: ::wgpu::TextureDimension) -> Self {
+        match v {
+            ::wgpu::TextureDimension::D1 => ffi::WGPUTextureDimension::WGPUTextureDimension_1D,
+            ::wgpu::TextureDimension::D2 => ffi::WGPUTextureDimension::WGPUTextureDimension_2D,
+            ::wgpu::TextureDimension::D3 => ffi::WGPUTextureDimension::WGPUTextureDimension_3D,
+        }
+    }
+}
+
+#[cfg(feature = "wgpu")]
+impl From<::wgpu::TextureUsages> for WGPUTextureUsage {
+    fn from(v: ::wgpu::TextureUsages) -> Self {
+        WGPUTextureUsage(v.bits() as u64)
+    }
+}
+
+#[cfg(feature = "wgpu")]
+impl From<::wgpu::Extent3d> for WGPUExtent3D {
+    fn from(v: ::wgpu::Extent3d) -> Self {
+        WGPUExtent3D {
+            width: v.width,
+            height: v.height,
+            depth_or_array_layers: v.depth_or_array_layers,
+        }
+    }
+}
+
+#[cfg(feature = "wgpu")]
+impl From<::wgpu::TextureAspect> for ffi::WGPUTextureAspect {
+    fn from(v: ::wgpu::TextureAspect) -> Self {
+        match v {
+            ::wgpu::TextureAspect::All => ffi::WGPUTextureAspect::WGPUTextureAspect_All,
+            ::wgpu::TextureAspect::StencilOnly => {
+                ffi::WGPUTextureAspect::WGPUTextureAspect_StencilOnly
+            }
+            ::wgpu::TextureAspect::DepthOnly => ffi::WGPUTextureAspect::WGPUTextureAspect_DepthOnly,
+            // Plane variants have no C WebGPU equivalent; fall back to All
+            _ => ffi::WGPUTextureAspect::WGPUTextureAspect_All,
+        }
+    }
+}
+
+#[cfg(feature = "wgpu")]
+impl From<::wgpu::TextureViewDimension> for ffi::WGPUTextureViewDimension {
+    fn from(v: ::wgpu::TextureViewDimension) -> Self {
+        use ffi::WGPUTextureViewDimension as C;
+        match v {
+            ::wgpu::TextureViewDimension::D1 => C::WGPUTextureViewDimension_1D,
+            ::wgpu::TextureViewDimension::D2 => C::WGPUTextureViewDimension_2D,
+            ::wgpu::TextureViewDimension::D2Array => C::WGPUTextureViewDimension_2DArray,
+            ::wgpu::TextureViewDimension::Cube => C::WGPUTextureViewDimension_Cube,
+            ::wgpu::TextureViewDimension::CubeArray => C::WGPUTextureViewDimension_CubeArray,
+            ::wgpu::TextureViewDimension::D3 => C::WGPUTextureViewDimension_3D,
+        }
+    }
+}
+
+#[cfg(feature = "wgpu")]
+impl TryFrom<::wgpu::TextureFormat> for ffi::WGPUTextureFormat {
+    type Error = ();
+    fn try_from(v: ::wgpu::TextureFormat) -> Result<Self, Self::Error> {
+        use ::wgpu::{AstcBlock, AstcChannel, TextureFormat as T};
+        use ffi::WGPUTextureFormat as C;
+        Ok(match v {
+            T::R8Unorm => C::WGPUTextureFormat_R8Unorm,
+            T::R8Snorm => C::WGPUTextureFormat_R8Snorm,
+            T::R8Uint => C::WGPUTextureFormat_R8Uint,
+            T::R8Sint => C::WGPUTextureFormat_R8Sint,
+            T::R16Uint => C::WGPUTextureFormat_R16Uint,
+            T::R16Sint => C::WGPUTextureFormat_R16Sint,
+            T::R16Float => C::WGPUTextureFormat_R16Float,
+            T::Rg8Unorm => C::WGPUTextureFormat_RG8Unorm,
+            T::Rg8Snorm => C::WGPUTextureFormat_RG8Snorm,
+            T::Rg8Uint => C::WGPUTextureFormat_RG8Uint,
+            T::Rg8Sint => C::WGPUTextureFormat_RG8Sint,
+            T::R32Float => C::WGPUTextureFormat_R32Float,
+            T::R32Uint => C::WGPUTextureFormat_R32Uint,
+            T::R32Sint => C::WGPUTextureFormat_R32Sint,
+            T::Rg16Uint => C::WGPUTextureFormat_RG16Uint,
+            T::Rg16Sint => C::WGPUTextureFormat_RG16Sint,
+            T::Rg16Float => C::WGPUTextureFormat_RG16Float,
+            T::Rgba8Unorm => C::WGPUTextureFormat_RGBA8Unorm,
+            T::Rgba8UnormSrgb => C::WGPUTextureFormat_RGBA8UnormSrgb,
+            T::Rgba8Snorm => C::WGPUTextureFormat_RGBA8Snorm,
+            T::Rgba8Uint => C::WGPUTextureFormat_RGBA8Uint,
+            T::Rgba8Sint => C::WGPUTextureFormat_RGBA8Sint,
+            T::Bgra8Unorm => C::WGPUTextureFormat_BGRA8Unorm,
+            T::Bgra8UnormSrgb => C::WGPUTextureFormat_BGRA8UnormSrgb,
+            T::Rgb10a2Uint => C::WGPUTextureFormat_RGB10A2Uint,
+            T::Rgb10a2Unorm => C::WGPUTextureFormat_RGB10A2Unorm,
+            T::Rg11b10Ufloat => C::WGPUTextureFormat_RG11B10Ufloat,
+            T::Rgb9e5Ufloat => C::WGPUTextureFormat_RGB9E5Ufloat,
+            T::Rg32Float => C::WGPUTextureFormat_RG32Float,
+            T::Rg32Uint => C::WGPUTextureFormat_RG32Uint,
+            T::Rg32Sint => C::WGPUTextureFormat_RG32Sint,
+            T::Rgba16Uint => C::WGPUTextureFormat_RGBA16Uint,
+            T::Rgba16Sint => C::WGPUTextureFormat_RGBA16Sint,
+            T::Rgba16Float => C::WGPUTextureFormat_RGBA16Float,
+            T::Rgba32Float => C::WGPUTextureFormat_RGBA32Float,
+            T::Rgba32Uint => C::WGPUTextureFormat_RGBA32Uint,
+            T::Rgba32Sint => C::WGPUTextureFormat_RGBA32Sint,
+            T::Stencil8 => C::WGPUTextureFormat_Stencil8,
+            T::Depth16Unorm => C::WGPUTextureFormat_Depth16Unorm,
+            T::Depth24Plus => C::WGPUTextureFormat_Depth24Plus,
+            T::Depth24PlusStencil8 => C::WGPUTextureFormat_Depth24PlusStencil8,
+            T::Depth32Float => C::WGPUTextureFormat_Depth32Float,
+            T::Depth32FloatStencil8 => C::WGPUTextureFormat_Depth32FloatStencil8,
+            T::Bc1RgbaUnorm => C::WGPUTextureFormat_BC1RGBAUnorm,
+            T::Bc1RgbaUnormSrgb => C::WGPUTextureFormat_BC1RGBAUnormSrgb,
+            T::Bc2RgbaUnorm => C::WGPUTextureFormat_BC2RGBAUnorm,
+            T::Bc2RgbaUnormSrgb => C::WGPUTextureFormat_BC2RGBAUnormSrgb,
+            T::Bc3RgbaUnorm => C::WGPUTextureFormat_BC3RGBAUnorm,
+            T::Bc3RgbaUnormSrgb => C::WGPUTextureFormat_BC3RGBAUnormSrgb,
+            T::Bc4RUnorm => C::WGPUTextureFormat_BC4RUnorm,
+            T::Bc4RSnorm => C::WGPUTextureFormat_BC4RSnorm,
+            T::Bc5RgUnorm => C::WGPUTextureFormat_BC5RGUnorm,
+            T::Bc5RgSnorm => C::WGPUTextureFormat_BC5RGSnorm,
+            T::Bc6hRgbUfloat => C::WGPUTextureFormat_BC6HRGBUfloat,
+            T::Bc6hRgbFloat => C::WGPUTextureFormat_BC6HRGBFloat,
+            T::Bc7RgbaUnorm => C::WGPUTextureFormat_BC7RGBAUnorm,
+            T::Bc7RgbaUnormSrgb => C::WGPUTextureFormat_BC7RGBAUnormSrgb,
+            T::Etc2Rgb8Unorm => C::WGPUTextureFormat_ETC2RGB8Unorm,
+            T::Etc2Rgb8UnormSrgb => C::WGPUTextureFormat_ETC2RGB8UnormSrgb,
+            T::Etc2Rgb8A1Unorm => C::WGPUTextureFormat_ETC2RGB8A1Unorm,
+            T::Etc2Rgb8A1UnormSrgb => C::WGPUTextureFormat_ETC2RGB8A1UnormSrgb,
+            T::Etc2Rgba8Unorm => C::WGPUTextureFormat_ETC2RGBA8Unorm,
+            T::Etc2Rgba8UnormSrgb => C::WGPUTextureFormat_ETC2RGBA8UnormSrgb,
+            T::EacR11Unorm => C::WGPUTextureFormat_EACR11Unorm,
+            T::EacR11Snorm => C::WGPUTextureFormat_EACR11Snorm,
+            T::EacRg11Unorm => C::WGPUTextureFormat_EACRG11Unorm,
+            T::EacRg11Snorm => C::WGPUTextureFormat_EACRG11Snorm,
+            T::Astc { block: AstcBlock::B4x4, channel: AstcChannel::Unorm } => {
+                C::WGPUTextureFormat_ASTC4x4Unorm
+            }
+            T::Astc { block: AstcBlock::B4x4, channel: AstcChannel::UnormSrgb } => {
+                C::WGPUTextureFormat_ASTC4x4UnormSrgb
+            }
+            T::Astc { block: AstcBlock::B5x4, channel: AstcChannel::Unorm } => {
+                C::WGPUTextureFormat_ASTC5x4Unorm
+            }
+            T::Astc { block: AstcBlock::B5x4, channel: AstcChannel::UnormSrgb } => {
+                C::WGPUTextureFormat_ASTC5x4UnormSrgb
+            }
+            T::Astc { block: AstcBlock::B5x5, channel: AstcChannel::Unorm } => {
+                C::WGPUTextureFormat_ASTC5x5Unorm
+            }
+            T::Astc { block: AstcBlock::B5x5, channel: AstcChannel::UnormSrgb } => {
+                C::WGPUTextureFormat_ASTC5x5UnormSrgb
+            }
+            T::Astc { block: AstcBlock::B6x5, channel: AstcChannel::Unorm } => {
+                C::WGPUTextureFormat_ASTC6x5Unorm
+            }
+            T::Astc { block: AstcBlock::B6x5, channel: AstcChannel::UnormSrgb } => {
+                C::WGPUTextureFormat_ASTC6x5UnormSrgb
+            }
+            T::Astc { block: AstcBlock::B6x6, channel: AstcChannel::Unorm } => {
+                C::WGPUTextureFormat_ASTC6x6Unorm
+            }
+            T::Astc { block: AstcBlock::B6x6, channel: AstcChannel::UnormSrgb } => {
+                C::WGPUTextureFormat_ASTC6x6UnormSrgb
+            }
+            T::Astc { block: AstcBlock::B8x5, channel: AstcChannel::Unorm } => {
+                C::WGPUTextureFormat_ASTC8x5Unorm
+            }
+            T::Astc { block: AstcBlock::B8x5, channel: AstcChannel::UnormSrgb } => {
+                C::WGPUTextureFormat_ASTC8x5UnormSrgb
+            }
+            T::Astc { block: AstcBlock::B8x6, channel: AstcChannel::Unorm } => {
+                C::WGPUTextureFormat_ASTC8x6Unorm
+            }
+            T::Astc { block: AstcBlock::B8x6, channel: AstcChannel::UnormSrgb } => {
+                C::WGPUTextureFormat_ASTC8x6UnormSrgb
+            }
+            T::Astc { block: AstcBlock::B8x8, channel: AstcChannel::Unorm } => {
+                C::WGPUTextureFormat_ASTC8x8Unorm
+            }
+            T::Astc { block: AstcBlock::B8x8, channel: AstcChannel::UnormSrgb } => {
+                C::WGPUTextureFormat_ASTC8x8UnormSrgb
+            }
+            T::Astc { block: AstcBlock::B10x5, channel: AstcChannel::Unorm } => {
+                C::WGPUTextureFormat_ASTC10x5Unorm
+            }
+            T::Astc { block: AstcBlock::B10x5, channel: AstcChannel::UnormSrgb } => {
+                C::WGPUTextureFormat_ASTC10x5UnormSrgb
+            }
+            T::Astc { block: AstcBlock::B10x6, channel: AstcChannel::Unorm } => {
+                C::WGPUTextureFormat_ASTC10x6Unorm
+            }
+            T::Astc { block: AstcBlock::B10x6, channel: AstcChannel::UnormSrgb } => {
+                C::WGPUTextureFormat_ASTC10x6UnormSrgb
+            }
+            T::Astc { block: AstcBlock::B10x8, channel: AstcChannel::Unorm } => {
+                C::WGPUTextureFormat_ASTC10x8Unorm
+            }
+            T::Astc { block: AstcBlock::B10x8, channel: AstcChannel::UnormSrgb } => {
+                C::WGPUTextureFormat_ASTC10x8UnormSrgb
+            }
+            T::Astc { block: AstcBlock::B10x10, channel: AstcChannel::Unorm } => {
+                C::WGPUTextureFormat_ASTC10x10Unorm
+            }
+            T::Astc { block: AstcBlock::B10x10, channel: AstcChannel::UnormSrgb } => {
+                C::WGPUTextureFormat_ASTC10x10UnormSrgb
+            }
+            T::Astc { block: AstcBlock::B12x10, channel: AstcChannel::Unorm } => {
+                C::WGPUTextureFormat_ASTC12x10Unorm
+            }
+            T::Astc { block: AstcBlock::B12x10, channel: AstcChannel::UnormSrgb } => {
+                C::WGPUTextureFormat_ASTC12x10UnormSrgb
+            }
+            T::Astc { block: AstcBlock::B12x12, channel: AstcChannel::Unorm } => {
+                C::WGPUTextureFormat_ASTC12x12Unorm
+            }
+            T::Astc { block: AstcBlock::B12x12, channel: AstcChannel::UnormSrgb } => {
+                C::WGPUTextureFormat_ASTC12x12UnormSrgb
+            }
+            // Formats with no WebGPU C equivalent (wgpu native extensions)
+            _ => return Err(()),
+        })
+    }
+}
+
 #[cxx::bridge()]
 /// Resource and configuration options for MapLibre.
 pub mod resource_options {
@@ -1127,10 +1350,19 @@ pub mod wgpu {
             desc: &wgpu::TextureViewDescriptor<'_>,
         ) -> wgpu::custom::DispatchTextureView {
             // TODO: get rid of unwraps!
-            let format = desc.format.unwrap_or(self.0.getFormat().0);
-            let dimension = TextureViewDimension(desc.dimension.unwrap()); // _or(self.0.getDimension().0);
-            let usage = TextureUsages(desc.usage.unwrap_or(self.0.getUsage().0));
-            let aspect = TextureAspect(desc.aspect);
+            let format = if let Some(format) = desc.format {
+                format.try_into().unwrap()
+            } else {
+                self.0.getFormat()
+            };
+            let dimension = desc.dimension.unwrap().try_into().unwrap(); // _or(self.0.getDimension().0);
+            let usage = if let Some(usage) = desc.usage {
+                usage.try_into().unwrap()
+            } else {
+                self.0.getUsage()
+            };
+
+            let aspect = desc.aspect.try_into().unwrap();
             let base_mip_level = desc.base_mip_level;
             let mip_level_count = desc.mip_level_count.unwrap();
             let base_array_layer = desc.base_array_layer;
