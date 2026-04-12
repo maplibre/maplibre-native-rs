@@ -3,6 +3,7 @@ use crate::renderer::callbacks::{
     void_callback, CameraDidChangeCallback, FailingLoadingMapCallback,
     FinishRenderingFrameCallback, VoidCallback,
 };
+use std::fmt::Display;
 use std::ops::Sub;
 
 // https://maplibre.org/maplibre-native/docs/book/design/ten-thousand-foot-view.html
@@ -294,11 +295,23 @@ impl std::fmt::Debug for tile_server_options::TileServerOptions {
     }
 }
 
+impl Display for map_observer::MapLoadError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = match *self {
+            Self::StyleParseError => "Failed parsing style",
+            Self::StyleLoadError => "Failed loading style",
+            Self::NotFoundError => "Style not found",
+            Self::UnknownError => "Unknown error",
+            _ => "Unrecognized error",
+        };
+        write!(f, "{}", s)
+    }
+}
+
 #[allow(clippy::borrow_as_ptr)]
 #[cxx::bridge(namespace = "mln::bridge")]
 /// Map observer callbacks and related types.
 pub mod map_observer {
-
     #[namespace = "mln::bridge"]
     #[repr(u32)]
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]

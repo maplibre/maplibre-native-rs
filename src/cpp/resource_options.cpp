@@ -1,5 +1,7 @@
 #include "rust/cxx.h"
 #include "mbgl/storage/resource_options.hpp"
+#include "util.h"
+#include <cassert>
 
 namespace mln::bridge::resource_options {
 
@@ -8,11 +10,11 @@ std::unique_ptr<mbgl::ResourceOptions> new_() {
 }
 
 void withAssetPath(mbgl::ResourceOptions &resource_options, rust::Slice<const uint8_t> path) {
-    resource_options.withAssetPath(std::string(reinterpret_cast<const char*>(path.data())));
+    resource_options.withAssetPath(rustSliceToString(path));
 }
 
 void withCachePath(mbgl::ResourceOptions &resource_options, rust::Slice<const uint8_t> path) {
-    resource_options.withCachePath(std::string(reinterpret_cast<const char*>(path.data())));
+    resource_options.withCachePath(rustSliceToString(path));
 }
 
 void withApiKey(mbgl::ResourceOptions &resource_options, rust::Str key) {
@@ -24,6 +26,10 @@ void withMaximumCacheSize(mbgl::ResourceOptions &resource_options, uint64_t max_
 }
 
 void withTileServerOptions(mbgl::ResourceOptions &resource_options, std::unique_ptr<mbgl::TileServerOptions> tile_server_options) {
+    assert(tile_server_options);
+    if (!tile_server_options) {
+        return;
+    }
     resource_options.withTileServerOptions(*tile_server_options);
 }
 

@@ -148,6 +148,7 @@ inline std::unique_ptr<MapRenderer> MapRenderer_new(
     auto logObserver = std::make_unique<mln::bridge::RustLogObserver>();
     mbgl::Log::setObserver(std::move(logObserver));
 
+    assert(resourceOptions);
     auto map = std::make_unique<mbgl::Map>(*frontend, *mapObserver, mapOptions, *resourceOptions);
 
     return std::make_unique<MapRenderer>(std::move(frontend), mapObserver, std::move(map));
