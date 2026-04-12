@@ -193,8 +193,8 @@ public:
 
     WGPUExtent3D getExtend3d() const {
         return WGPUExtent3D {
-            0, // TODO: where do I get this information?
-            0,// TODO: where do I get this information?
+            wgpuTextureGetWidth(mTexture),
+            wgpuTextureGetHeight(mTexture),
             wgpuTextureGetDepthOrArrayLayers(mTexture)
         };
     }
