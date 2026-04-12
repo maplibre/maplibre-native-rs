@@ -405,6 +405,66 @@ pub mod map_observer {
     }
 }
 
+pub(crate) struct Extent3d(pub(crate) wgpu::Extent3d);
+pub(crate) struct TextureDimension(pub(crate) wgpu::TextureDimension);
+pub(crate) struct TextureFormat(pub(crate) wgpu::TextureFormat);
+pub(crate) struct TextureUsages(pub(crate) wgpu::TextureUsages);
+pub struct TextureInterface(pub UniquePtr<ffi::Texture>);
+pub struct TextureViewInterface(pub UniquePtr<ffi::TextureView>);
+pub(crate) struct TextureAspect(pub(crate) wgpu::TextureAspect);
+pub(crate) struct TextureViewDimension(pub(crate) wgpu::TextureViewDimension);
+
+impl std::fmt::Debug for TextureInterface {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "TextureInterface")
+    }
+}
+
+impl wgpu::custom::TextureInterface for TextureInterface {
+    fn create_view(
+        &self,
+        desc: &wgpu::TextureViewDescriptor<'_>,
+    ) -> wgpu::custom::DispatchTextureView {
+        // TODO: get rid of unwraps!
+        let format = TextureFormat(desc.format.unwrap_or(self.0.getFormat().0));
+        let dimension = TextureViewDimension(desc.dimension.unwrap()); // _or(self.0.getDimension().0);
+        let usage = TextureUsages(desc.usage.unwrap_or(self.0.getUsage().0));
+        let aspect = TextureAspect(desc.aspect);
+        let base_mip_level = desc.base_mip_level;
+        let mip_level_count = desc.mip_level_count.unwrap();
+        let base_array_layer = desc.base_array_layer;
+        let array_layer_count = desc.array_layer_count.unwrap(); // _or(default)
+        wgpu::custom::DispatchTextureView::custom(TextureViewInterface(self.0.createView(
+            format,
+            dimension,
+            usage,
+            aspect,
+            base_mip_level,
+            mip_level_count,
+            base_array_layer,
+            array_layer_count,
+        )))
+    }
+
+    fn destroy(&self) {
+        self.0.destroy();
+    }
+}
+
+unsafe impl Send for TextureInterface {}
+unsafe impl Sync for TextureInterface {}
+
+impl std::fmt::Debug for TextureViewInterface {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "TextureViewInterface")
+    }
+}
+
+impl wgpu::custom::TextureViewInterface for TextureViewInterface {}
+
+unsafe impl Send for TextureViewInterface {}
+unsafe impl Sync for TextureViewInterface {}
+
 #[allow(clippy::borrow_as_ptr)]
 #[cxx::bridge(namespace = "mln::bridge")]
 /// Core FFI definitions and types for the MapLibre bridge.
