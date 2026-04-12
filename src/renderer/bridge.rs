@@ -201,6 +201,19 @@ impl std::fmt::Debug for layers::SymbolAnchorType {
     }
 }
 
+impl TryFrom<ffi::WGPUTextureDimension> for wgpu::TextureDimension {
+    type Error = ();
+    fn try_from(value: ffi::WGPUTextureDimension) -> Result<Self, Self::Error> {
+        match value {
+            ffi::WGPUTextureDimension::WGPUTextureDimension_Undefined => Err(()),
+            ffi::WGPUTextureDimension::WGPUTextureDimension_1D => Ok(wgpu::TextureDimension::D1),
+            ffi::WGPUTextureDimension::WGPUTextureDimension_2D => Ok(wgpu::TextureDimension::D2),
+            ffi::WGPUTextureDimension::WGPUTextureDimension_3D => Ok(wgpu::TextureDimension::D2),
+            _ => Err(()),
+        }
+    }
+}
+
 #[cxx::bridge()]
 /// Resource and configuration options for MapLibre.
 pub mod resource_options {
@@ -549,15 +562,26 @@ pub mod ffi {
         type SymbolLayer = super::layers::SymbolLayer;
     }
 
+    #[namespace = ""]
+    #[repr(u32)]
+    enum WGPUTextureDimension {
+        WGPUTextureDimension_Undefined,
+        WGPUTextureDimension_1D,
+        WGPUTextureDimension_2D,
+        WGPUTextureDimension_3D,
+    }
+
     #[cfg(feature = "wgpu")]
     #[namespace = ""]
     extern "C++" {
-        type WGPUTextureDimension = super::wgpu::TextureDimension;
-        type WGPUTextureFormat = super::wgpu::TextureFormat;
-        type WGPUTextureUsage = super::wgpu::TextureUsages;
-        type WGPUExtent3D = super::wgpu::Extent3d;
-        type WGPUTextureViewDimension = super::wgpu::TextureViewDimension;
-        type WGPUTextureAspect = super::wgpu::TextureAspect;
+        include!("webgpu/webgpu.h");
+
+        type WGPUTextureDimension;
+        type WGPUTextureFormat = wgpu::TextureFormat;
+        type WGPUTextureUsage = wgpu::TextureUsages;
+        type WGPUExtent3D = wgpu::Extent3d;
+        type WGPUTextureViewDimension = wgpu::TextureViewDimension;
+        type WGPUTextureAspect = wgpu::TextureAspect;
     }
 
     // Declarations for Rust with implementations in C++
@@ -705,99 +729,99 @@ unsafe impl cxx::ExternType for ScreenCoordinate {
     type Kind = cxx::kind::Trivial;
 }
 
-#[cfg(feature = "wgpu")]
-pub mod wgpu {
-    use cxx::UniquePtr;
+// #[cfg(feature = "wgpu")]
+// pub mod wgpu {
+//     use cxx::UniquePtr;
 
-    pub(crate) struct Extent3d(pub(crate) wgpu::Extent3d);
-    pub(crate) struct TextureDimension(pub(crate) wgpu::TextureDimension);
-    pub(crate) struct TextureFormat(pub(crate) wgpu::TextureFormat);
-    pub(crate) struct TextureUsages(pub(crate) wgpu::TextureUsages);
-    pub struct TextureInterface(pub UniquePtr<super::ffi::Texture>);
-    pub struct TextureViewInterface(pub UniquePtr<super::ffi::TextureView>);
-    pub(crate) struct TextureAspect(pub(crate) wgpu::TextureAspect);
-    pub(crate) struct TextureViewDimension(pub(crate) wgpu::TextureViewDimension);
+//     pub(crate) struct Extent3d(pub(crate) wgpu::Extent3d);
+//     pub(crate) struct TextureDimension(pub(crate) wgpu::TextureDimension);
+//     pub(crate) struct TextureFormat(pub(crate) wgpu::TextureFormat);
+//     pub(crate) struct TextureUsages(pub(crate) wgpu::TextureUsages);
+//     pub struct TextureInterface(pub UniquePtr<super::ffi::Texture>);
+//     pub struct TextureViewInterface(pub UniquePtr<super::ffi::TextureView>);
+//     pub(crate) struct TextureAspect(pub(crate) wgpu::TextureAspect);
+//     pub(crate) struct TextureViewDimension(pub(crate) wgpu::TextureViewDimension);
 
-    impl std::fmt::Debug for TextureInterface {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            write!(f, "TextureInterface")
-        }
-    }
+//     impl std::fmt::Debug for TextureInterface {
+//         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+//             write!(f, "TextureInterface")
+//         }
+//     }
 
-    impl wgpu::custom::TextureInterface for TextureInterface {
-        fn create_view(
-            &self,
-            desc: &wgpu::TextureViewDescriptor<'_>,
-        ) -> wgpu::custom::DispatchTextureView {
-            // TODO: get rid of unwraps!
-            let format = TextureFormat(desc.format.unwrap_or(self.0.getFormat().0));
-            let dimension = TextureViewDimension(desc.dimension.unwrap()); // _or(self.0.getDimension().0);
-            let usage = TextureUsages(desc.usage.unwrap_or(self.0.getUsage().0));
-            let aspect = TextureAspect(desc.aspect);
-            let base_mip_level = desc.base_mip_level;
-            let mip_level_count = desc.mip_level_count.unwrap();
-            let base_array_layer = desc.base_array_layer;
-            let array_layer_count = desc.array_layer_count.unwrap(); // _or(default)
-            wgpu::custom::DispatchTextureView::custom(TextureViewInterface(self.0.createView(
-                format,
-                dimension,
-                usage,
-                aspect,
-                base_mip_level,
-                mip_level_count,
-                base_array_layer,
-                array_layer_count,
-            )))
-        }
+//     impl wgpu::custom::TextureInterface for TextureInterface {
+//         fn create_view(
+//             &self,
+//             desc: &wgpu::TextureViewDescriptor<'_>,
+//         ) -> wgpu::custom::DispatchTextureView {
+//             // TODO: get rid of unwraps!
+//             let format = TextureFormat(desc.format.unwrap_or(self.0.getFormat().0));
+//             let dimension = TextureViewDimension(desc.dimension.unwrap()); // _or(self.0.getDimension().0);
+//             let usage = TextureUsages(desc.usage.unwrap_or(self.0.getUsage().0));
+//             let aspect = TextureAspect(desc.aspect);
+//             let base_mip_level = desc.base_mip_level;
+//             let mip_level_count = desc.mip_level_count.unwrap();
+//             let base_array_layer = desc.base_array_layer;
+//             let array_layer_count = desc.array_layer_count.unwrap(); // _or(default)
+//             wgpu::custom::DispatchTextureView::custom(TextureViewInterface(self.0.createView(
+//                 format,
+//                 dimension,
+//                 usage,
+//                 aspect,
+//                 base_mip_level,
+//                 mip_level_count,
+//                 base_array_layer,
+//                 array_layer_count,
+//             )))
+//         }
 
-        fn destroy(&self) {
-            self.0.destroy();
-        }
-    }
+//         fn destroy(&self) {
+//             self.0.destroy();
+//         }
+//     }
 
-    unsafe impl Send for TextureInterface {}
-    unsafe impl Sync for TextureInterface {}
+//     unsafe impl Send for TextureInterface {}
+//     unsafe impl Sync for TextureInterface {}
 
-    impl std::fmt::Debug for TextureViewInterface {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            write!(f, "TextureViewInterface")
-        }
-    }
+//     impl std::fmt::Debug for TextureViewInterface {
+//         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+//             write!(f, "TextureViewInterface")
+//         }
+//     }
 
-    impl wgpu::custom::TextureViewInterface for TextureViewInterface {}
+//     impl wgpu::custom::TextureViewInterface for TextureViewInterface {}
 
-    unsafe impl Send for TextureViewInterface {}
-    unsafe impl Sync for TextureViewInterface {}
-    unsafe impl cxx::ExternType for TextureDimension {
-        type Id = cxx::type_id!("WGPUTextureDimension");
-        type Kind = cxx::kind::Trivial;
-    }
+//     unsafe impl Send for TextureViewInterface {}
+//     unsafe impl Sync for TextureViewInterface {}
+//     // unsafe impl cxx::ExternType for TextureDimension {
+//     //     type Id = cxx::type_id!("WGPUTextureDimension");
+//     //     type Kind = cxx::kind::Trivial;
+//     // }
 
-    unsafe impl cxx::ExternType for TextureFormat {
-        type Id = cxx::type_id!("WGPUTextureFormat");
-        type Kind = cxx::kind::Trivial;
-    }
+//     unsafe impl cxx::ExternType for TextureFormat {
+//         type Id = cxx::type_id!("WGPUTextureFormat");
+//         type Kind = cxx::kind::Trivial;
+//     }
 
-    unsafe impl cxx::ExternType for TextureUsages {
-        type Id = cxx::type_id!("WGPUTextureUsage");
-        type Kind = cxx::kind::Trivial;
-    }
+//     unsafe impl cxx::ExternType for TextureUsages {
+//         type Id = cxx::type_id!("WGPUTextureUsage");
+//         type Kind = cxx::kind::Trivial;
+//     }
 
-    unsafe impl cxx::ExternType for Extent3d {
-        type Id = cxx::type_id!("WGPUExtent3D");
-        type Kind = cxx::kind::Trivial;
-    }
+//     unsafe impl cxx::ExternType for Extent3d {
+//         type Id = cxx::type_id!("WGPUExtent3D");
+//         type Kind = cxx::kind::Trivial;
+//     }
 
-    unsafe impl cxx::ExternType for TextureViewDimension {
-        type Id = cxx::type_id!("WGPUTextureViewDimension");
-        type Kind = cxx::kind::Trivial;
-    }
+//     unsafe impl cxx::ExternType for TextureViewDimension {
+//         type Id = cxx::type_id!("WGPUTextureViewDimension");
+//         type Kind = cxx::kind::Trivial;
+//     }
 
-    unsafe impl cxx::ExternType for TextureAspect {
-        type Id = cxx::type_id!("WGPUTextureAspect");
-        type Kind = cxx::kind::Trivial;
-    }
-}
+//     unsafe impl cxx::ExternType for TextureAspect {
+//         type Id = cxx::type_id!("WGPUTextureAspect");
+//         type Kind = cxx::kind::Trivial;
+//     }
+// }
 
 #[cfg(test)]
 mod test {
