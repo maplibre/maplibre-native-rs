@@ -10,7 +10,7 @@ pub use bridge::{
     ffi::{MapDebugOptions, MapMode},
     layers,
     map_observer::{MapLoadError, MapObserverCameraChangeMode},
-    Height, ScreenCoordinate, Size, Width, X, Y,
+    set_log_thread_enabled, Height, ScreenCoordinate, Size, Width, X, Y,
 };
 pub use builder::ImageRendererBuilder;
 pub use image_renderer::{Continuous, Image, ImageRenderer, RenderingError, Static, Tile};

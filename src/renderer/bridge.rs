@@ -12,7 +12,6 @@ use std::ops::Sub;
 ///
 /// By default, logs are generated asynchronously except for Error level messages.
 /// In crash scenarios, pending async log entries may be lost.
-#[allow(dead_code)]
 pub fn set_log_thread_enabled(enable: bool) {
     ffi::Log_useLogThread(enable);
 }
@@ -631,7 +630,6 @@ pub mod ffi {
         include!("rust_log_observer.h");
 
         /// Enables or disables logging from a separate thread.
-        #[allow(dead_code)]
         fn Log_useLogThread(enable: bool);
     }
 }
