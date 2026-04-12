@@ -16,14 +16,18 @@
 //!     - `cargo install armerge`
 //!     - `sudo apt install llvm` llvm-objcopy required
 
+use const_format::formatcp;
+use downloader::{Download, Downloader};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::{env, fs};
 
-use downloader::{Download, Downloader};
-
 // Used when building locally
-const MLN_COMMIT: &str = "0e297db5fe7aff90e63ea6e590df0d076b36741e";
+const MLN_COMMIT: &str = "6151b385a42fce4320c3f81db4ace0b1530a265d";
+/// Version expected in the Cargo.toml. So it will not be forgotten to update WGPU_NATIVE_VERSION
+const WGPU_RUST_VERSION: &str = "29.0.0";
+/// Manually specified, because it is not guaranteed to have always this convention
+const WGPU_NATIVE_VERSION: &str = formatcp!("v{WGPU_RUST_VERSION}.0"); // wgpu-native git tag
 
 // Files of the bridge
 const BRIDGE_FILES: &[&str] = &[
@@ -169,8 +173,13 @@ fn download_static(out_dir: &Path, revision: &str) -> (PathBuf, PathBuf) {
     (library_file, headers_file)
 }
 
+struct CargoTomlInformation {
+    mln_release: String,
+    wgpu_version: String,
+}
+
 /// Reads `[package.metadata.mln].release` from the crate's `Cargo.toml`.
-fn mln_release_from_manifest() -> String {
+fn determine_cargo_toml_information() -> CargoTomlInformation {
     let manifest_dir =
         PathBuf::from(env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR is not set"));
     let manifest_path = manifest_dir.join("Cargo.toml");
@@ -184,7 +193,7 @@ fn mln_release_from_manifest() -> String {
         panic!("Failed to parse manifest as TOML at {}: {err}", manifest_path.display())
     });
 
-    manifest
+    let mln_release = manifest
         .get("package")
         .and_then(|package| package.get("metadata"))
         .and_then(|metadata| metadata.get("mln"))
@@ -196,7 +205,17 @@ fn mln_release_from_manifest() -> String {
                 manifest_path.display()
             )
         })
-        .to_owned()
+        .to_owned();
+
+    let wgpu_version = manifest
+        .get("dependencies")
+        .and_then(|dependencies| dependencies.get("wgpu"))
+        .and_then(|wgpu| wgpu.get("version"))
+        .and_then(toml::Value::as_str)
+        .unwrap_or_else(|| panic!("Missing wgpu version in {}", manifest_path.display()))
+        .to_owned();
+
+    CargoTomlInformation { mln_release, wgpu_version }
 }
 
 /// Extracts the headers from the downloaded tarball
@@ -223,7 +242,7 @@ fn extract_headers(headers_from: &Path, headers_to: &Path) {
 fn resolve_mln_core(root: &Path) -> (PathBuf, Vec<PathBuf>) {
     let out_dir =
         PathBuf::from(env::var_os("OUT_DIR").expect("OUT_DIR is not set")).join("maplibre-native");
-    let mln_release = mln_release_from_manifest();
+    let mln_release = determine_cargo_toml_information().mln_release;
 
     println!("cargo:rerun-if-env-changed=MLN_CORE_LIBRARY_PATH");
     println!("cargo:rerun-if-env-changed=MLN_CORE_LIBRARY_HEADERS_PATH");
@@ -339,6 +358,8 @@ fn build_local(
     const TARGET_NAME: &str = "mbgl-core";
     let maplibre_native_dir = clone_dir.join(name);
 
+    assert_eq!(determine_cargo_toml_information().wgpu_version, WGPU_RUST_VERSION);
+
     // Some CI cache restores may leave an incomplete directory tree.
     // Require files that prove this is a usable maplibre-native checkout.
     let has_required_checkout_files = maplibre_native_dir.join("CMakeLists.txt").is_file()
@@ -386,7 +407,8 @@ fn build_local(
 
     let mut config = cmake::Config::new(maplibre_native_dir.clone());
     config.build_target(TARGET_NAME);
-    match GraphicsRenderingAPI::from_selected_features() {
+    let api = GraphicsRenderingAPI::from_selected_features();
+    match api {
         GraphicsRenderingAPI::Metal => {
             config.configure_arg("-DMLN_WITH_METAL=ON");
         }
@@ -397,6 +419,7 @@ fn build_local(
             config.configure_arg("-DMLN_WITH_VULKAN=ON");
         }
         GraphicsRenderingAPI::WGPU => {
+            config.configure_arg(format!("-DMLN_WGPU_NATIVE_VERSION={WGPU_NATIVE_VERSION}"));
             config.configure_arg("-DMLN_WITH_WEBGPU=ON");
             config.configure_arg("-DMLN_WEBGPU_IMPL_WGPU=ON");
         }
@@ -416,8 +439,11 @@ fn build_local(
     );
     // println!("cargo:warning=Building maplibre-native done.");
 
-    // maplibre-native include directories
-    let mut include_dirs: Vec<PathBuf> = vec![
+    // General include dirs relative to this projects dir or absolute paths
+    let mut include_dirs: Vec<PathBuf> = Vec::new();
+
+    // maplibre-native include directories relative to the maplibre-native repository
+    let mut maplibre_include_dirs = vec![
         "include",
         "platform/default/include",
         "vendor/maplibre-native-base/include",
@@ -426,10 +452,21 @@ fn build_local(
         "vendor/maplibre-native-base/deps/geojson.hpp/include",
         "vendor/metal-cpp",
         "vendor/expected-lite/include",
-    ]
-    .into_iter()
-    .map(|s| maplibre_native_dir.clone().join(s))
-    .collect();
+    ];
+    if matches!(api, GraphicsRenderingAPI::WGPU) {
+        maplibre_include_dirs.push("vendor/wgpu-native/ffi");
+        maplibre_include_dirs.push("vendor/wgpu-native/ffi/webgpu-headers");
+
+        include_dirs.push(dest.join("build").join("webgpu-cpp"));
+    }
+
+    include_dirs.append(
+        &mut maplibre_include_dirs
+            .into_iter()
+            .map(|path| maplibre_native_dir.clone().join(path))
+            .collect::<Vec<PathBuf>>(),
+    );
+
     // maplibre-rs include dirs
     for i in BRIDGE_INCLUDE_DIRS {
         include_dirs.push(Path::new(i).to_path_buf());
