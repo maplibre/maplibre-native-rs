@@ -246,25 +246,25 @@ impl ImageRenderer<Continuous> {
         ImagePtr::new(self.instance.pin_mut().readStillImage())
     }
 
-    // #[cfg(feature = "wgpu")]
-    // pub fn get_texture(&mut self) -> wgpu::Texture {
-    //     let t = self.instance.pin_mut().getTexture();
-    //     assert!(!t.is_null());
+    #[cfg(feature = "wgpu")]
+    pub fn get_texture(&mut self) -> wgpu::Texture {
+        let t = self.instance.pin_mut().getTexture();
+        assert!(!t.is_null());
 
-    //     let desc = wgpu::TextureDescriptor {
-    //         /// Debug label of the texture. This will show up in graphics debuggers for easy identification.
-    //         label: None,
-    //         size: t.getExtend3d().0,
-    //         mip_level_count: t.getMipLevelCount(),
-    //         sample_count: t.getSampleCount(),
-    //         dimension: t.getDimension().0,
-    //         format: t.getFormat().0,
-    //         usage: t.getUsage().0,
-    //         view_formats: &[],
-    //     };
+        let desc = wgpu::TextureDescriptor {
+            /// Debug label of the texture. This will show up in graphics debuggers for easy identification.
+            label: None,
+            size: t.getExtend3d().0,
+            mip_level_count: t.getMipLevelCount(),
+            sample_count: t.getSampleCount(),
+            dimension: t.getDimension().0,
+            format: t.getFormat().0,
+            usage: t.getUsage().0,
+            view_formats: &[],
+        };
 
-    //     wgpu::Texture::from_custom(TextureInterface(t), &desc)
-    // }
+        wgpu::Texture::from_custom(TextureInterface(t), &desc)
+    }
 }
 
 #[allow(clippy::cast_precision_loss)]
