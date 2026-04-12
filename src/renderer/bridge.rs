@@ -608,6 +608,16 @@ pub mod ffi {
         type SymbolLayer = super::layers::SymbolLayer;
     }
 
+    #[namespace = ""]
+    extern "C++" {
+        type WGPUTextureDimension = super::TextureDimension;
+        type WGPUTextureFormat = super::TextureFormat;
+        type WGPUTextureUsage = super::TextureUsages;
+        type WGPUExtent3D = super::Extent3d;
+        type WGPUTextureViewDimension = super::TextureViewDimension;
+        type WGPUTextureAspect = super::TextureAspect;
+    }
+
     // Declarations for Rust with implementations in C++
     unsafe extern "C++" {
         include!("map_renderer.h");
@@ -619,6 +629,8 @@ pub mod ffi {
         type MapObserver; // Created custom map observer
         /// Map renderer for rendering map content.
         type MapRenderer;
+        type Texture;
+        type TextureView;
         /// Creates a new map renderer instance.
         #[allow(clippy::too_many_arguments)]
         fn MapRenderer_new(
@@ -678,6 +690,27 @@ pub mod ffi {
         );
         /// Adds a symbol layer to the style.
         fn style_add_symbol_layer(self: Pin<&mut MapRenderer>, layer: UniquePtr<CxxSymbolLayer>);
+
+        // Texture
+        fn getTexture(self: Pin<&mut MapRenderer>) -> UniquePtr<Texture>;
+        fn createView(
+            self: &Texture,
+            format: WGPUTextureFormat,
+            dimension: WGPUTextureViewDimension,
+            usage: WGPUTextureUsage,
+            aspect: WGPUTextureAspect,
+            base_mip_level: u32,
+            mip_level_count: u32,
+            base_array_layer: u32,
+            array_layer_count: u32,
+        ) -> UniquePtr<TextureView>;
+        fn destroy(self: &Texture);
+        fn getMipLevelCount(self: &Texture) -> u32;
+        fn getSampleCount(self: &Texture) -> u32;
+        fn getDimension(self: &Texture) -> WGPUTextureDimension;
+        fn getFormat(self: &Texture) -> WGPUTextureFormat;
+        fn getUsage(self: &Texture) -> WGPUTextureUsage;
+        fn getExtend3d(self: &Texture) -> WGPUExtent3D;
     }
 
     // Declarations for C++ with implementations in Rust
@@ -719,6 +752,36 @@ unsafe impl cxx::ExternType for Size {
 
 unsafe impl cxx::ExternType for ScreenCoordinate {
     type Id = cxx::type_id!("mbgl::ScreenCoordinate");
+    type Kind = cxx::kind::Trivial;
+}
+
+unsafe impl cxx::ExternType for TextureDimension {
+    type Id = cxx::type_id!("WGPUTextureDimension");
+    type Kind = cxx::kind::Trivial;
+}
+
+unsafe impl cxx::ExternType for TextureFormat {
+    type Id = cxx::type_id!("WGPUTextureFormat");
+    type Kind = cxx::kind::Trivial;
+}
+
+unsafe impl cxx::ExternType for TextureUsages {
+    type Id = cxx::type_id!("WGPUTextureUsage");
+    type Kind = cxx::kind::Trivial;
+}
+
+unsafe impl cxx::ExternType for Extent3d {
+    type Id = cxx::type_id!("WGPUExtent3D");
+    type Kind = cxx::kind::Trivial;
+}
+
+unsafe impl cxx::ExternType for TextureViewDimension {
+    type Id = cxx::type_id!("WGPUTextureViewDimension");
+    type Kind = cxx::kind::Trivial;
+}
+
+unsafe impl cxx::ExternType for TextureAspect {
+    type Id = cxx::type_id!("WGPUTextureAspect");
     type Kind = cxx::kind::Trivial;
 }
 
