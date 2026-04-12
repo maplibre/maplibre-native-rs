@@ -2,6 +2,7 @@
 #include "mbgl/storage/resource_options.hpp"
 #include "util.h"
 #include <cassert>
+#include <memory>
 
 namespace mln::bridge::resource_options {
 
@@ -10,11 +11,11 @@ std::unique_ptr<mbgl::ResourceOptions> new_() {
 }
 
 void withAssetPath(mbgl::ResourceOptions &resource_options, rust::Slice<const uint8_t> path) {
-    resource_options.withAssetPath(rustSliceToString(path));
+    resource_options.withAssetPath(::mln::bridge::rustSliceToString(path));
 }
 
 void withCachePath(mbgl::ResourceOptions &resource_options, rust::Slice<const uint8_t> path) {
-    resource_options.withCachePath(rustSliceToString(path));
+    resource_options.withCachePath(::mln::bridge::rustSliceToString(path));
 }
 
 void withApiKey(mbgl::ResourceOptions &resource_options, rust::Str key) {

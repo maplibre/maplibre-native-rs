@@ -13,7 +13,9 @@ pub struct TileServerOptions {
 impl Default for TileServerOptions {
     /// Create new tile server options object
     fn default() -> Self {
-        Self { ptr: tile_server_options::new_tile_server_options() }
+        let ptr = tile_server_options::new_tile_server_options();
+        assert!(!ptr.is_null());
+        Self { ptr }
     }
 }
 

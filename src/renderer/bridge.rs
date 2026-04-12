@@ -340,7 +340,7 @@ pub mod map_observer {
 
     #[namespace = "mbgl"]
     extern "C++" {
-        include!("mbgl/map/mode.hpp");
+        include!("mbgl/map/map_observer.hpp");
         type MapLoadError;
     }
 
@@ -517,6 +517,8 @@ pub mod ffi {
 
     #[namespace = "mbgl"]
     extern "C++" {
+        include!("mbgl/map/mode.hpp");
+
         type MapMode;
         type MapDebugOptions;
         // The name must be unique but for some reason this is required
