@@ -29,6 +29,7 @@ const MLN_COMMIT: &str = "35cf39b72f45cfea55a34ffe7358ade5c950a3c5";
 const BRIDGE_FILES: &[&str] = &[
     "src/renderer/bridge.rs",
     "src/cpp/bridge.cpp",
+    "src/cpp/util.cpp",
     "src/cpp/resource_options.h",
     "src/cpp/resource_options.cpp",
     "src/cpp/tile_server_options.h",
