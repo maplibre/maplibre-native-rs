@@ -110,7 +110,7 @@ impl<S> ImageRenderer<S> {
             opts.width.get(),
             opts.height.get(),
             opts.pixel_ratio,
-            resource_options.into_ptr(),
+            resource_options.as_ref(),
         );
 
         Self { instance: map, style_specified: false, _marker: PhantomData }

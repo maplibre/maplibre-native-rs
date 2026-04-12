@@ -15,6 +15,6 @@ void withAssetPath(mbgl::ResourceOptions &resource_options, rust::Slice<const ui
 void withCachePath(mbgl::ResourceOptions &resource_options, rust::Slice<const uint8_t> path);
 void withApiKey(mbgl::ResourceOptions &resource_options, rust::Str key);
 void withMaximumCacheSize(mbgl::ResourceOptions &resource_options, uint64_t max_cache_size);
-void withTileServerOptions(mbgl::ResourceOptions &resource_options, std::unique_ptr<mbgl::TileServerOptions> tile_server_options);
+void withTileServerOptions(mbgl::ResourceOptions &resource_options, const mbgl::TileServerOptions& tile_server_options);
 
 }

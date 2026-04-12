@@ -14,7 +14,7 @@ impl Default for TileServerOptions {
     /// Create new tile server options object
     fn default() -> Self {
         let ptr = tile_server_options::new_tile_server_options();
-        assert!(!ptr.is_null());
+        assert!(!ptr.is_null(), "nullptr to TileServerOptions received");
         Self { ptr }
     }
 }
@@ -131,9 +131,9 @@ impl TileServerOptions {
         self
     }
 
-    /// Return internal pointer by consuming this object
+    /// Get nonmutable reference to the object
     #[must_use]
-    pub(crate) fn into_ptr(self) -> UniquePtr<tile_server_options::TileServerOptions> {
-        self.ptr
+    pub(crate) fn as_ref<'a>(&'a self) -> &'a tile_server_options::TileServerOptions {
+        self.ptr.as_ref().unwrap()
     }
 }

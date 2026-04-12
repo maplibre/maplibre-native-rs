@@ -58,13 +58,13 @@ impl ResourceOptions {
     /// Set tile server options
     #[must_use]
     pub fn with_tile_server_options(mut self, tile_server_options: TileServerOptions) -> Self {
-        resource_options::withTileServerOptions(self.ptr.pin_mut(), tile_server_options.into_ptr());
+        resource_options::withTileServerOptions(self.ptr.pin_mut(), tile_server_options.as_ref());
         self
     }
 
-    /// Get internal pointer by consuming this object
+    /// Get nonmutable reference to the object
     #[must_use]
-    pub(crate) fn into_ptr(self) -> UniquePtr<resource_options::ResourceOptions> {
-        self.ptr
+    pub(crate) fn as_ref<'a>(&'a self) -> &'a resource_options::ResourceOptions {
+        self.ptr.as_ref().unwrap()
     }
 }

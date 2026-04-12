@@ -230,7 +230,7 @@ pub mod resource_options {
         fn withMaximumCacheSize(obj: Pin<&mut ResourceOptions>, max_cache_size: u64);
         fn withTileServerOptions(
             obj: Pin<&mut ResourceOptions>,
-            tile_server_options: UniquePtr<CxxTileServerOptions>,
+            tile_server_options: &CxxTileServerOptions,
         );
     }
 }
@@ -567,7 +567,7 @@ pub mod ffi {
             width: u32,
             height: u32,
             pixelRatio: f32,
-            resource_options: UniquePtr<CxxResourceOptions>,
+            resource_options: &CxxResourceOptions,
         ) -> UniquePtr<MapRenderer>;
         /// Reads the current still image from the renderer.
         fn readStillImage(self: Pin<&mut MapRenderer>) -> UniquePtr<BridgeImage>;

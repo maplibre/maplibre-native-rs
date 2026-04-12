@@ -26,12 +26,8 @@ void withMaximumCacheSize(mbgl::ResourceOptions &resource_options, uint64_t max_
     resource_options.withMaximumCacheSize(max_cache_size);
 }
 
-void withTileServerOptions(mbgl::ResourceOptions &resource_options, std::unique_ptr<mbgl::TileServerOptions> tile_server_options) {
-    assert(tile_server_options);
-    if (!tile_server_options) {
-        return;
-    }
-    resource_options.withTileServerOptions(*tile_server_options);
+void withTileServerOptions(mbgl::ResourceOptions &resource_options, const mbgl::TileServerOptions& tile_server_options) {
+    resource_options.withTileServerOptions(tile_server_options);
 }
 
 }

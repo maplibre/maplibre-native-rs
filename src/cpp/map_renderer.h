@@ -135,7 +135,7 @@ inline std::unique_ptr<MapRenderer> MapRenderer_new(
             uint32_t width,
             uint32_t height,
             float pixelRatio,
-            std::unique_ptr<mbgl::ResourceOptions> resourceOptions
+            const mbgl::ResourceOptions& resourceOptions
 ) {
     mbgl::Size size = {width, height};
     auto mapObserver = std::make_shared<MapObserver>();
@@ -147,9 +147,7 @@ inline std::unique_ptr<MapRenderer> MapRenderer_new(
     // Set up logging observer for Rust bridge
     auto logObserver = std::make_unique<mln::bridge::RustLogObserver>();
     mbgl::Log::setObserver(std::move(logObserver));
-
-    assert(resourceOptions);
-    auto map = std::make_unique<mbgl::Map>(*frontend, *mapObserver, mapOptions, *resourceOptions);
+    auto map = std::make_unique<mbgl::Map>(*frontend, *mapObserver, mapOptions, resourceOptions);
 
     return std::make_unique<MapRenderer>(std::move(frontend), mapObserver, std::move(map));
 }
