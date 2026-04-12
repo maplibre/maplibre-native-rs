@@ -18,14 +18,17 @@ use std::path::Path;
 
 pub fn init(ui: &MainWindow, map: &Rc<RefCell<MapLibre>>) {
     loop {
-        let map = map.borrow_mut();
-        map.renderer().render_once();
-        if map.style_loaded() {
-            drop(map);
+        let mut borrow = map.borrow_mut();
+        borrow.renderer().render_once();
+
+        if let Some(error) = borrow.style_loading_error() {
+            panic!("Failed to load map: {}", error);
+        }
+
+        if borrow.style_loaded() {
+            drop(borrow);
             style(map);
             break;
-        } else if let Some(error) = map.style_loading_error() {
-            panic!("Failed to load map: {}", error);
         }
     }
 

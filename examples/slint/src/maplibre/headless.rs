@@ -30,12 +30,12 @@ impl MapLibre {
         Self { renderer, flags: Rc::default(), last_pos: ScreenCoordinate::default() }
     }
 
-    pub fn style_loaded(&mut self) -> bool {
+    pub fn style_loaded(&self) -> bool {
         self.flags.borrow().style_loaded
     }
 
-    pub fn style_loading_error(&mut self) -> Option<MapLoadError> {
-        self.flags.borrow().failed_loading_style
+    pub fn style_loading_error(&self) -> Option<MapLoadError> {
+        self.flags.borrow().loading_style_error
     }
 
     pub fn updated(&mut self) -> bool {
