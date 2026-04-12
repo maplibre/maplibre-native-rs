@@ -59,11 +59,7 @@ pub fn init(ui: &MainWindow, map: &Rc<RefCell<MapLibre>>) {
                 // );
                 // println!("New image: ({}, {})", size.width(), size.height());
                 if let Ok(image) = image.try_into() {
-                    ui_handle
-                        .upgrade()
-                        .unwrap()
-                        .global::<MapAdapter>()
-                        .set_map_texture(image); // TODO: check if the image really changed, otherwise we don't need to clone!
+                    ui_handle.upgrade().unwrap().global::<MapAdapter>().set_map_texture(image); // TODO: check if the image really changed, otherwise we don't need to clone!
                 }
             }
         }
