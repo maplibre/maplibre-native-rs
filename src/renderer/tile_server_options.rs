@@ -133,7 +133,7 @@ impl TileServerOptions {
 
     /// Get nonmutable reference to the object
     #[must_use]
-    pub(crate) fn as_ref<'a>(&'a self) -> &'a tile_server_options::TileServerOptions {
+    pub(crate) fn as_ref(&self) -> &tile_server_options::TileServerOptions {
         self.ptr.as_ref().unwrap()
     }
 }

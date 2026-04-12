@@ -3,8 +3,8 @@
 use crate::renderer::bridge::ffi::Size;
 use crate::ImageRenderer;
 use image::DynamicImage;
-use std::fmt;
-
+mod symbol_layer;
+pub use symbol_layer::SymbolLayer;
 mod geojson_source;
 pub use geojson_source::GeoJsonSource;
 pub use geojson_source::Latitude;
@@ -59,35 +59,18 @@ impl StyleImageRef for ImageId {
 }
 
 /// A style source for rendering data layers.
+#[derive(Debug)]
 pub enum StyleSource {
     /// A `GeoJSON` source.
     GeoJson(GeoJsonSource),
 }
 
-impl fmt::Debug for StyleSource {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::GeoJson(src) => f.debug_tuple("GeoJson").field(src).finish(),
-        }
-    }
-}
-
 /// A style layer for rendering.
+#[derive(Debug)]
 pub enum StyleLayer {
     /// A symbol layer.
     Symbol(SymbolLayer),
 }
-
-impl fmt::Debug for StyleLayer {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Symbol(layer) => f.debug_tuple("Symbol").field(layer).finish(),
-        }
-    }
-}
-
-mod symbol_layer;
-pub use symbol_layer::SymbolLayer;
 
 /// The style of the map
 #[derive(Debug)]

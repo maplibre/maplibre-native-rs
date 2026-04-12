@@ -304,7 +304,7 @@ impl Display for map_observer::MapLoadError {
             Self::UnknownError => "Unknown error",
             _ => "Unrecognized error",
         };
-        write!(f, "{}", s)
+        write!(f, "{s}")
     }
 }
 

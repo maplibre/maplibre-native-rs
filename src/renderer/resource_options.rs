@@ -57,14 +57,14 @@ impl ResourceOptions {
 
     /// Set tile server options
     #[must_use]
-    pub fn with_tile_server_options(mut self, tile_server_options: TileServerOptions) -> Self {
+    pub fn with_tile_server_options(mut self, tile_server_options: &TileServerOptions) -> Self {
         resource_options::withTileServerOptions(self.ptr.pin_mut(), tile_server_options.as_ref());
         self
     }
 
     /// Get nonmutable reference to the object
     #[must_use]
-    pub(crate) fn as_ref<'a>(&'a self) -> &'a resource_options::ResourceOptions {
+    pub(crate) fn as_ref(&self) -> &resource_options::ResourceOptions {
         self.ptr.as_ref().unwrap()
     }
 }
