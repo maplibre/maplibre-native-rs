@@ -247,9 +247,11 @@ impl ImageRenderer<Continuous> {
     }
 
     #[cfg(feature = "wgpu")]
-    pub fn get_texture(&mut self) -> wgpu::Texture {
+    pub fn get_texture(&mut self) -> Option<wgpu::Texture> {
         let t = self.instance.pin_mut().getTexture();
-        assert!(!t.is_null());
+        if t.is_null() {
+            return None;
+        }
 
         let desc = wgpu::TextureDescriptor {
             /// Debug label of the texture. This will show up in graphics debuggers for easy identification.
@@ -263,7 +265,7 @@ impl ImageRenderer<Continuous> {
             view_formats: &[],
         };
 
-        wgpu::Texture::from_custom(TextureInterface(t), &desc)
+        Some(wgpu::Texture::from_custom(TextureInterface(t), &desc))
     }
 }
 
