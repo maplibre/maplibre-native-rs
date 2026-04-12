@@ -3,7 +3,7 @@ use crate::renderer::callbacks::{
     void_callback, CameraDidChangeCallback, FailingLoadingMapCallback,
     FinishRenderingFrameCallback, VoidCallback,
 };
-use cxx::UniquePtr;
+use std::fmt::Display;
 use std::ops::Sub;
 
 // https://maplibre.org/maplibre-native/docs/book/design/ten-thousand-foot-view.html
@@ -65,10 +65,7 @@ impl ScreenCoordinate {
 impl Sub for ScreenCoordinate {
     type Output = Self;
     fn sub(self, rhs: Self) -> Self::Output {
-        Self {
-            x: self.x - rhs.x,
-            y: self.y - rhs.y,
-        }
+        Self { x: self.x - rhs.x, y: self.y - rhs.y }
     }
 }
 
@@ -85,10 +82,7 @@ impl Size {
     #[must_use]
     #[allow(clippy::needless_pass_by_value)]
     pub fn new(width: Width, height: Height) -> Self {
-        Self {
-            width: width.0,
-            heigth: height.0,
-        }
+        Self { width: width.0, heigth: height.0 }
     }
 
     /// get width
@@ -104,68 +98,316 @@ impl Size {
     }
 }
 
-pub(crate) struct Extent3d(pub(crate) wgpu::Extent3d);
-pub(crate) struct TextureDimension(pub(crate) wgpu::TextureDimension);
-pub(crate) struct TextureFormat(pub(crate) wgpu::TextureFormat);
-pub(crate) struct TextureUsages(pub(crate) wgpu::TextureUsages);
-pub struct TextureInterface(pub UniquePtr<ffi::Texture>);
-pub struct TextureViewInterface(pub UniquePtr<ffi::TextureView>);
-pub(crate) struct TextureAspect(pub(crate) wgpu::TextureAspect);
-pub(crate) struct TextureViewDimension(pub(crate) wgpu::TextureViewDimension);
+#[cxx::bridge()]
+/// FFI bindings for map source operations.
+///
+/// This module provides C++/Rust interoperability for various source types.
+/// Currently supports GeoJSON sources, with extensibility for additional source types.
+pub mod sources {
+    #[namespace = "mbgl::style"]
+    extern "C++" {
+        include!("mbgl/style/sources/geojson_source.hpp");
+        // Opaque types
+        /// A GeoJSON source for MapLibre rendering.
+        type GeoJSONSource;
+    }
 
-impl std::fmt::Debug for TextureInterface {
+    #[namespace = "mln::bridge::style::sources::geojson"]
+    unsafe extern "C++" {
+        include!("sources/sources.h");
+
+        /// Creates a new GeoJSON source with the given ID.
+        fn create(id: &str) -> UniquePtr<GeoJSONSource>;
+        /// Sets a point for the GeoJSON source.
+        fn setPoint(source: &UniquePtr<GeoJSONSource>, latitude: f64, longitude: f64);
+    }
+}
+
+impl std::fmt::Debug for sources::GeoJSONSource {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "TextureInterface")
+        f.debug_struct("GeoJSONSource").finish()
     }
 }
 
-impl wgpu::custom::TextureInterface for TextureInterface {
-    fn create_view(
-        &self,
-        desc: &wgpu::TextureViewDescriptor<'_>,
-    ) -> wgpu::custom::DispatchTextureView {
-        // TODO: get rid of unwraps!
-        let format = TextureFormat(desc.format.unwrap_or(self.0.getFormat().0));
-        let dimension = TextureViewDimension(desc.dimension.unwrap()); // _or(self.0.getDimension().0);
-        let usage = TextureUsages(desc.usage.unwrap_or(self.0.getUsage().0));
-        let aspect = TextureAspect(desc.aspect);
-        let base_mip_level = desc.base_mip_level;
-        let mip_level_count = desc.mip_level_count.unwrap();
-        let base_array_layer = desc.base_array_layer;
-        let array_layer_count = desc.array_layer_count.unwrap(); // _or(default)
-        wgpu::custom::DispatchTextureView::custom(TextureViewInterface(self.0.createView(
-            format,
-            dimension,
-            usage,
-            aspect,
-            base_mip_level,
-            mip_level_count,
-            base_array_layer,
-            array_layer_count,
-        )))
+#[cxx::bridge()]
+/// FFI bindings for map layer operations.
+///
+/// This module provides C++/Rust interoperability for various layer types.
+/// Currently supports symbol layers, with extensibility for additional layer types like fill, line, and background layers.
+pub mod layers {
+    // Must have the same namespace than on the C++ side
+    #[namespace = "mbgl::style"]
+    /// Symbol anchor position type.
+    pub enum SymbolAnchorType {
+        /// Center anchor point.
+        Center,
+        /// Left anchor point.
+        Left,
+        /// Right anchor point.
+        Right,
+        /// Top anchor point.
+        Top,
+        /// Bottom anchor point.
+        Bottom,
+        /// Top-left anchor point.
+        TopLeft,
+        /// Top-right anchor point.
+        TopRight,
+        /// Bottom-left anchor point.
+        BottomLeft,
+        /// Bottom-right anchor point.
+        BottomRight,
     }
 
-    fn destroy(&self) {
-        self.0.destroy();
+    #[namespace = "mbgl::style"]
+    extern "C++" {
+        include!("mbgl/style/layers/symbol_layer.hpp");
+        include!("mbgl/style/types.hpp");
+        // Opaque types
+        /// A symbol layer for rendering labels and icons on the map.
+        type SymbolLayer;
+
+        /// Symbol anchor position type.
+        type SymbolAnchorType;
+    }
+
+    #[namespace = "mln::bridge::style::layers"]
+    unsafe extern "C++" {
+        include!("layers/layers.h");
+
+        /// Creates a new symbol layer.
+        #[must_use]
+        pub(crate) fn create_symbol_layer(
+            layer_id: &str,
+            source_id: &str,
+        ) -> UniquePtr<SymbolLayer>;
+        /// Sets the icon image for a layer by image ID.
+        fn setIconImage(layer: &UniquePtr<SymbolLayer>, image_id: &str);
+        /// Sets the anchor point for layer icons.
+        fn setIconAnchor(layer: &UniquePtr<SymbolLayer>, anchor: SymbolAnchorType);
     }
 }
 
-unsafe impl Send for TextureInterface {}
-unsafe impl Sync for TextureInterface {}
-
-impl std::fmt::Debug for TextureViewInterface {
+impl std::fmt::Debug for layers::SymbolLayer {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "TextureViewInterface")
+        f.debug_struct("SymbolLayer").finish()
     }
 }
 
-impl wgpu::custom::TextureViewInterface for TextureViewInterface {}
+impl std::fmt::Debug for layers::SymbolAnchorType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SymbolAnchorType").finish()
+    }
+}
 
-unsafe impl Send for TextureViewInterface {}
-unsafe impl Sync for TextureViewInterface {}
+#[cxx::bridge()]
+/// Resource and configuration options for MapLibre.
+pub mod resource_options {
+
+    #[namespace = "mbgl"]
+    extern "C++" {
+        // Opaque types
+        /// Resource configuration options.
+        type ResourceOptions;
+
+        // The name must be unique but for some reason this is required
+        #[rust_name = "CxxTileServerOptions"]
+        type TileServerOptions = super::tile_server_options::TileServerOptions;
+    }
+
+    #[namespace = "mln::bridge::resource_options"]
+    unsafe extern "C++" {
+        include!("resource_options.h");
+
+        #[rust_name = "new"]
+        fn new_() -> UniquePtr<ResourceOptions>;
+
+        fn withApiKey(obj: Pin<&mut ResourceOptions>, key: &str);
+        fn withAssetPath(obj: Pin<&mut ResourceOptions>, path: &[u8]);
+        fn withCachePath(obj: Pin<&mut ResourceOptions>, path: &[u8]);
+
+        fn withMaximumCacheSize(obj: Pin<&mut ResourceOptions>, max_cache_size: u64);
+        fn withTileServerOptions(
+            obj: Pin<&mut ResourceOptions>,
+            tile_server_options: &CxxTileServerOptions,
+        );
+    }
+}
+
+impl std::fmt::Debug for resource_options::ResourceOptions {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ResourceOptions").finish()
+    }
+}
+
+#[cxx::bridge()]
+/// Tile server configuration options.
+pub mod tile_server_options {
+    #[namespace = "mbgl"]
+    extern "C++" {
+        // Opaque types
+        /// Tile server configuration.
+        type TileServerOptions;
+    }
+
+    #[namespace = "mln::bridge::tile_server_options"]
+    unsafe extern "C++" {
+        include!("tile_server_options.h");
+
+        #[rust_name = "new_tile_server_options"]
+        fn new_() -> UniquePtr<TileServerOptions>;
+
+        fn withBaseUrl(obj: Pin<&mut TileServerOptions>, path: &[u8]);
+        fn withUriSchemeAlias(obj: Pin<&mut TileServerOptions>, path: &[u8]);
+        fn withSourceTemplate(
+            obj: Pin<&mut TileServerOptions>,
+            styleTemplate: &[u8],
+            domainName: &[u8],
+            versionPrefix: &[u8],
+        );
+        fn withSpritesTemplate(
+            obj: Pin<&mut TileServerOptions>,
+            spritesTemplate: &[u8],
+            domainName: &[u8],
+            versionPrefix: &[u8],
+        );
+        fn withGlyphsTemplate(
+            obj: Pin<&mut TileServerOptions>,
+            glyphsTemplate: &[u8],
+            domainName: &[u8],
+            versionPrefix: &[u8],
+        );
+        fn withTileTemplate(
+            obj: Pin<&mut TileServerOptions>,
+            tileTemplate: &[u8],
+            domainName: &[u8],
+            versionPrefix: &[u8],
+        );
+        fn withApiKeyParameterName(obj: Pin<&mut TileServerOptions>, apiKeyParameterName: &[u8]);
+        fn setRequiresApiKey(obj: Pin<&mut TileServerOptions>, apiKeyRequired: bool);
+    }
+}
+
+impl std::fmt::Debug for tile_server_options::TileServerOptions {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TileServerOptions").finish()
+    }
+}
+
+impl Display for map_observer::MapLoadError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = match *self {
+            Self::StyleParseError => "Failed parsing style",
+            Self::StyleLoadError => "Failed loading style",
+            Self::NotFoundError => "Style not found",
+            Self::UnknownError => "Unknown error",
+            _ => "Unrecognized error",
+        };
+        write!(f, "{s}")
+    }
+}
 
 #[allow(clippy::borrow_as_ptr)]
 #[cxx::bridge(namespace = "mln::bridge")]
+/// Map observer callbacks and related types.
+pub mod map_observer {
+    #[namespace = "mln::bridge"]
+    #[repr(u32)]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    /// Camera change mode for map observer callbacks.
+    pub enum MapObserverCameraChangeMode {
+        /// Camera changed immediately without animation.
+        Immediate,
+        /// Camera changed using an animated transition.
+        Animated,
+    }
+
+    #[namespace = "mbgl"]
+    #[repr(u32)]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    /// Map loading error types.
+    pub enum MapLoadError {
+        /// Style parsing error.
+        StyleParseError,
+        /// Style loading error.
+        StyleLoadError,
+        /// Resource not found.
+        NotFoundError,
+        /// Unknown error.
+        UnknownError,
+    }
+
+    #[namespace = "mbgl"]
+    extern "C++" {
+        include!("mbgl/map/map_observer.hpp");
+        type MapLoadError;
+    }
+
+    // Declarations for C++ with implementations in Rust
+    extern "Rust" {
+        type VoidCallback;
+        type FinishRenderingFrameCallback;
+        type CameraDidChangeCallback;
+        type FailingLoadingMapCallback;
+
+        fn void_callback(callback: &VoidCallback);
+        fn finish_rendering_frame_callback(
+            callback: &FinishRenderingFrameCallback,
+            needsRepaint: bool,
+            placementChanged: bool,
+        );
+        fn camera_did_change_callback(
+            callback: &CameraDidChangeCallback,
+            mode: MapObserverCameraChangeMode,
+        );
+        fn failing_loading_map_callback(
+            callback: &FailingLoadingMapCallback,
+            error: MapLoadError,
+            what: &str,
+        );
+    }
+
+    // Declarations for Rust with implementations in C++
+    extern "C++" {
+        include!("map_observer.h"); // Required to find functions below
+
+        type MapObserverCameraChangeMode;
+
+        // C++ Opaque types
+        #[rust_name = "CxxMapObserver"]
+        type MapObserver = super::ffi::MapObserver; // Created custom map observer
+    }
+
+    unsafe extern "C++" {
+        // With `self: Pin<&mut MapObserver>` as first argument, it is a non static method of that object.
+        // cxx searches for such a method
+        /// Sets the callback for when loading of the map will start.
+        fn setWillStartLoadingMapCallback(self: &CxxMapObserver, callback: Box<VoidCallback>);
+        /// Sets the callback for when the style has finished loading.
+        fn setFinishLoadingStyleCallback(self: &CxxMapObserver, callback: Box<VoidCallback>);
+        /// Sets the callback for when the map becomes idle.
+        fn setBecomeIdleCallback(self: &CxxMapObserver, callback: Box<VoidCallback>);
+        /// Sets the callback for when loading of the map fails.
+        fn setFailLoadingMapCallback(
+            self: &CxxMapObserver,
+            callback: Box<FailingLoadingMapCallback>,
+        );
+        /// Sets the callback for when a frame finishes rendering.
+        fn setFinishRenderingFrameCallback(
+            self: &CxxMapObserver,
+            callback: Box<FinishRenderingFrameCallback>,
+        );
+        /// Sets the callback for when the camera finishes changing.
+        fn setCameraDidChangeCallback(
+            self: &CxxMapObserver,
+            callback: Box<CameraDidChangeCallback>,
+        );
+    }
+}
+
+#[allow(clippy::borrow_as_ptr)]
+#[cxx::bridge(namespace = "mln::bridge")]
+/// Core FFI definitions and types for the MapLibre bridge.
 pub mod ffi {
     // CXX validates enum types against the C++ definition during compilation
 
@@ -174,7 +416,7 @@ pub mod ffi {
     #[repr(u32)]
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     /// Map rendering mode configuration.
-    enum MapMode {
+    pub enum MapMode {
         /// Continually updating map
         Continuous,
         /// Once-off still image of an arbitrary viewport
@@ -183,31 +425,11 @@ pub mod ffi {
         Tile,
     }
 
-    #[namespace = "mln::bridge"]
-    #[repr(u32)]
-    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-    // Map Load error
-    enum MapObserverCameraChangeMode {
-        Immediate,
-        Animated,
-    }
-
-    #[namespace = "mbgl"]
-    #[repr(u32)]
-    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-    // Map Load error
-    enum MapLoadError {
-        StyleParseError,
-        StyleLoadError,
-        NotFoundError,
-        UnknownError,
-    }
-
     #[namespace = "mbgl"]
     #[repr(u32)]
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     /// Debug visualization options for map rendering.
-    enum MapDebugOptions {
+    pub enum MapDebugOptions {
         /// No debug visualization.
         NoDebug = 0,
         /// Edges of tile boundaries are shown as thick, red lines.
@@ -241,9 +463,13 @@ pub mod ffi {
     #[repr(u8)]
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
     pub enum EventSeverity {
+        /// Debug severity level.
         Debug = 0,
+        /// Info severity level.
         Info = 1,
+        /// Warning severity level.
         Warning = 2,
+        /// Error severity level.
         Error = 3,
     }
 
@@ -252,166 +478,150 @@ pub mod ffi {
     #[repr(u8)]
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
     pub enum Event {
+        /// General event.
         General = 0,
+        /// Setup event.
         Setup = 1,
+        /// Shader event.
         Shader = 2,
+        /// Style parsing event.
         ParseStyle = 3,
+        /// Tile parsing event.
         ParseTile = 4,
+        /// Render event.
         Render = 5,
+        /// Style event.
         Style = 6,
+        /// Database event.
         Database = 7,
+        /// HTTP request event.
         HttpRequest = 8,
+        /// Sprite event.
         Sprite = 9,
+        /// Image event.
         Image = 10,
+        /// OpenGL event.
         OpenGL = 11,
+        /// JNI event.
         JNI = 12,
+        /// Android event.
         Android = 13,
+        /// Crash event.
         Crash = 14,
+        /// Glyph event.
         Glyph = 15,
+        /// Timing event.
         Timing = 16,
     }
 
     #[namespace = "mbgl"]
     extern "C++" {
         include!("mbgl/map/mode.hpp");
-        include!("mbgl/map/map_observer.hpp");
-        include!("mbgl/util/geo.hpp");
 
         type MapMode;
         type MapDebugOptions;
+        // The name must be unique but for some reason this is required
+        /// Resource configuration options.
+        #[rust_name = "CxxResourceOptions"]
+        type ResourceOptions = super::resource_options::ResourceOptions;
+        /// Event severity enumeration.
         pub type EventSeverity;
+        /// Event type enumeration.
         pub type Event;
-        type MapLoadError;
     }
 
     #[namespace = "mbgl"]
     extern "C++" {
-        // Left side must match a type in C++! Right side must be defined in Rust
-        // example: type VoidCallback = super::VoidCallbackampoline;
+        /// Screen coordinate type.
         type ScreenCoordinate = super::ScreenCoordinate;
+        /// Size type.
         type Size = super::Size;
     }
 
-    #[namespace = ""]
+    #[namespace = "mbgl::style"]
     extern "C++" {
-        type WGPUTextureDimension = super::TextureDimension;
-        type WGPUTextureFormat = super::TextureFormat;
-        type WGPUTextureUsage = super::TextureUsages;
-        type WGPUExtent3D = super::Extent3d;
-        type WGPUTextureViewDimension = super::TextureViewDimension;
-        type WGPUTextureAspect = super::TextureAspect;
+        /// GeoJSON source opaque type.
+        #[rust_name = "CxxGeoJSONSource"]
+        type GeoJSONSource = super::sources::GeoJSONSource;
+        /// Symbol layer opaque type.
+        #[rust_name = "CxxSymbolLayer"]
+        type SymbolLayer = super::layers::SymbolLayer;
     }
 
     // Declarations for Rust with implementations in C++
     unsafe extern "C++" {
         include!("map_renderer.h");
-        include!("map_observer.h"); // Required to find functions below
 
-        // Opaque types
+        // C++ Opaque types
+        /// Bridge image for rendering output.
         type BridgeImage;
-        type MapObserverCameraChangeMode;
+        /// Map observer for handling map events.
         type MapObserver; // Created custom map observer
+        /// Map renderer for rendering map content.
         type MapRenderer;
-        type Texture;
-        type TextureView;
-
+        /// Creates a new map renderer instance.
         #[allow(clippy::too_many_arguments)]
         fn MapRenderer_new(
             mapMode: MapMode,
             width: u32,
             height: u32,
             pixelRatio: f32,
-            cachePath: &[u8],
-            assetRoot: &[u8],
-            apiKey: &str,
-            baseUrl: &str,
-            uriSchemeAlias: &str,
-            apiKeyParameterName: &str,
-            sourceTemplate: &str,
-            styleTemplate: &str,
-            spritesTemplate: &str,
-            glyphsTemplate: &str,
-            tileTemplate: &str,
-            requiresApiKey: bool,
+            resource_options: &CxxResourceOptions,
         ) -> UniquePtr<MapRenderer>;
-        fn MapRenderer_readStillImage(obj: Pin<&mut MapRenderer>) -> UniquePtr<BridgeImage>;
+        /// Reads the current still image from the renderer.
+        fn readStillImage(self: Pin<&mut MapRenderer>) -> UniquePtr<BridgeImage>;
+        /// Gets the pixel data pointer from a bridge image.
         fn get(self: &BridgeImage) -> *const u8;
+        /// Gets the size of a bridge image.
         fn size(self: &BridgeImage) -> Size;
+        /// Gets the buffer length of a bridge image.
         fn bufferLength(self: &BridgeImage) -> usize;
-        fn getTexture(self: Pin<&mut MapRenderer>) -> UniquePtr<Texture>;
-        fn MapRenderer_render_once(obj: Pin<&mut MapRenderer>);
-        fn MapRenderer_render(obj: Pin<&mut MapRenderer>) -> UniquePtr<CxxString>;
-        fn MapRenderer_setDebugFlags(obj: Pin<&mut MapRenderer>, flags: MapDebugOptions);
-        fn MapRenderer_setCamera(
-            obj: Pin<&mut MapRenderer>,
+        /// Renders a single frame.
+        fn render_once(self: Pin<&mut MapRenderer>);
+        /// Renders continuously.
+        fn render(self: Pin<&mut MapRenderer>) -> UniquePtr<CxxString>;
+        /// Sets debug visualization flags.
+        fn setDebugFlags(self: Pin<&mut MapRenderer>, flags: MapDebugOptions);
+        /// Sets the camera position and orientation.
+        fn setCamera(
+            self: Pin<&mut MapRenderer>,
             lat: f64,
             lon: f64,
             zoom: f64,
             bearing: f64,
             pitch: f64,
         );
-        fn MapRenderer_moveBy(obj: Pin<&mut MapRenderer>, delta: &ScreenCoordinate);
-        fn MapRenderer_scaleBy(obj: Pin<&mut MapRenderer>, scale: f64, pos: &ScreenCoordinate);
-        fn MapRenderer_getStyle_loadURL(obj: Pin<&mut MapRenderer>, url: &str);
-        fn MapRenderer_setSize(obj: Pin<&mut MapRenderer>, size: &Size);
+        /// Moves the camera by the given delta.
+        fn moveBy(self: Pin<&mut MapRenderer>, delta: &ScreenCoordinate);
+        /// Scales the camera based on the given scale factor.
+        fn scaleBy(self: Pin<&mut MapRenderer>, scale: f64, pos: &ScreenCoordinate);
+        /// Loads a style from a URL.
+        fn style_load_from_url(self: Pin<&mut MapRenderer>, url: &str);
+        /// Sets the renderer size.
+        fn setSize(self: Pin<&mut MapRenderer>, size: &Size);
+        /// Gets the map observer.
         fn observer(self: Pin<&mut MapRenderer>) -> SharedPtr<MapObserver>;
-
-        // With `self: Pin<&mut MapObserver>` as first argument, it is a non static method of that object.
-        // cxx searches for such a method
-        fn setWillStartLoadingMapCallback(self: &MapObserver, callback: Box<VoidCallback>);
-        fn setFinishLoadingStyleCallback(self: &MapObserver, callback: Box<VoidCallback>);
-        fn setBecomeIdleCallback(self: &MapObserver, callback: Box<VoidCallback>);
-        fn setFailLoadingMapCallback(self: &MapObserver, callback: Box<FailingLoadingMapCallback>);
-        fn setFinishRenderingFrameCallback(
-            self: &MapObserver,
-            callback: Box<FinishRenderingFrameCallback>,
+        /// Adds an image to the style.
+        fn style_add_image(
+            self: Pin<&mut MapRenderer>,
+            id: &str,
+            data: &[u8],
+            size: Size,
+            single_distance_field: bool,
         );
-        fn setCameraDidChangeCallback(self: &MapObserver, callback: Box<CameraDidChangeCallback>);
-
-        // Texture
-        fn createView(
-            self: &Texture,
-            format: WGPUTextureFormat,
-            dimension: WGPUTextureViewDimension,
-            usage: WGPUTextureUsage,
-            aspect: WGPUTextureAspect,
-            base_mip_level: u32,
-            mip_level_count: u32,
-            base_array_layer: u32,
-            array_layer_count: u32,
-        ) -> UniquePtr<TextureView>;
-        fn destroy(self: &Texture);
-        fn getMipLevelCount(self: &Texture) -> u32;
-        fn getSampleCount(self: &Texture) -> u32;
-        fn getDimension(self: &Texture) -> WGPUTextureDimension;
-        fn getFormat(self: &Texture) -> WGPUTextureFormat;
-        fn getUsage(self: &Texture) -> WGPUTextureUsage;
-        fn getExtend3d(self: &Texture) -> WGPUExtent3D;
+        /// Removes an image from the style.
+        fn style_remove_image(self: Pin<&mut MapRenderer>, id: &str);
+        /// Adds a GeoJSON source to the style.
+        fn style_add_geojson_source(
+            self: Pin<&mut MapRenderer>,
+            source: UniquePtr<CxxGeoJSONSource>,
+        );
+        /// Adds a symbol layer to the style.
+        fn style_add_symbol_layer(self: Pin<&mut MapRenderer>, layer: UniquePtr<CxxSymbolLayer>);
     }
 
     // Declarations for C++ with implementations in Rust
     extern "Rust" {
-        type VoidCallback;
-        type FinishRenderingFrameCallback;
-        type CameraDidChangeCallback;
-        type FailingLoadingMapCallback;
-
-        fn void_callback(callback: &VoidCallback);
-        fn finish_rendering_frame_callback(
-            callback: &FinishRenderingFrameCallback,
-            needsRepaint: bool,
-            placementChanged: bool,
-        );
-        fn camera_did_change_callback(
-            callback: &CameraDidChangeCallback,
-            mode: MapObserverCameraChangeMode,
-        );
-        fn failing_loading_map_callback(
-            callback: &FailingLoadingMapCallback,
-            error: MapLoadError,
-            what: &str,
-        );
-
         /// Bridge logging from C++ to Rust log crate
         fn log_from_cpp(severity: EventSeverity, event: Event, code: i64, message: &str);
     }
@@ -419,7 +629,26 @@ pub mod ffi {
     unsafe extern "C++" {
         include!("rust_log_observer.h");
 
+        /// Enables or disables logging from a separate thread.
         fn Log_useLogThread(enable: bool);
+    }
+}
+
+impl std::fmt::Debug for ffi::BridgeImage {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("BridgeImage").finish()
+    }
+}
+
+impl std::fmt::Debug for ffi::MapObserver {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("MapObserver").finish()
+    }
+}
+
+impl std::fmt::Debug for ffi::MapRenderer {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("MapRenderer").finish()
     }
 }
 
@@ -430,36 +659,6 @@ unsafe impl cxx::ExternType for Size {
 
 unsafe impl cxx::ExternType for ScreenCoordinate {
     type Id = cxx::type_id!("mbgl::ScreenCoordinate");
-    type Kind = cxx::kind::Trivial;
-}
-
-unsafe impl cxx::ExternType for TextureDimension {
-    type Id = cxx::type_id!("WGPUTextureDimension");
-    type Kind = cxx::kind::Trivial;
-}
-
-unsafe impl cxx::ExternType for TextureFormat {
-    type Id = cxx::type_id!("WGPUTextureFormat");
-    type Kind = cxx::kind::Trivial;
-}
-
-unsafe impl cxx::ExternType for TextureUsages {
-    type Id = cxx::type_id!("WGPUTextureUsage");
-    type Kind = cxx::kind::Trivial;
-}
-
-unsafe impl cxx::ExternType for Extent3d {
-    type Id = cxx::type_id!("WGPUExtent3D");
-    type Kind = cxx::kind::Trivial;
-}
-
-unsafe impl cxx::ExternType for TextureViewDimension {
-    type Id = cxx::type_id!("WGPUTextureViewDimension");
-    type Kind = cxx::kind::Trivial;
-}
-
-unsafe impl cxx::ExternType for TextureAspect {
-    type Id = cxx::type_id!("WGPUTextureAspect");
     type Kind = cxx::kind::Trivial;
 }
 

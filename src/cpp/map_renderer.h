@@ -3,14 +3,19 @@
 #include <cassert>
 #include <cstdint>
 #include <mbgl/gfx/headless_frontend.hpp>
+#include <mbgl/style/image.hpp>
+#include <mbgl/style/sources/geojson_source.hpp>
+#include <mbgl/style/layers/symbol_layer.hpp>
 #include <mbgl/map/map.hpp>
 #include <mbgl/map/map_options.hpp>
 #include <mbgl/style/style.hpp>
+#include <mbgl/style/source.hpp>
 #include <mbgl/util/image.hpp>
 #include <mbgl/util/run_loop.hpp>
 #include <mbgl/util/premultiply.hpp>
 #include <mbgl/util/tile_server_options.hpp>
 #include <mbgl/util/size.hpp>
+#include "mbgl/storage/resource_options.hpp"
 #include <memory>
 #include <vector>
 #include <stdexcept>
@@ -26,6 +31,8 @@ struct Texture;
 struct TextureView;
 
 constexpr size_t BYTES_PER_PIXEL = 4; // rgba
+
+struct BridgeImage;
 
 class MapRenderer {
 public:
@@ -45,6 +52,82 @@ public:
         return std::make_unique<Texture>(this->frontend->getTexture());
     }
 
+    void style_add_image(rust::Str id, rust::Slice<const unsigned char> data, mbgl::Size size, bool single_distance_field) {
+        mbgl::PremultipliedImage image(size, data.data(), data.size());
+
+        const float pixelRatio = 1.0;
+        map->getStyle().addImage(std::make_unique<mbgl::style::Image>(std::string(id), std::move(image), pixelRatio, single_distance_field));
+    }
+
+    void style_remove_image(rust::Str id) {
+        map->getStyle().removeImage(std::string(id));
+    }
+
+    void style_add_geojson_source(std::unique_ptr<mbgl::style::GeoJSONSource> source) {
+        map->getStyle().addSource(std::move(source));
+    }
+
+    void style_add_symbol_layer(std::unique_ptr<mbgl::style::SymbolLayer> layer) {
+        map->getStyle().addLayer(std::move(layer));
+    }
+
+    void style_load_from_url(const rust::Str styleUrl) {
+        map->getStyle().loadURL((std::string)styleUrl);
+    }
+
+    std::unique_ptr<BridgeImage> readStillImage() {
+        auto image = frontend->readStillImage();
+        auto unpremultipliedImage = mbgl::util::unpremultiply(std::move(image));
+        return std::make_unique<BridgeImage>(std::move(unpremultipliedImage.data), unpremultipliedImage.size);
+    }
+
+    void render_once() {
+        frontend->renderOnce(*map);
+    }
+
+    std::unique_ptr<std::string> render() {
+        auto result = frontend->render(*map);
+        auto unpremultipliedImage = mbgl::util::unpremultiply(std::move(result.image));
+
+        const size_t pixelCount = unpremultipliedImage.size.width * unpremultipliedImage.size.height;
+        std::string data;
+        data.reserve(pixelCount * BYTES_PER_PIXEL);
+
+        uint32_t width = unpremultipliedImage.size.width;
+        uint32_t height = unpremultipliedImage.size.height;
+        data.append(reinterpret_cast<const char*>(&width), sizeof(uint32_t));
+        data.append(reinterpret_cast<const char*>(&height), sizeof(uint32_t));
+
+        const char* pixelData = reinterpret_cast<const char*>(unpremultipliedImage.data.get());
+        data.append(pixelData, pixelCount * BYTES_PER_PIXEL);
+
+        return std::make_unique<std::string>(std::move(data));
+    }
+
+    void setSize(const mbgl::Size& size) {
+        if (size.width == 0 || size.height == 0)
+            return;
+        frontend->setSize(size);
+        map->setSize(size);
+    }
+
+    void setDebugFlags(mbgl::MapDebugOptions debugFlags) {
+        map->setDebug(debugFlags);
+    }
+
+    void setCamera(double lat, double lon, double zoom, double bearing, double pitch) {
+        mbgl::CameraOptions cameraOptions;
+        cameraOptions.withCenter(mbgl::LatLng{lat, lon}).withZoom(zoom).withBearing(bearing).withPitch(pitch);
+        map->jumpTo(cameraOptions);
+    }
+
+    void moveBy(const mbgl::ScreenCoordinate& delta) {
+        map->moveBy(delta);
+    }
+
+    void scaleBy(double scale, const mbgl::ScreenCoordinate& pos) {
+        map->scaleBy(scale, pos);
+    }
 public:
     mbgl::util::RunLoop runLoop;
     // Due to CXX limitations, make all these public and access them from the regular functions below
@@ -59,40 +142,11 @@ inline std::unique_ptr<MapRenderer> MapRenderer_new(
             uint32_t width,
             uint32_t height,
             float pixelRatio,
-            rust::Slice<const uint8_t> cachePath,
-            rust::Slice<const uint8_t> assetRoot,
-            const rust::Str apiKey,
-            const rust::Str baseUrl,
-            const rust::Str uriSchemeAlias,
-            const rust::Str apiKeyParameterName,
-            const rust::Str sourceTemplate,
-            const rust::Str styleTemplate,
-            const rust::Str spritesTemplate,
-            const rust::Str glyphsTemplate,
-            const rust::Str tileTemplate,
-            bool requiresApiKey
+            const mbgl::ResourceOptions& resourceOptions
 ) {
     mbgl::Size size = {width, height};
     auto mapObserver = std::make_shared<MapObserver>();
     auto frontend = std::make_unique<mbgl::HeadlessFrontend>(size, pixelRatio);
-
-    mbgl::TileServerOptions options = mbgl::TileServerOptions()
-        .withBaseURL((std::string)baseUrl)
-        .withUriSchemeAlias((std::string)uriSchemeAlias)
-        .withSourceTemplate((std::string)sourceTemplate, "", {})
-        .withStyleTemplate((std::string)styleTemplate, "maps", {})
-        .withSpritesTemplate((std::string)spritesTemplate, "", {})
-        .withGlyphsTemplate((std::string)glyphsTemplate, "fonts", {})
-        .withTileTemplate((std::string)tileTemplate, "tiles", {})
-        .withApiKeyParameterName((std::string)apiKeyParameterName)
-        .setRequiresApiKey(requiresApiKey);
-
-    mbgl::ResourceOptions resourceOptions;
-    resourceOptions
-        .withCachePath(std::string(reinterpret_cast<const char*>(cachePath.data()), cachePath.size()))
-        .withAssetPath(std::string(reinterpret_cast<const char*>(assetRoot.data()), assetRoot.size()))
-        .withApiKey((std::string)apiKey)
-        .withTileServerOptions(options);
 
     mbgl::MapOptions mapOptions;
     mapOptions.withMapMode(mapMode).withSize(size).withPixelRatio(pixelRatio);
@@ -100,7 +154,6 @@ inline std::unique_ptr<MapRenderer> MapRenderer_new(
     // Set up logging observer for Rust bridge
     auto logObserver = std::make_unique<mln::bridge::RustLogObserver>();
     mbgl::Log::setObserver(std::move(logObserver));
-
     auto map = std::make_unique<mbgl::Map>(*frontend, *mapObserver, mapOptions, resourceOptions);
 
     return std::make_unique<MapRenderer>(std::move(frontend), mapObserver, std::move(map));
@@ -206,74 +259,6 @@ struct BridgeImage {
         mbgl::Size mSize;
         std::unique_ptr<uint8_t[]> mData;
 };
-
-inline std::unique_ptr<BridgeImage> MapRenderer_readStillImage(MapRenderer& self) {
-    auto image = self.frontend->readStillImage();
-    auto unpremultipliedImage = mbgl::util::unpremultiply(std::move(image));
-    return std::make_unique<BridgeImage>(std::move(unpremultipliedImage.data), unpremultipliedImage.size);
-}
-
-inline void MapRenderer_render_once(MapRenderer& self) {
-    self.frontend->renderOnce(*self.map);
-}
-
-/*!
- * Blocking method for rendering the map
- */
-inline std::unique_ptr<std::string> MapRenderer_render(MapRenderer& self) {
-    auto result = self.frontend->render(*self.map);
-    auto unpremultipliedImage = mbgl::util::unpremultiply(std::move(result.image));
-
-    // Prepare string with dimensions and pixel data
-    const size_t pixelCount = unpremultipliedImage.size.width * unpremultipliedImage.size.height;
-    std::string data;
-    data.reserve(pixelCount * BYTES_PER_PIXEL);
-
-    // First 8 bytes: width and height as uint32_t (little-endian)
-    uint32_t width = unpremultipliedImage.size.width;
-    uint32_t height = unpremultipliedImage.size.height;
-    data.append(reinterpret_cast<const char*>(&width), sizeof(uint32_t));
-    data.append(reinterpret_cast<const char*>(&height), sizeof(uint32_t));
-
-    // Append the unpremultiplied RGBA pixel data directly
-    const char* pixelData = reinterpret_cast<const char*>(unpremultipliedImage.data.get());
-    data.append(pixelData, pixelCount * BYTES_PER_PIXEL);
-
-    return std::make_unique<std::string>(std::move(data));
-}
-
-inline void MapRenderer_setSize(MapRenderer& self, const mbgl::Size& size) {
-    if (size.width == 0 || size.height == 0)
-        return; // Otherwise we run into an exception
-    self.frontend->setSize(size);
-    self.map->setSize(size);
-}
-
-inline void MapRenderer_setDebugFlags(MapRenderer& self, mbgl::MapDebugOptions debugFlags) {
-    self.map->setDebug(debugFlags);
-}
-
-inline void MapRenderer_setCamera(
-    MapRenderer& self, double lat, double lon, double zoom, double bearing, double pitch) {
-    // TODO: decide if this is the right approach,
-    //       or if we want to cache camera options in the instance,
-    //       and have several setters for each property.
-    mbgl::CameraOptions cameraOptions;
-    cameraOptions.withCenter(mbgl::LatLng{lat, lon}).withZoom(zoom).withBearing(bearing).withPitch(pitch);
-    self.map->jumpTo(cameraOptions);
-}
-
-inline void MapRenderer_moveBy(MapRenderer& self, const mbgl::ScreenCoordinate& delta) {
-    self.map->moveBy(delta);
-}
-
-inline void MapRenderer_scaleBy(MapRenderer& self, double scale, const mbgl::ScreenCoordinate& pos) {
-    self.map->scaleBy(scale, pos);
-}
-
-inline void MapRenderer_getStyle_loadURL(MapRenderer& self, const rust::Str styleUrl) {
-    self.map->getStyle().loadURL((std::string)styleUrl);
-}
 
 } // namespace bridge
 } // namespace mln

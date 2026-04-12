@@ -35,10 +35,7 @@ async fn rendered_style_tile(
     let mut png_bytes = Vec::new();
     image
         .as_image()
-        .write_to(
-            &mut std::io::Cursor::new(&mut png_bytes),
-            image::ImageFormat::Png,
-        )
+        .write_to(&mut std::io::Cursor::new(&mut png_bytes), image::ImageFormat::Png)
         .map_err(|e| dbg!(e))
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     let body = axum::body::Body::from(png_bytes);
@@ -58,8 +55,6 @@ async fn main() {
     let addr = "127.0.0.1:3000";
     println!("Server running on http://{addr}");
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
-    let app = Router::new()
-        .route("/", get(index))
-        .route("/{z}/{x}/{y}", get(rendered_style_tile));
+    let app = Router::new().route("/", get(index)).route("/{z}/{x}/{y}", get(rendered_style_tile));
     axum::serve(listener, app).await.unwrap();
 }
