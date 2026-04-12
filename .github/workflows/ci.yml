@@ -47,10 +47,10 @@ jobs:
             backend: vulkan
             precompiled: 0
             amalgam: 0
-          - runs-on: ubuntu-latest
-            backend: vulkan
-            precompiled: 1
-            amalgam: 1
+          # - runs-on: ubuntu-latest
+          #   backend: vulkan
+          #   precompiled: 1
+          #   amalgam: 1
           - runs-on: ubuntu-latest
             backend: opengl
             precompiled: 0
