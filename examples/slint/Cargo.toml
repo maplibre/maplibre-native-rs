@@ -13,7 +13,7 @@ metal = ["maplibre_native/metal"]
 [dependencies]
 image = { workspace = true }
 maplibre_native = { path = "../.." }
-slint = { version = "1.15", features = ["backend-android-activity-06", "unstable-wgpu-28"] }
+slint = { version = "1.15", features = ["backend-android-activity-06", "unstable-wgpu-29"] }
 
 [build-dependencies]
 slint-build = { version = "1.15" }

@@ -1,7 +1,8 @@
 use super::MapObserver;
 use crate::renderer::bridge::ffi;
 use crate::renderer::bridge::ffi::BridgeImage;
-use crate::renderer::bridge::TextureInterface;
+#[cfg(feature = "wgpu")]
+use crate::renderer::bridge::wgpu::TextureInterface;
 use crate::renderer::callbacks::{
     CameraDidChangeCallback, FailingLoadingMapCallback, FinishRenderingFrameCallback, VoidCallback,
 };
@@ -245,6 +246,7 @@ impl ImageRenderer<Continuous> {
         ImagePtr::new(self.instance.pin_mut().readStillImage())
     }
 
+    #[cfg(feature = "wgpu")]
     pub fn get_texture(&mut self) -> wgpu::Texture {
         let t = self.instance.pin_mut().getTexture();
         assert!(!t.is_null());
