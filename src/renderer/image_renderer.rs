@@ -206,6 +206,9 @@ impl ImagePtr {
 impl ImageRenderer<Continuous> {
     /// Set the camera position using geographic coordinates.
     ///
+    /// See [this grapic](https://en.wikipedia.org/wiki/Degrees_of_freedom_(mechanics)#/media/File:Flight_dynamics_with_text.svg)
+    /// as a reminder what bearing, pitch (and yaw) is.
+    ///
     /// Important: Without setting the camera initially no image will be generated!
     pub fn set_camera(
         &mut self,
