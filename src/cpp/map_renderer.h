@@ -50,7 +50,8 @@ public:
     }
 
     std::shared_ptr<mbgl::webgpu::Texture2D> getTexture() {
-        auto ptr = std::dynamic_pointer_cast<mbgl::webgpu::Texture2D>(this->frontend->getTexture());
+        // TODO: don't like the static pointer cast
+        auto ptr = std::static_pointer_cast<mbgl::webgpu::Texture2D>(this->frontend->getTexture());
         assert(ptr);
         return ptr;
     }

@@ -23,7 +23,7 @@ use std::process::Command;
 use std::{env, fs};
 
 // Used when building locally
-const MLN_COMMIT: &str = "6151b385a42fce4320c3f81db4ace0b1530a265d";
+const MLN_COMMIT: &str = "cff407fc0a9748eace94d876ce143c1ddf1e7d39";
 /// Version expected in the Cargo.toml. So it will not be forgotten to update WGPU_NATIVE_VERSION
 const WGPU_RUST_VERSION: &str = "29.0.0";
 /// Manually specified, because it is not guaranteed to have always this convention
@@ -46,9 +46,11 @@ const BRIDGE_FILES: &[&str] = &[
     "src/cpp/sources/sources.cpp",
     "src/cpp/layers/layers.h",
     "src/cpp/layers/layers.cpp",
+    "src/cpp/texture.h",
+    "src/cpp/texture.cpp",
 ];
 
-const BRIDGE_INCLUDE_DIRS: &[&str] = &["include", "src/cpp"];
+const BRIDGE_INCLUDE_DIRS: &[&str] = &[/*"include", */ "src/cpp"];
 
 /// Supported graphics rendering APIs.
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
@@ -445,6 +447,7 @@ fn build_local(
     // maplibre-native include directories relative to the maplibre-native repository
     let mut maplibre_include_dirs = vec![
         "include",
+        "src", // contains offscreen_texture.hpp
         "platform/default/include",
         "vendor/maplibre-native-base/include",
         "vendor/maplibre-native-base/deps/variant/include",
