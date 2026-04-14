@@ -3,7 +3,7 @@
 
 namespace mln::bridge::texture {
     WGPUExtent3D getExtend3d(const std::shared_ptr<mbgl::webgpu::Texture2D>& texture2d) {
-        
+
         return WGPUExtent3D {
             wgpuTextureGetWidth(texture2d->getTexture()),
             wgpuTextureGetHeight(texture2d->getTexture()),
