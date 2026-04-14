@@ -64,11 +64,14 @@ pub fn create_map(size: Size) -> Rc<RefCell<MapLibre>> {
         // .with_api_key(api_key)
         .with_cache_path(Path::new(env!("CARGO_MANIFEST_DIR")).join("maplibre_database.sqlite"));
 
-    let mut renderer = ImageRendererBuilder::new()
-        .with_size(
+    let mut renderer = ImageRendererBuilder::new();
+    if size.width > 0. && size.height > 0. {
+        renderer = renderer.with_size(
             NonZeroU32::new(size.width as u32).unwrap(),
             NonZeroU32::new(size.height as u32).unwrap(),
-        )
+        );
+    }
+    let mut renderer = renderer
         .with_pixel_ratio(1.0)
         .with_resource_options(resource_options)
         .build_continuous_renderer();

@@ -4,7 +4,8 @@ version = "0.1.0"
 edition = "2024"
 
 [features]
-default = ["vulkan"]
+default = ["wgpu"]
+wgpu = ["maplibre_native/wgpu"]
 vulkan = ["maplibre_native/vulkan"]
 opengl = ["maplibre_native/opengl"]
 metal = ["maplibre_native/metal"]
@@ -12,7 +13,8 @@ metal = ["maplibre_native/metal"]
 [dependencies]
 image = { workspace = true }
 maplibre_native = { path = "../.." }
-slint = { version = "1.15", features = ["backend-android-activity-06"] }
+# slint = { version = "1.16", features = ["backend-android-activity-06", "unstable-wgpu-29"] }
+slint = { path = "../../../slint/api/rs/slint", features = ["backend-android-activity-06", "renderer-femtovg-wgpu", "unstable-wgpu-29", "compat-1-2"] }
 
 [build-dependencies]
-slint-build = { version = "1.15" }
+slint-build = { path = "../../../slint/api/rs/build"  }

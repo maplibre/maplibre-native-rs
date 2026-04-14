@@ -16,14 +16,18 @@
 //!     - `cargo install armerge`
 //!     - `sudo apt install llvm` llvm-objcopy required
 
+use const_format::formatcp;
+use downloader::{Download, Downloader};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::{env, fs};
 
-use downloader::{Download, Downloader};
-
 // Used when building locally
-const MLN_COMMIT: &str = "35cf39b72f45cfea55a34ffe7358ade5c950a3c5";
+const MLN_COMMIT: &str = "cff407fc0a9748eace94d876ce143c1ddf1e7d39";
+/// Version expected in the Cargo.toml. So it will not be forgotten to update WGPU_NATIVE_VERSION
+const WGPU_RUST_VERSION: &str = "29.0.0";
+/// Manually specified, because it is not guaranteed to have always this convention
+const WGPU_NATIVE_VERSION: &str = formatcp!("v{WGPU_RUST_VERSION}.0"); // wgpu-native git tag
 
 // Files of the bridge
 const BRIDGE_FILES: &[&str] = &[
@@ -42,12 +46,14 @@ const BRIDGE_FILES: &[&str] = &[
     "src/cpp/sources/sources.cpp",
     "src/cpp/layers/layers.h",
     "src/cpp/layers/layers.cpp",
+    "src/cpp/texture.h",
+    "src/cpp/texture.cpp",
 ];
 
-const BRIDGE_INCLUDE_DIRS: &[&str] = &["include", "src/cpp"];
+const BRIDGE_INCLUDE_DIRS: &[&str] = &[/*"include", */ "src/cpp"];
 
 /// Supported graphics rendering APIs.
-#[derive(PartialEq, Eq, Clone, Copy)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
 enum GraphicsRenderingAPI {
     /// [Apple's Metal API](https://developer.apple.com/metal/) (macOS/iOS only)
     Metal,
@@ -55,6 +61,8 @@ enum GraphicsRenderingAPI {
     OpenGL,
     /// [Vulkan API](https://www.vulkan.org/)
     Vulkan,
+    /// [WGPU API](https://github.com/gfx-rs/wgpu)
+    WGPU,
 }
 impl GraphicsRenderingAPI {
     /// Selects the rendering API based on enabled cargo features and platform.
@@ -66,37 +74,42 @@ impl GraphicsRenderingAPI {
         let with_opengl = env::var("CARGO_FEATURE_OPENGL").is_ok();
         let with_metal = env::var("CARGO_FEATURE_METAL").is_ok();
         let with_vulkan = env::var("CARGO_FEATURE_VULKAN").is_ok();
+        let with_wgpu = env::var("CARGO_FEATURE_WGPU").is_ok();
 
         let target_os = env::var("CARGO_CFG_TARGET_OS").expect("CARGO_CFG_TARGET_OS not set");
         let is_macos = target_os == "ios" || target_os == "macos";
 
-        match (with_metal, with_vulkan, with_opengl) {
-            (true, false, false) => Self::Metal,
-            (false, true, false) => Self::Vulkan,
-            (false, false, true) => Self::OpenGL,
-            (false, false, false) => {
-                if is_macos {
-                    Self::Metal
-                } else {
-                    Self::Vulkan
+        if !with_wgpu {
+            match (with_metal, with_vulkan, with_opengl) {
+                (true, false, false) => Self::Metal,
+                (false, true, false) => Self::Vulkan,
+                (false, false, true) => Self::OpenGL,
+                (false, false, false) => {
+                    if is_macos {
+                        Self::Metal
+                    } else {
+                        Self::WGPU
+                    }
+                }
+                (_, _, _) => {
+                    // TODO: modify for better defaults
+                    // This might not be the best logic, but it can change at any moment because it's a fallback with a warning
+                    // Current logic: if opengl is enabled, always use that, otherwise pick metal on macOS and vulkan on other platforms
+                    println!("cargo::warning=Features 'metal', 'opengl', and 'vulkan' are mutually exclusive.");
+
+                    let default_choice = if with_opengl {
+                        Self::OpenGL
+                    } else if is_macos {
+                        Self::Metal
+                    } else {
+                        Self::WGPU
+                    };
+                    println!("cargo::warning=Using only '{default_choice}', but this default selection may change in future releases.");
+                    default_choice
                 }
             }
-            (_, _, _) => {
-                // TODO: modify for better defaults
-                // This might not be the best logic, but it can change at any moment because it's a fallback with a warning
-                // Current logic: if opengl is enabled, always use that, otherwise pick metal on macOS and vulkan on other platforms
-                println!("cargo::warning=Features 'metal', 'opengl', and 'vulkan' are mutually exclusive.");
-
-                let default_choice = if with_opengl {
-                    Self::OpenGL
-                } else if is_macos {
-                    Self::Metal
-                } else {
-                    Self::Vulkan
-                };
-                println!("cargo::warning=Using only '{default_choice}', but this default selection may change in future releases.");
-                default_choice
-            }
+        } else {
+            Self::WGPU
         }
     }
 }
@@ -106,6 +119,7 @@ impl std::fmt::Display for GraphicsRenderingAPI {
             Self::Metal => f.write_str("metal"),
             Self::OpenGL => f.write_str("opengl"),
             Self::Vulkan => f.write_str("vulkan"),
+            Self::WGPU => f.write_str("webgpu-wgpu"),
         }
     }
 }
@@ -161,8 +175,13 @@ fn download_static(out_dir: &Path, revision: &str) -> (PathBuf, PathBuf) {
     (library_file, headers_file)
 }
 
+struct CargoTomlInformation {
+    mln_release: String,
+    wgpu_version: String,
+}
+
 /// Reads `[package.metadata.mln].release` from the crate's `Cargo.toml`.
-fn mln_release_from_manifest() -> String {
+fn determine_cargo_toml_information() -> CargoTomlInformation {
     let manifest_dir =
         PathBuf::from(env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR is not set"));
     let manifest_path = manifest_dir.join("Cargo.toml");
@@ -176,7 +195,7 @@ fn mln_release_from_manifest() -> String {
         panic!("Failed to parse manifest as TOML at {}: {err}", manifest_path.display())
     });
 
-    manifest
+    let mln_release = manifest
         .get("package")
         .and_then(|package| package.get("metadata"))
         .and_then(|metadata| metadata.get("mln"))
@@ -188,7 +207,17 @@ fn mln_release_from_manifest() -> String {
                 manifest_path.display()
             )
         })
-        .to_owned()
+        .to_owned();
+
+    let wgpu_version = manifest
+        .get("dependencies")
+        .and_then(|dependencies| dependencies.get("wgpu"))
+        .and_then(|wgpu| wgpu.get("version"))
+        .and_then(toml::Value::as_str)
+        .unwrap_or_else(|| panic!("Missing wgpu version in {}", manifest_path.display()))
+        .to_owned();
+
+    CargoTomlInformation { mln_release, wgpu_version }
 }
 
 /// Extracts the headers from the downloaded tarball
@@ -215,7 +244,7 @@ fn extract_headers(headers_from: &Path, headers_to: &Path) {
 fn resolve_mln_core(root: &Path) -> (PathBuf, Vec<PathBuf>) {
     let out_dir =
         PathBuf::from(env::var_os("OUT_DIR").expect("OUT_DIR is not set")).join("maplibre-native");
-    let mln_release = mln_release_from_manifest();
+    let mln_release = determine_cargo_toml_information().mln_release;
 
     println!("cargo:rerun-if-env-changed=MLN_CORE_LIBRARY_PATH");
     println!("cargo:rerun-if-env-changed=MLN_CORE_LIBRARY_HEADERS_PATH");
@@ -331,6 +360,8 @@ fn build_local(
     const TARGET_NAME: &str = "mbgl-core";
     let maplibre_native_dir = clone_dir.join(name);
 
+    assert_eq!(determine_cargo_toml_information().wgpu_version, WGPU_RUST_VERSION);
+
     // Some CI cache restores may leave an incomplete directory tree.
     // Require files that prove this is a usable maplibre-native checkout.
     let has_required_checkout_files = maplibre_native_dir.join("CMakeLists.txt").is_file()
@@ -354,7 +385,7 @@ fn build_local(
                 "1",
                 "--revision",
                 MLN_COMMIT,
-                "https://github.com/maplibre/maplibre-native.git",
+                "https://github.com/Murmele/maplibre-native.git",
                 name,
             ])
             .status()?;
@@ -378,7 +409,8 @@ fn build_local(
 
     let mut config = cmake::Config::new(maplibre_native_dir.clone());
     config.build_target(TARGET_NAME);
-    match GraphicsRenderingAPI::from_selected_features() {
+    let api = GraphicsRenderingAPI::from_selected_features();
+    match api {
         GraphicsRenderingAPI::Metal => {
             config.configure_arg("-DMLN_WITH_METAL=ON");
         }
@@ -387,7 +419,12 @@ fn build_local(
         }
         GraphicsRenderingAPI::Vulkan => {
             config.configure_arg("-DMLN_WITH_VULKAN=ON");
-        } //GraphicsRenderingAPI::WebGPU => config.configure_arg("-DMLN_WITH_WEBGPU=ON").configure_arg("-DMLN_WEBGPU_IMPL_WGPU=ON"),
+        }
+        GraphicsRenderingAPI::WGPU => {
+            config.configure_arg(format!("-DMLN_WGPU_NATIVE_VERSION={WGPU_NATIVE_VERSION}"));
+            config.configure_arg("-DMLN_WITH_WEBGPU=ON");
+            config.configure_arg("-DMLN_WEBGPU_IMPL_WGPU=ON");
+        }
     }
     if amalgam_lib {
         config.configure_arg("-DMLN_CREATE_AMALGAMATION:BOOL=ON");
@@ -404,9 +441,13 @@ fn build_local(
     );
     // println!("cargo:warning=Building maplibre-native done.");
 
-    // maplibre-native include directories
-    let mut include_dirs: Vec<PathBuf> = vec![
+    // General include dirs relative to this projects dir or absolute paths
+    let mut include_dirs: Vec<PathBuf> = Vec::new();
+
+    // maplibre-native include directories relative to the maplibre-native repository
+    let mut maplibre_include_dirs = vec![
         "include",
+        "src", // contains offscreen_texture.hpp
         "platform/default/include",
         "vendor/maplibre-native-base/include",
         "vendor/maplibre-native-base/deps/variant/include",
@@ -414,10 +455,21 @@ fn build_local(
         "vendor/maplibre-native-base/deps/geojson.hpp/include",
         "vendor/metal-cpp",
         "vendor/expected-lite/include",
-    ]
-    .into_iter()
-    .map(|s| maplibre_native_dir.clone().join(s))
-    .collect();
+    ];
+    if matches!(api, GraphicsRenderingAPI::WGPU) {
+        maplibre_include_dirs.push("vendor/wgpu-native/ffi");
+        maplibre_include_dirs.push("vendor/wgpu-native/ffi/webgpu-headers");
+
+        include_dirs.push(dest.join("build").join("webgpu-cpp"));
+    }
+
+    include_dirs.append(
+        &mut maplibre_include_dirs
+            .into_iter()
+            .map(|path| maplibre_native_dir.clone().join(path))
+            .collect::<Vec<PathBuf>>(),
+    );
+
     // maplibre-rs include dirs
     for i in BRIDGE_INCLUDE_DIRS {
         include_dirs.push(Path::new(i).to_path_buf());
@@ -530,6 +582,15 @@ fn build_mln() {
     println!("cargo:rustc-link-lib=curl");
     println!("cargo:rustc-link-lib=z");
     match GraphicsRenderingAPI::from_selected_features() {
+        GraphicsRenderingAPI::WGPU => {
+            // TODO: check to use vulkan!
+            println!("cargo:rustc-link-lib=X11");
+            println!("cargo:rustc-link-lib=GL");
+            println!("cargo:rustc-link-lib=EGL");
+            println!("cargo:rustc-link-arg=-Wl,-rpath,/home/martin/GIT/maplibre-native/vendor/wgpu-native/target/x86_64-unknown-linux-gnu/release");
+            println!("cargo:rustc-link-search=/home/martin/GIT/maplibre-native/vendor/wgpu-native/target/x86_64-unknown-linux-gnu/release");
+            println!("cargo:rustc-link-lib=wgpu_native");
+        }
         GraphicsRenderingAPI::Vulkan => {}
         GraphicsRenderingAPI::OpenGL => {
             println!("cargo:rustc-link-lib=GL");

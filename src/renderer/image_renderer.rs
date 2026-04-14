@@ -1,6 +1,11 @@
 use super::MapObserver;
 use crate::renderer::bridge::ffi;
 use crate::renderer::bridge::ffi::BridgeImage;
+#[cfg(feature = "wgpu")]
+use crate::renderer::bridge::wgpu::TextureInterface;
+use crate::renderer::callbacks::{
+    CameraDidChangeCallback, FailingLoadingMapCallback, FinishRenderingFrameCallback, VoidCallback,
+};
 use crate::renderer::MapDebugOptions;
 use crate::{Latitude, Longitude, ScreenCoordinate, Size};
 use cxx::UniquePtr;
@@ -249,6 +254,30 @@ impl ImageRenderer<Continuous> {
     /// Reading rendered image
     pub fn read_still_image(&mut self) -> ImagePtr {
         ImagePtr::new(self.instance.pin_mut().readStillImage())
+    }
+
+    #[cfg(feature = "wgpu")]
+    pub fn get_texture(&mut self) -> Option<wgpu::Texture> {
+        use crate::bridge;
+
+        let t = self.instance.pin_mut().getTexture();
+        if t.is_null() {
+            return None;
+        }
+
+        let desc = wgpu::TextureDescriptor {
+            /// Debug label of the texture. This will show up in graphics debuggers for easy identification.
+            label: None,
+            size: bridge::ffi::getExtend3d(&t).try_into().unwrap(),
+            mip_level_count: bridge::ffi::getMipLevelCount(&t),
+            sample_count: bridge::ffi::getSampleCount(&t),
+            dimension: bridge::ffi::getDimension(&t).try_into().unwrap(),
+            format: bridge::ffi::getFormat(&t).try_into().unwrap(),
+            usage: bridge::ffi::getUsage(&t).try_into().unwrap(),
+            view_formats: &[],
+        };
+
+        Some(wgpu::Texture::from_custom(TextureInterface(t), &desc))
     }
 }
 

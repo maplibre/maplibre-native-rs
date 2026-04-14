@@ -35,9 +35,14 @@ pub fn init(ui: &MainWindow, map: &Rc<RefCell<MapLibre>>) {
     ui.on_map_size_changed({
         let map = Rc::downgrade(map);
         move |size| {
-            let size =
-                maplibre_native::Size::new(Width(size.width as u32), Height(size.height as u32));
-            map.upgrade().unwrap().borrow_mut().renderer().set_map_size(size);
+            println!("on_map_size_changed: {:?}", size);
+            if size.width > 0. && size.height > 0. {
+                let size = maplibre_native::Size::new(
+                    Width(size.width as u32),
+                    Height(size.height as u32),
+                );
+                map.upgrade().unwrap().borrow_mut().renderer().set_map_size(size);
+            }
         }
     });
 
@@ -49,18 +54,19 @@ pub fn init(ui: &MainWindow, map: &Rc<RefCell<MapLibre>>) {
             let mut map = map.borrow_mut();
             map.renderer().render_once();
             if map.updated() {
-                let image = map.renderer().read_still_image();
-                let size = image.size();
-                let img = slint::SharedPixelBuffer::<slint::Rgba8Pixel>::clone_from_slice(
-                    image.buffer(),
-                    size.width(),
-                    size.height(),
-                );
-                ui_handle
-                    .upgrade()
-                    .unwrap()
-                    .global::<MapAdapter>()
-                    .set_map_texture(slint::Image::from_rgba8(img)); // TODO: check if the image really changed, otherwise we don't need to clone!
+                if let Some(image) = map.renderer().get_texture() {
+                    // let image = map.renderer().read_still_image();
+                    let size = image.size();
+                    // let img = slint::SharedPixelBuffer::<slint::Rgba8Pixel>::clone_from_slice(
+                    //     image.buffer(),
+                    //     size.width(),
+                    //     size.height(),
+                    // );
+                    println!("New image: ({}, {})", size.width, size.height);
+                    if let Ok(image) = image.try_into() {
+                        ui_handle.upgrade().unwrap().global::<MapAdapter>().set_map_texture(image); // TODO: check if the image really changed, otherwise we don't need to clone!
+                    }
+                }
             }
         }
     });

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cassert>
+#include <cstdint>
 #include <mbgl/gfx/headless_frontend.hpp>
 #include <mbgl/style/image.hpp>
 #include <mbgl/style/sources/geojson_source.hpp>
@@ -13,7 +15,8 @@
 #include <mbgl/util/premultiply.hpp>
 #include <mbgl/util/tile_server_options.hpp>
 #include <mbgl/util/size.hpp>
-#include "mbgl/storage/resource_options.hpp"
+#include <mbgl/storage/resource_options.hpp>
+#include <mbgl/webgpu/texture2d.hpp>
 #include <memory>
 #include <vector>
 #include <stdexcept>
@@ -24,6 +27,9 @@
 
 namespace mln {
 namespace bridge {
+
+struct Texture;
+struct TextureView;
 
 constexpr size_t BYTES_PER_PIXEL = 4; // rgba
 
@@ -41,6 +47,13 @@ public:
 
     std::shared_ptr<MapObserver> observer() {
         return mapObserverInstance;
+    }
+
+    std::shared_ptr<mbgl::webgpu::Texture2D> getTexture() {
+        // TODO: don't like the static pointer cast
+        auto ptr = std::static_pointer_cast<mbgl::webgpu::Texture2D>(this->frontend->getTexture());
+        assert(ptr);
+        return ptr;
     }
 
     void style_add_image(rust::Str id, rust::Slice<const unsigned char> data, mbgl::Size size, bool single_distance_field) {
@@ -119,8 +132,6 @@ public:
     void scaleBy(double scale, const mbgl::ScreenCoordinate& pos) {
         map->scaleBy(scale, pos);
     }
-
-
 public:
     mbgl::util::RunLoop runLoop;
     // Due to CXX limitations, make all these public and access them from the regular functions below
