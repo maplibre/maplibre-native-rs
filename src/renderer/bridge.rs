@@ -3,7 +3,7 @@ use crate::renderer::callbacks::{
     void_callback, CameraDidChangeCallback, FailingLoadingMapCallback,
     FinishRenderingFrameCallback, VoidCallback,
 };
-use cxx::UniquePtr;
+use cxx::{SharedPtr, UniquePtr};
 use std::fmt::Display;
 use std::ops::Sub;
 
@@ -1190,6 +1190,7 @@ pub mod ffi {
     // Declarations for Rust with implementations in C++
     unsafe extern "C++" {
         include!("map_renderer.h");
+        include!("mbgl/webgpu/texture2d.hpp");
 
         // C++ Opaque types
         /// Bridge image for rendering output.
@@ -1198,8 +1199,9 @@ pub mod ffi {
         type MapObserver; // Created custom map observer
         /// Map renderer for rendering map content.
         type MapRenderer;
-        type Texture;
-        type TextureView;
+
+        #[namespace = "mbgl::webgpu"]
+        type Texture2D;
         /// Creates a new map renderer instance.
         #[allow(clippy::too_many_arguments)]
         fn MapRenderer_new(
@@ -1261,33 +1263,38 @@ pub mod ffi {
         fn style_add_symbol_layer(self: Pin<&mut MapRenderer>, layer: UniquePtr<CxxSymbolLayer>);
 
         // Texture
-        fn getTexture(self: Pin<&mut MapRenderer>) -> UniquePtr<Texture>;
+        fn getTexture(self: Pin<&mut MapRenderer>) -> SharedPtr<Texture2D>;
+    }
+
+    #[namespace = "mln::bridge::texture"]
+    unsafe extern "C++" {
+        include!("texture.h");
+        // #[cfg(feature = "wgpu")]
+        // fn createView(
+        //     self: &Texture2D,
+        //     format: WGPUTextureFormat,
+        //     dimension: WGPUTextureViewDimension,
+        //     usage: WGPUTextureUsage,
+        //     aspect: WGPUTextureAspect,
+        //     base_mip_level: u32,
+        //     mip_level_count: u32,
+        //     base_array_layer: u32,
+        //     array_layer_count: u32,
+        // ) -> UniquePtr<TextureView>;
+        // #[cfg(feature = "wgpu")]
+        // fn destroy(self: &Texture);
         #[cfg(feature = "wgpu")]
-        fn createView(
-            self: &Texture,
-            format: WGPUTextureFormat,
-            dimension: WGPUTextureViewDimension,
-            usage: WGPUTextureUsage,
-            aspect: WGPUTextureAspect,
-            base_mip_level: u32,
-            mip_level_count: u32,
-            base_array_layer: u32,
-            array_layer_count: u32,
-        ) -> UniquePtr<TextureView>;
+        fn getMipLevelCount(obj: &SharedPtr<Texture2D>) -> u32;
         #[cfg(feature = "wgpu")]
-        fn destroy(self: &Texture);
+        fn getSampleCount(obj: &SharedPtr<Texture2D>) -> u32;
         #[cfg(feature = "wgpu")]
-        fn getMipLevelCount(self: &Texture) -> u32;
+        fn getDimension(obj: &SharedPtr<Texture2D>) -> WGPUTextureDimension;
         #[cfg(feature = "wgpu")]
-        fn getSampleCount(self: &Texture) -> u32;
+        fn getFormat(obj: &SharedPtr<Texture2D>) -> WGPUTextureFormat;
         #[cfg(feature = "wgpu")]
-        fn getDimension(self: &Texture) -> WGPUTextureDimension;
+        fn getUsage(obj: &SharedPtr<Texture2D>) -> WGPUTextureUsage;
         #[cfg(feature = "wgpu")]
-        fn getFormat(self: &Texture) -> WGPUTextureFormat;
-        #[cfg(feature = "wgpu")]
-        fn getUsage(self: &Texture) -> WGPUTextureUsage;
-        #[cfg(feature = "wgpu")]
-        fn getExtend3d(self: &Texture) -> WGPUExtent3D;
+        fn getExtend3d(obj: &SharedPtr<Texture2D>) -> WGPUExtent3D;
     }
 
     // Declarations for C++ with implementations in Rust
@@ -1334,9 +1341,9 @@ unsafe impl cxx::ExternType for ScreenCoordinate {
 
 #[cfg(feature = "wgpu")]
 pub mod wgpu {
-    use cxx::UniquePtr;
-    pub struct TextureInterface(pub UniquePtr<super::ffi::Texture>);
-    pub struct TextureViewInterface(pub UniquePtr<super::ffi::TextureView>);
+    use cxx::{SharedPtr, UniquePtr};
+    pub struct TextureInterface(pub SharedPtr<super::ffi::Texture2D>);
+    // pub struct TextureViewInterface(pub UniquePtr<super::ffi::TextureView>);
 
     impl std::fmt::Debug for TextureInterface {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -1349,53 +1356,56 @@ pub mod wgpu {
             &self,
             desc: &wgpu::TextureViewDescriptor<'_>,
         ) -> wgpu::custom::DispatchTextureView {
-            // TODO: get rid of unwraps!
-            let format = if let Some(format) = desc.format {
-                format.try_into().unwrap()
-            } else {
-                self.0.getFormat()
-            };
-            let dimension = desc.dimension.unwrap().try_into().unwrap(); // _or(self.0.getDimension().0);
-            let usage = if let Some(usage) = desc.usage {
-                usage.try_into().unwrap()
-            } else {
-                self.0.getUsage()
-            };
+            unreachable!("We don't need creating a view")
 
-            let aspect = desc.aspect.try_into().unwrap();
-            let base_mip_level = desc.base_mip_level;
-            let mip_level_count = desc.mip_level_count.unwrap();
-            let base_array_layer = desc.base_array_layer;
-            let array_layer_count = desc.array_layer_count.unwrap(); // _or(default)
-            wgpu::custom::DispatchTextureView::custom(TextureViewInterface(self.0.createView(
-                format,
-                dimension,
-                usage,
-                aspect,
-                base_mip_level,
-                mip_level_count,
-                base_array_layer,
-                array_layer_count,
-            )))
+            // // TODO: get rid of unwraps!
+            // let format = if let Some(format) = desc.format {
+            //     format.try_into().unwrap()
+            // } else {
+            //     self.0.getFormat()
+            // };
+            // let dimension = desc.dimension.unwrap().try_into().unwrap(); // _or(self.0.getDimension().0);
+            // let usage = if let Some(usage) = desc.usage {
+            //     usage.try_into().unwrap()
+            // } else {
+            //     self.0.getUsage()
+            // };
+
+            // let aspect = desc.aspect.try_into().unwrap();
+            // let base_mip_level = desc.base_mip_level;
+            // let mip_level_count = desc.mip_level_count.unwrap();
+            // let base_array_layer = desc.base_array_layer;
+            // let array_layer_count = desc.array_layer_count.unwrap(); // _or(default)
+            // wgpu::custom::DispatchTextureView::custom(TextureViewInterface(self.0.createView(
+            //     format,
+            //     dimension,
+            //     usage,
+            //     aspect,
+            //     base_mip_level,
+            //     mip_level_count,
+            //     base_array_layer,
+            //     array_layer_count,
+            // )))
         }
 
         fn destroy(&self) {
-            self.0.destroy();
+            // self.0 = SharedPtr::null();
+            // When droping TextureInterface we destroy also the texture
         }
     }
 
     unsafe impl Send for TextureInterface {}
     unsafe impl Sync for TextureInterface {}
 
-    impl std::fmt::Debug for TextureViewInterface {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            write!(f, "TextureViewInterface")
-        }
-    }
+    // impl std::fmt::Debug for TextureViewInterface {
+    //     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    //         write!(f, "TextureViewInterface")
+    //     }
+    // }
 
-    impl wgpu::custom::TextureViewInterface for TextureViewInterface {}
-    unsafe impl Send for TextureViewInterface {}
-    unsafe impl Sync for TextureViewInterface {}
+    // impl wgpu::custom::TextureViewInterface for TextureViewInterface {}
+    // unsafe impl Send for TextureViewInterface {}
+    // unsafe impl Sync for TextureViewInterface {}
 }
 
 #[cfg(test)]

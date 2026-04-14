@@ -248,6 +248,8 @@ impl ImageRenderer<Continuous> {
 
     #[cfg(feature = "wgpu")]
     pub fn get_texture(&mut self) -> Option<wgpu::Texture> {
+        use crate::bridge;
+
         let t = self.instance.pin_mut().getTexture();
         if t.is_null() {
             return None;
@@ -256,12 +258,12 @@ impl ImageRenderer<Continuous> {
         let desc = wgpu::TextureDescriptor {
             /// Debug label of the texture. This will show up in graphics debuggers for easy identification.
             label: None,
-            size: t.getExtend3d().try_into().unwrap(),
-            mip_level_count: t.getMipLevelCount(),
-            sample_count: t.getSampleCount(),
-            dimension: t.getDimension().try_into().unwrap(),
-            format: t.getFormat().try_into().unwrap(),
-            usage: t.getUsage().try_into().unwrap(),
+            size: bridge::ffi::getExtend3d(&t).try_into().unwrap(),
+            mip_level_count: bridge::ffi::getMipLevelCount(&t),
+            sample_count: bridge::ffi::getSampleCount(&t),
+            dimension: bridge::ffi::getDimension(&t).try_into().unwrap(),
+            format: bridge::ffi::getFormat(&t).try_into().unwrap(),
+            usage: bridge::ffi::getUsage(&t).try_into().unwrap(),
             view_formats: &[],
         };
 

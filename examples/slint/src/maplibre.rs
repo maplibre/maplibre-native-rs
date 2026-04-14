@@ -35,9 +35,14 @@ pub fn init(ui: &MainWindow, map: &Rc<RefCell<MapLibre>>) {
     ui.on_map_size_changed({
         let map = Rc::downgrade(map);
         move |size| {
-            let size =
-                maplibre_native::Size::new(Width(size.width as u32), Height(size.height as u32));
-            map.upgrade().unwrap().borrow_mut().renderer().set_map_size(size);
+            println!("on_map_size_changed: {:?}", size);
+            if size.width > 0. && size.height > 0. {
+                let size = maplibre_native::Size::new(
+                    Width(size.width as u32),
+                    Height(size.height as u32),
+                );
+                map.upgrade().unwrap().borrow_mut().renderer().set_map_size(size);
+            }
         }
     });
 
