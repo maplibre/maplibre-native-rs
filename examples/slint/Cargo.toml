@@ -1,6 +1,7 @@
 [package]
 name = "slint_map_libre_native"
 version = "0.1.0"
+publish = false
 edition = "2024"
 
 [features]
