@@ -60,7 +60,7 @@ The following platform and rendering-API combinations are supported and tested i
 | Linux ARM   | ❌    | ✅     | ✅     |
 | Windows x86 | ❌    | 🟨     | 🟨     |
 | Windows ARM | ❌    | 🟨     | 🟨     |
-| macOS ARM   | ✅    | ✅[^1] | ❌     |
+| macOS ARM   | ✅    | 🟨[^1] | ❌     |
 
 <sub>
 ✅ = IS supported and tested in CI
