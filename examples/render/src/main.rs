@@ -260,37 +260,41 @@ mod tests {
 
     #[test]
     fn test_rendering() {
-        let args = Args {
-            width: NonZero::new(32).unwrap(),
-            height: NonZero::new(32).unwrap(),
-            mode: Mode::Static,
-            ..Args::parse()
-        };
-        let mut renderer = args.load();
-        let image = renderer.render();
+        {
+            let args = Args {
+                width: NonZero::new(32).unwrap(),
+                height: NonZero::new(32).unwrap(),
+                mode: Mode::Static,
+                ..Args::parse()
+            };
+            let mut renderer = args.load();
+            let image = renderer.render();
 
-        // Test image properties
-        let img_buffer = image.as_image();
-        assert_eq!(img_buffer.width(), 32);
-        assert_eq!(img_buffer.height(), 32);
-        assert_eq!(img_buffer.dimensions(), (32, 32));
-        assert!(!img_buffer.as_raw().is_empty());
-        assert_eq!(img_buffer.as_raw().len(), 32 * 32 * 4); // RGBA
+            // Test image properties
+            let img_buffer = image.as_image();
+            assert_eq!(img_buffer.width(), 32);
+            assert_eq!(img_buffer.height(), 32);
+            assert_eq!(img_buffer.dimensions(), (32, 32));
+            assert!(!img_buffer.as_raw().is_empty());
+            assert_eq!(img_buffer.as_raw().len(), 32 * 32 * 4); // RGBA
+        }
 
-        let args = Args {
-            width: NonZero::new(64).unwrap(),
-            height: NonZero::new(64).unwrap(),
-            mode: Mode::Tile,
-            ..Args::parse()
-        };
-        let mut renderer = args.load();
-        let image = renderer.render();
+        {
+            let args = Args {
+                width: NonZero::new(64).unwrap(),
+                height: NonZero::new(64).unwrap(),
+                mode: Mode::Tile,
+                ..Args::parse()
+            };
+            let mut renderer = args.load();
+            let image = renderer.render();
 
-        // Test tile rendering
-        let img_buffer = image.as_image();
-        assert_eq!(img_buffer.width(), 64);
-        assert_eq!(img_buffer.height(), 64);
-        assert!(!img_buffer.as_raw().is_empty());
-        assert_eq!(img_buffer.as_raw().len(), 64 * 64 * 4); // RGBA
+            // Test tile rendering
+            let img_buffer = image.as_image();
+            assert_eq!(img_buffer.width(), 64);
+            assert_eq!(img_buffer.height(), 64);
+            assert!(!img_buffer.as_raw().is_empty());
+            assert_eq!(img_buffer.as_raw().len(), 64 * 64 * 4); // RGBA
+        }
     }
 }
