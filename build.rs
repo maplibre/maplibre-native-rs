@@ -517,7 +517,7 @@ fn build_mln() {
         println!("cargo:rustc-link-lib=mbgl-freetype");
         println!("cargo:rustc-link-lib=mbgl-vendor-parsedate");
         println!("cargo:rustc-link-lib=mbgl-vendor-csscolorparser");
-        println!("cargo:rustc-link-lib=mlt-cpp"); // provided with matlibre-native
+        println!("cargo:rustc-link-lib=mlt-cpp"); // provided with maplibre-native
         if is_apple {
             // darwin builds vendored ICU and uses the system sqlite3
             println!("cargo:rustc-link-lib=mbgl-vendor-icu");
