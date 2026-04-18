@@ -327,6 +327,7 @@ fn build_local(
     clone_dir: PathBuf,
     name: &str,
     amalgam_lib: bool,
+    target_os: &str,
 ) -> Result<Info, Box<dyn std::error::Error>> {
     const TARGET_NAME: &str = "mbgl-core";
     let maplibre_native_dir = clone_dir.join(name);
@@ -381,7 +382,7 @@ fn build_local(
 
     // maplibre-native's platform/darwin/darwin.cmake calls enable_language(Swift),
     // which the default "Unix Makefiles" generator does not support. Switch to Ninja.
-    if cfg!(any(target_os = "macos", target_os = "ios")) {
+    if target_os == "macos" || target_os == "ios" {
         config.generator("Ninja");
     }
 
@@ -486,7 +487,7 @@ fn build_mln() {
         let root = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
         let clone_dir = root.join("target");
 
-        match build_local(clone_dir.clone(), MAPLIBRE_NATIVE_DIR_NAME, amalgam_lib) {
+        match build_local(clone_dir.clone(), MAPLIBRE_NATIVE_DIR_NAME, amalgam_lib, &target_os) {
             Err(e) => {
                 if clone_dir.join(MAPLIBRE_NATIVE_DIR_NAME).exists() {
                     // let _ = fs::remove_dir_all(clone_dir.join(MAPLIBRE_NATIVE_DIR_NAME));
