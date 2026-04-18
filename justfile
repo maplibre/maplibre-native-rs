@@ -108,14 +108,20 @@ install-dependencies backend='vulkan':
       xvfb \
       pkg-config # required for fontconfig detection
 
-# Install macOS dependencies via Homebrew
+# Install macOS dependencies via Homebrew.
+# Only Vulkan translates GLSL->SPIR-V at runtime (via glslang); Metal and OpenGL don't.
 [macos]
 install-dependencies backend='vulkan':
     brew install \
-        {{if backend == 'vulkan' {'molten-vk vulkan-headers'} else {''} }} \
+        {{if backend == 'vulkan' {'molten-vk vulkan-loader vulkan-headers glslang spirv-tools'} else {''} }} \
+        cmake \
+        ninja \
         curl \
         glfw \
         libuv \
+        libpng \
+        jpeg-turbo \
+        webp \
         zlib
 
 # Show current maplibre-native dependency information

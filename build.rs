@@ -378,6 +378,13 @@ fn build_local(
 
     let mut config = cmake::Config::new(maplibre_native_dir.clone());
     config.build_target(TARGET_NAME);
+
+    // maplibre-native's platform/darwin/darwin.cmake calls enable_language(Swift),
+    // which the default "Unix Makefiles" generator does not support. Switch to Ninja.
+    if cfg!(any(target_os = "macos", target_os = "ios")) {
+        config.generator("Ninja");
+    }
+
     match GraphicsRenderingAPI::from_selected_features() {
         GraphicsRenderingAPI::Metal => {
             config.configure_arg("-DMLN_WITH_METAL=ON");
@@ -491,6 +498,8 @@ fn build_mln() {
     };
 
     build_bridge(&info.lib_name, &info.include_dirs);
+    let is_apple = target_os == "macos" || target_os == "ios";
+    let backend = GraphicsRenderingAPI::from_selected_features();
     if !amalgam_lib {
         // The dependent libs are not bundled in the core lib, so we have to link manually
         // Required for mlt-cpp. Cpp root link search was already added above
@@ -506,22 +515,31 @@ fn build_mln() {
         );
         println!("cargo:rustc-link-lib=mbgl-harfbuzz");
         println!("cargo:rustc-link-lib=mbgl-freetype");
-        println!("cargo:rustc-link-lib=mbgl-vendor-nunicode");
         println!("cargo:rustc-link-lib=mbgl-vendor-parsedate");
-        println!("cargo:rustc-link-lib=mbgl-vendor-sqlite");
         println!("cargo:rustc-link-lib=mbgl-vendor-csscolorparser");
         println!("cargo:rustc-link-lib=mlt-cpp"); // provided with matlibre-native
-                                                  // println!("cargo:rustc-link-lib=utf8proc"); // sudo dnf install utf8proc-devel
-        println!("cargo:rustc-link-lib=icuuc"); //sudo dnf install libicu-devel
-        println!("cargo:rustc-link-lib=icudata"); //sudo dnf install libicu-devel
-        println!("cargo:rustc-link-lib=icui18n"); //sudo dnf install libicu-devel
-        println!("cargo:rustc-link-lib=glslang"); //sudo dnf install libglslang-devel
-        println!("cargo:rustc-link-lib=glslang-default-resource-limits"); //sudo dnf install libglslang-devel
+        if is_apple {
+            // darwin builds vendored ICU and uses the system sqlite3
+            println!("cargo:rustc-link-lib=mbgl-vendor-icu");
+            println!("cargo:rustc-link-lib=sqlite3");
+        } else {
+            println!("cargo:rustc-link-lib=mbgl-vendor-nunicode");
+            println!("cargo:rustc-link-lib=mbgl-vendor-sqlite");
+            // println!("cargo:rustc-link-lib=utf8proc"); // sudo dnf install utf8proc-devel
+            println!("cargo:rustc-link-lib=icuuc"); //sudo dnf install libicu-devel
+            println!("cargo:rustc-link-lib=icudata"); //sudo dnf install libicu-devel
+            println!("cargo:rustc-link-lib=icui18n"); //sudo dnf install libicu-devel
+        }
+        // Vulkan translates GLSL to SPIR-V at runtime via glslang; OpenGL/Metal don't.
+        if backend == GraphicsRenderingAPI::Vulkan {
+            println!("cargo:rustc-link-lib=glslang"); //sudo dnf install libglslang-devel
+            println!("cargo:rustc-link-lib=glslang-default-resource-limits"); //sudo dnf install libglslang-devel
 
-        // `SPIRV-Tools-opt` depends on symbols from `SPIRV-Tools`.
-        // Keep this order for static linking (notably on Linux/aarch64).
-        println!("cargo:rustc-link-lib=SPIRV-Tools-opt"); //sudo dnf install  spirv-tools-devel // Required by glslang spirv-tools-devel
-        println!("cargo:rustc-link-lib=SPIRV-Tools"); //sudo dnf install  spirv-tools-devel // Required by glslang spirv-tools-devel
+            // `SPIRV-Tools-opt` depends on symbols from `SPIRV-Tools`.
+            // Keep this order for static linking (notably on Linux/aarch64).
+            println!("cargo:rustc-link-lib=SPIRV-Tools-opt"); //sudo dnf install  spirv-tools-devel // Required by glslang spirv-tools-devel
+            println!("cargo:rustc-link-lib=SPIRV-Tools"); //sudo dnf install  spirv-tools-devel // Required by glslang spirv-tools-devel
+        }
         println!("cargo:rustc-link-lib=png"); // sudo dnf install libpng-devel
         println!("cargo:rustc-link-lib=jpeg"); // sudo dnf install libjpeg-turbo-devel
         println!("cargo:rustc-link-lib=uv"); // sudo dnf install libuv-devel
@@ -529,7 +547,15 @@ fn build_mln() {
     }
     println!("cargo:rustc-link-lib=curl");
     println!("cargo:rustc-link-lib=z");
-    match GraphicsRenderingAPI::from_selected_features() {
+    if is_apple {
+        println!("cargo:rustc-link-lib=framework=Foundation");
+        println!("cargo:rustc-link-lib=framework=CoreGraphics");
+    }
+    match backend {
+        GraphicsRenderingAPI::Vulkan if is_apple => {
+            println!("cargo:rustc-link-lib=framework=CoreText");
+            println!("cargo:rustc-link-lib=framework=ImageIO");
+        }
         GraphicsRenderingAPI::Vulkan => {}
         GraphicsRenderingAPI::OpenGL => {
             println!("cargo:rustc-link-lib=GL");
@@ -544,8 +570,6 @@ fn build_mln() {
             println!("cargo:rustc-link-lib=framework=Metal");
             println!("cargo:rustc-link-lib=framework=MetalKit");
             println!("cargo:rustc-link-lib=framework=QuartzCore");
-            println!("cargo:rustc-link-lib=framework=Foundation");
-            println!("cargo:rustc-link-lib=framework=CoreGraphics");
             println!("cargo:rustc-link-lib=framework=AppKit");
             println!("cargo:rustc-link-lib=framework=CoreLocation");
         }
