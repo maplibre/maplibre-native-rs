@@ -29,7 +29,7 @@ check:
 ci-lint: env-info test-fmt clippy
 
 # Run all tests as expected by CI
-ci-test backend: (env-info) (build backend) (test backend) (test-doc backend) (test-example_slint) && assert-git-is-clean
+ci-test backend: (env-info) (build backend) (test backend) (test-doc backend) (test-example_slint backend) && assert-git-is-clean
 
 # Run minimal subset of tests to ensure compatibility with MSRV
 ci-test-msrv backend: (ci-test backend)  # for now, same as ci-test
@@ -108,14 +108,20 @@ install-dependencies backend='vulkan':
       xvfb \
       pkg-config # required for fontconfig detection
 
-# Install macOS dependencies via Homebrew
+# Install macOS dependencies via Homebrew.
+# Only Vulkan translates GLSL->SPIR-V at runtime (via glslang); Metal and OpenGL don't.
 [macos]
 install-dependencies backend='vulkan':
     brew install \
-        {{if backend == 'vulkan' {'molten-vk vulkan-headers'} else {''} }} \
+        {{if backend == 'vulkan' {'molten-vk vulkan-loader vulkan-headers glslang spirv-tools'} else {''} }} \
+        cmake \
+        ninja \
         curl \
         glfw \
         libuv \
+        libpng \
+        jpeg-turbo \
+        webp \
         zlib
 
 # Show current maplibre-native dependency information
