@@ -287,7 +287,6 @@ fn build_bridge(lib_name: &str, include_dirs: &[PathBuf]) {
         println!("cargo:rerun-if-changed={f}");
         #[allow(clippy::case_sensitive_file_extension_comparisons)]
         if f.ends_with(".cpp") {
-            println!("cargo:warning=Source file: {f}");
             build.file(f);
         }
     }
