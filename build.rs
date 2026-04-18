@@ -277,7 +277,11 @@ fn resolve_mln_core(root: &Path) -> (PathBuf, Vec<PathBuf>) {
 fn build_bridge(lib_name: &str, include_dirs: &[PathBuf]) {
     // println!("cargo:warning=Include_dirs: {:?}", include_dirs);
     let mut build = cxx_build::bridge("src/renderer/bridge.rs");
-    build.includes(include_dirs).flag_if_supported("-std=c++20");
+    build
+        .includes(include_dirs)
+        .flag_if_supported("-std=c++20")
+        .warnings(true)
+        .warnings_into_errors(true);
 
     for f in BRIDGE_FILES {
         println!("cargo:rerun-if-changed={f}");
