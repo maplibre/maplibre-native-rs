@@ -61,10 +61,10 @@ jobs:
             precompiled: 0
             amalgam: 0
           # macOS ARM
-          #- runs-on: macos-latest
-          #  backend: metal
-          #  precompiled: 0
-          #  amalgam: 0
+          - runs-on: macos-latest
+            backend: metal
+            precompiled: 0
+            amalgam: 0
           #- runs-on: macos-latest
           #  backend: vulkan
           #  precompiled: 0
@@ -111,10 +111,10 @@ jobs:
             precompiled: 0
             amalgam: 0
           # macOS ARM
-          #- runs-on: macos-latest
-          #  backend: metal
-          #  precompiled: 0
-          #  amalgam: 0
+          - runs-on: macos-latest
+            backend: metal
+            precompiled: 0
+            amalgam: 0
           #- runs-on: macos-latest
           #  backend: vulkan
           #  precompiled: 0
