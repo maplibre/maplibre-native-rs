@@ -211,8 +211,8 @@ fn extract_headers(headers_from: &Path, headers_to: &Path) {
 
 /// Get local directory or download maplibre-native into the `OUT_DIR`
 ///
-/// Returns the path to the maplibre-native directory and an optional path to an include directorys.
-fn resolve_mln_core(root: &Path) -> (PathBuf, Vec<PathBuf>) {
+/// Returns the path to the maplibre-native directory and the include directories.
+fn resolve_mln_core() -> (PathBuf, Vec<PathBuf>) {
     let out_dir =
         PathBuf::from(env::var_os("OUT_DIR").expect("OUT_DIR is not set")).join("maplibre-native");
     let mln_release = mln_release_from_manifest();
@@ -253,21 +253,13 @@ fn resolve_mln_core(root: &Path) -> (PathBuf, Vec<PathBuf>) {
     let extracted_path = out_dir.join("headers");
     extract_headers(&headers, &extracted_path);
     // Returning the downloaded file, bypassing CMakeLists.txt check
+    let base = extracted_path.join("vendor").join("maplibre-native-base");
+    let deps = base.join("deps");
     let include_dirs = vec![
-        root.join("include"),
-        extracted_path.join("vendor").join("maplibre-native-base").join("include"),
-        extracted_path
-            .join("vendor")
-            .join("maplibre-native-base")
-            .join("deps")
-            .join("geometry.hpp")
-            .join("include"),
-        extracted_path
-            .join("vendor")
-            .join("maplibre-native-base")
-            .join("deps")
-            .join("variant")
-            .join("include"),
+        base.join("include"),
+        deps.join("geometry.hpp").join("include"),
+        deps.join("geojson.hpp").join("include"),
+        deps.join("variant").join("include"),
         extracted_path.join("include"),
     ];
     (library_file, include_dirs)
@@ -276,8 +268,12 @@ fn resolve_mln_core(root: &Path) -> (PathBuf, Vec<PathBuf>) {
 /// Gather include directories and build the C++ bridge using `cxx_build`.
 fn build_bridge(lib_name: &str, include_dirs: &[PathBuf]) {
     // println!("cargo:warning=Include_dirs: {:?}", include_dirs);
+    let root = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
+    let bridge_include_dirs: Vec<PathBuf> =
+        BRIDGE_INCLUDE_DIRS.iter().map(|p| root.join(p)).collect();
     let mut build = cxx_build::bridge("src/renderer/bridge.rs");
     build
+        .includes(&bridge_include_dirs)
         .includes(include_dirs)
         .flag_if_supported("-std=c++20")
         .warnings(true)
@@ -304,8 +300,7 @@ struct Info {
 }
 
 fn bundle_precompiled() -> Info {
-    let root = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
-    let (cpp_root, include_dirs) = resolve_mln_core(&root);
+    let (cpp_root, include_dirs) = resolve_mln_core();
 
     println!(
         "cargo:warning=Using precompiled maplibre-native static library from {}",
@@ -350,6 +345,7 @@ fn build_local(
 
     if !maplibre_native_dir.exists() {
         println!("cargo:warning=Cloning maplibre-native.");
+        fs::create_dir_all(&clone_dir)?;
         let clone_status = Command::new("git")
             .current_dir(clone_dir)
             .args([
@@ -416,7 +412,7 @@ fn build_local(
     // println!("cargo:warning=Building maplibre-native done.");
 
     // maplibre-native include directories
-    let mut include_dirs: Vec<PathBuf> = vec![
+    let include_dirs: Vec<PathBuf> = [
         "include",
         "platform/default/include",
         "vendor/maplibre-native-base/include",
@@ -427,12 +423,8 @@ fn build_local(
         "vendor/expected-lite/include",
     ]
     .into_iter()
-    .map(|s| maplibre_native_dir.clone().join(s))
+    .map(|s| maplibre_native_dir.join(s))
     .collect();
-    // maplibre-rs include dirs
-    for i in BRIDGE_INCLUDE_DIRS {
-        include_dirs.push(Path::new(i).to_path_buf());
-    }
 
     Ok(Info {
         lib_name: format!("{TARGET_NAME}{}", if amalgam_lib { "-amalgam" } else { "" }),
@@ -446,8 +438,9 @@ fn build_mln() {
     println!("cargo:rerun-if-env-changed=MLN_SYSTEM");
     println!("cargo:rerun-if-env-changed=MLN_PRECOMPILE");
     println!("cargo:rerun-if-env-changed=MLN_CORE_LIBRARY_USE_AMALGAM");
-    let amalgam_lib = !env::var("MLN_CORE_LIBRARY_USE_AMALGAM").unwrap_or("0".to_string()).eq("0");
     let precompiled = !env::var("MLN_PRECOMPILE").unwrap_or("0".to_string()).eq("0");
+    let amalgam_lib =
+        precompiled || !env::var("MLN_CORE_LIBRARY_USE_AMALGAM").unwrap_or("0".to_string()).eq("0");
     let system_lib = !env::var("MLN_SYSTEM").unwrap_or("0".to_string()).eq("0");
 
     // Add system library search paths for macOS
