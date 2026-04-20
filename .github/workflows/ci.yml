@@ -65,10 +65,10 @@ jobs:
             backend: metal
             precompiled: 0
             amalgam: 0
-          #- runs-on: macos-latest
-          #  backend: vulkan
-          #  precompiled: 0
-          #  amalgam: 0
+          - runs-on: macos-latest
+            backend: vulkan
+            precompiled: 0
+            amalgam: 0
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with: { persist-credentials: false }
@@ -78,6 +78,10 @@ jobs:
         with: { tool: 'just' }
       - run: echo "MLN_PRECOMPILE=${{ matrix.precompiled }}" >> $GITHUB_ENV
       - run: echo "MLN_CORE_LIBRARY_USE_AMALGAM=${{ matrix.amalgam }}" >> $GITHUB_ENV
+      - if: startsWith(matrix.runs-on, 'macos') && matrix.backend == 'vulkan'
+        run: |
+          echo "VK_ICD_FILENAMES=$(brew --prefix molten-vk)/etc/vulkan/icd.d/MoltenVK_icd.json" >> $GITHUB_ENV
+          echo "DYLD_LIBRARY_PATH=$(brew --prefix vulkan-loader)/lib" >> $GITHUB_ENV
       - run: just env-info install-dependencies '${{ matrix.backend }}'
       - run: rustup update stable && rustup default stable
       - name: Run CI tests (Linux OpenGL via Xvfb)
@@ -115,10 +119,10 @@ jobs:
             backend: metal
             precompiled: 0
             amalgam: 0
-          #- runs-on: macos-latest
-          #  backend: vulkan
-          #  precompiled: 0
-          #  amalgam: 0
+          - runs-on: macos-latest
+            backend: vulkan
+            precompiled: 0
+            amalgam: 0
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with: { persist-credentials: false }
@@ -128,6 +132,10 @@ jobs:
         with: { tool: 'just' }
       - run: echo "MLN_PRECOMPILE=${{ matrix.precompiled }}" >> $GITHUB_ENV
       - run: echo "MLN_CORE_LIBRARY_USE_AMALGAM=${{ matrix.amalgam }}" >> $GITHUB_ENV
+      - if: startsWith(matrix.runs-on, 'macos') && matrix.backend == 'vulkan'
+        run: |
+          echo "VK_ICD_FILENAMES=$(brew --prefix molten-vk)/etc/vulkan/icd.d/MoltenVK_icd.json" >> $GITHUB_ENV
+          echo "DYLD_LIBRARY_PATH=$(brew --prefix vulkan-loader)/lib" >> $GITHUB_ENV
       - run: just env-info install-dependencies '${{ matrix.backend }}'
       - name: Read MSRV
         id: msrv
