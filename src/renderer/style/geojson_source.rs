@@ -1,6 +1,8 @@
-use crate::renderer::bridge::sources;
-use cxx::UniquePtr;
 use std::fmt;
+
+use cxx::UniquePtr;
+
+use crate::renderer::bridge::sources;
 
 /// Latitude coordinate value.
 #[derive(Debug, Clone, Copy)]

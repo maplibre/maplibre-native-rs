@@ -1,6 +1,8 @@
-use crate::renderer::bridge::layers::{self, SymbolAnchorType};
-use cxx::UniquePtr;
 use std::fmt;
+
+use cxx::UniquePtr;
+
+use crate::renderer::bridge::layers::{self, SymbolAnchorType};
 
 /// A symbol layer for rendering labels and icons on the map.
 pub struct SymbolLayer {

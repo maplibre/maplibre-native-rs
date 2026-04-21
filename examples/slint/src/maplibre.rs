@@ -1,20 +1,17 @@
-use crate::MainWindow;
-use crate::MapAdapter;
-use maplibre_native::Height;
-use maplibre_native::ScreenCoordinate;
-use maplibre_native::Width;
-use maplibre_native::layers::SymbolAnchorType;
-use slint::ComponentHandle;
 use std::rc::Rc;
+
+use maplibre_native::layers::SymbolAnchorType;
+use maplibre_native::{Height, ScreenCoordinate, Width};
+use slint::ComponentHandle;
+
+use crate::{MainWindow, MapAdapter};
 mod headless;
-pub use headless::MapLibre;
-pub use headless::create_map;
-use image::ImageReader;
-use maplibre_native::Style;
-use maplibre_native::{GeoJsonSource, Latitude, Longitude, SymbolLayer};
-use maplibre_native::{X, Y};
 use std::cell::RefCell;
 use std::path::Path;
+
+pub use headless::{MapLibre, create_map};
+use image::ImageReader;
+use maplibre_native::{GeoJsonSource, Latitude, Longitude, Style, SymbolLayer, X, Y};
 
 pub fn init(ui: &MainWindow, map: &Rc<RefCell<MapLibre>>) {
     loop {

@@ -1,16 +1,15 @@
-use crate::Size;
-use maplibre_native::Continuous;
-use maplibre_native::ImageRenderer;
-use maplibre_native::ImageRendererBuilder;
-use maplibre_native::MapLoadError;
-use maplibre_native::ResourceOptions;
-use maplibre_native::ScreenCoordinate;
-use maplibre_native::tile_server_options::TileServerOptions;
-use maplibre_native::{Latitude, Longitude};
 use std::cell::RefCell;
 use std::num::NonZeroU32;
 use std::path::Path;
 use std::rc::Rc;
+
+use maplibre_native::tile_server_options::TileServerOptions;
+use maplibre_native::{
+    Continuous, ImageRenderer, ImageRendererBuilder, Latitude, Longitude, MapLoadError,
+    ResourceOptions, ScreenCoordinate,
+};
+
+use crate::Size;
 
 #[derive(Default)]
 struct Flags {

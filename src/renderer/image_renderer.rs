@@ -1,14 +1,16 @@
+use std::f64::consts::PI;
+use std::fmt::Debug;
+use std::marker::PhantomData;
+use std::path::Path;
+
+use cxx::UniquePtr;
+use image::{ImageBuffer, Rgba};
+
 use super::MapObserver;
 use crate::renderer::bridge::ffi;
 use crate::renderer::bridge::ffi::BridgeImage;
 use crate::renderer::MapDebugOptions;
 use crate::{Latitude, Longitude, ScreenCoordinate, Size};
-use cxx::UniquePtr;
-use image::{ImageBuffer, Rgba};
-use std::f64::consts::PI;
-use std::fmt::Debug;
-use std::marker::PhantomData;
-use std::path::Path;
 
 /// A rendered map image.
 ///
@@ -127,6 +129,11 @@ impl<S> ImageRenderer<S> {
         self.instance.pin_mut().setDebugFlags(flags);
         self
     }
+
+    /// Set the renderer output size.
+    pub fn set_map_size(&mut self, size: Size) {
+        self.instance.pin_mut().setSize(&size);
+    }
 }
 
 impl ImageRenderer<Static> {
@@ -234,11 +241,6 @@ impl ImageRenderer<Continuous> {
     /// Scale map (zooming)
     pub fn scale_by(&mut self, scale: f64, pos: ScreenCoordinate) {
         self.instance.pin_mut().scaleBy(scale, &pos);
-    }
-
-    /// Set the map size. It determines also the rendered image size
-    pub fn set_map_size(&mut self, size: Size) {
-        self.instance.pin_mut().setSize(&size);
     }
 
     /// Trigger render loop once (animations)

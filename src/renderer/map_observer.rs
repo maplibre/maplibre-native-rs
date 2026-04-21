@@ -2,12 +2,12 @@
 
 use std::fmt::Debug;
 
-use crate::renderer::bridge::ffi;
-use crate::renderer::bridge::map_observer;
+use cxx::SharedPtr;
+
+use crate::renderer::bridge::{ffi, map_observer};
 use crate::renderer::callbacks::{
     CameraDidChangeCallback, FailingLoadingMapCallback, FinishRenderingFrameCallback, VoidCallback,
 };
-use cxx::SharedPtr;
 
 /// Object to modify the map observer callbacks
 pub struct MapObserver {

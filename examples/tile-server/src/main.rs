@@ -2,15 +2,14 @@
 //!
 //! It serves rendered tiles from a MapLibre style file via our pooling.
 
-use axum::{
-    extract::Path,
-    http::{header, StatusCode},
-    response::{Html, Response},
-    routing::get,
-    Router,
-};
-use maplibre_native::SingleThreadedRenderPool;
 use std::path::PathBuf;
+
+use axum::extract::Path;
+use axum::http::{header, StatusCode};
+use axum::response::{Html, Response};
+use axum::routing::get;
+use axum::Router;
+use maplibre_native::SingleThreadedRenderPool;
 
 fn fixture_path(name: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -28,6 +27,8 @@ async fn rendered_style_tile(
     let style = fixture_path("maplibre_demo.json");
     assert!(style.is_file());
     let image = SingleThreadedRenderPool::global_pool()
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
         .render_tile(style, z, x, y)
         .await
         .map_err(|e| dbg!(e))

@@ -24,12 +24,19 @@ metal = []
 opengl = []
 vulkan = []
 log = ["dep:log"]
-pool = ["dep:tokio"]
+pool = ["dep:tokio", "dep:sqlx", "dep:futures", "dep:serde_json", "dep:reqwest", "dep:tempfile", "dep:httpdate", "dep:fastbloom"]
 
 [dependencies]
 cxx.workspace = true
+fastbloom = { workspace = true, optional = true }
+futures = { workspace = true, optional = true }
+httpdate = { workspace = true, optional = true }
 image.workspace = true
 log = { workspace = true, optional = true }
+reqwest = { workspace = true, optional = true }
+serde_json = { workspace = true, optional = true }
+sqlx = { workspace = true, features = ["sqlite-unbundled", "runtime-tokio"], optional = true }
+tempfile = { workspace = true, optional = true }
 thiserror.workspace = true
 tokio = { workspace = true, features = ["sync"], optional = true }
 url.workspace = true
@@ -44,10 +51,16 @@ toml = "0.8"
 walkdir.workspace = true
 
 [dev-dependencies]
+criterion = { workspace = true, features = ["async_tokio"] }
 env_logger.workspace = true
 futures.workspace = true
 insta = { workspace = true, features = ["json", "redactions"] }
 tokio = { workspace = true, features = ["macros", "sync", "rt-multi-thread"] }
+
+[[bench]]
+name = "cache_throughput"
+required-features = ["pool"]
+harness = false
 
 [lints]
 workspace = true
@@ -74,12 +87,19 @@ cxx-build = "1.0" # TODO: required to be a dependency and not only a build depen
 downloader = "0.2"
 env_logger = "0.11"
 flate2 = "1.1"
+fastbloom = "0.17"
 futures = "0.3"
+httpdate = "1"
 image = "0.25"
 insta = "1.43"
 log = "0.4"
 maplibre_native = { path = ".", version = "0.4.4" }
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
+serde_json = "1"
+sqlx = { version = "0.8", default-features = false }
+criterion = { version = "0.5", default-features = false }
 tar = "0.4.44"
+tempfile = "3"
 thiserror = "2.0.16"
 tokio = { version = "1", features = [], default-features = false }
 url = "2.5.7"
