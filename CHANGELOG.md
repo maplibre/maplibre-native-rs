@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.4](https://github.com/maplibre/maplibre-native-rs/compare/v0.4.3...v0.4.4) - 2026-04-21
+
+### Other
+
+- *(ci)* Enable macOS Vulkan in the CI test ([#158](https://github.com/maplibre/maplibre-native-rs/pull/158))
+
 ## [0.4.3](https://github.com/maplibre/maplibre-native-rs/compare/v0.4.2...v0.4.3) - 2026-04-19
 
 ### Other
