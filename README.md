@@ -60,7 +60,7 @@ The following platform and rendering-API combinations are supported and tested i
 | Linux ARM   | ❌    | ✅     | ✅     |
 | Windows x86 | ❌    | 🟨     | 🟨     |
 | Windows ARM | ❌    | 🟨     | 🟨     |
-| macOS ARM   | ✅    | 🟨[^1] | ❌     |
+| macOS ARM   | ✅    | ✅[^1] | ❌     |
 
 <sub>
 ✅ = IS supported and tested in CI
@@ -68,7 +68,7 @@ The following platform and rendering-API combinations are supported and tested i
 ❌ = Not possible
 </sub>
 
-[^1]: Vulcan support on macos is provided via `MoltenVK`. There is a slight performance overhead for this with little upsides. Both Metal and Vulcan run through the same extensive test suite upstream. You can use Vulcan if you find a bug in the Metal implementation until we have fixed it upstream.
+[^1]: Vulkan support on macos is provided via `MoltenVK`. There is a slight performance overhead for this with little upsides. Both Metal and Vulkan run through the same extensive test suite upstream. You can use Vulkan if you find a bug in the Metal implementation until we have fixed it upstream.
 
 ### Dependencies
 
