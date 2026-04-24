@@ -3,6 +3,7 @@ use crate::renderer::callbacks::{
     void_callback, CameraDidChangeCallback, FailingLoadingMapCallback,
     FinishRenderingFrameCallback, VoidCallback,
 };
+use crate::renderer::file_source::{fs_request_callback, FileSourceRequestCallback};
 use std::fmt::Display;
 use std::ops::Sub;
 
@@ -402,6 +403,42 @@ pub mod map_observer {
             self: &CxxMapObserver,
             callback: Box<CameraDidChangeCallback>,
         );
+    }
+}
+
+#[allow(clippy::borrow_as_ptr, unused_qualifications)]
+#[cxx::bridge(namespace = "mln::bridge")]
+/// Rust-backed FileSource bridge. See `src/cpp/rust_file_source.{h,cpp}`
+/// for the C++ side.
+pub mod file_source {
+    /// FFI shape for a resource-request response. `error_reason == 0`
+    /// means success; non-zero values map directly onto
+    /// `mbgl::Response::Error::Reason`. `no_content == true` with
+    /// `error_reason == 0` is a well-formed miss (e.g. tile not present).
+    #[derive(Debug)]
+    pub struct RustFsResponse {
+        pub data: Vec<u8>,
+        pub error_reason: u8,
+        pub error_message: String,
+        pub no_content: bool,
+    }
+
+    extern "Rust" {
+        type FileSourceRequestCallback;
+
+        fn fs_request_callback(
+            callback: &FileSourceRequestCallback,
+            url: &str,
+            kind: u8,
+        ) -> RustFsResponse;
+    }
+
+    unsafe extern "C++" {
+        include!("rust_file_source.h");
+
+        /// Install the Rust closure as the `ResourceLoader` file source
+        /// factory. Process-global; replaces any previous callback.
+        fn register_rust_file_source_factory(callback: Box<FileSourceRequestCallback>);
     }
 }
 

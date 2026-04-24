@@ -5,12 +5,18 @@ use crate::renderer::bridge::map_observer::MapObserverCameraChangeMode;
 use std::fmt::Debug;
 
 macro_rules! callback {
+    // Simple callback without extra trait bounds.
     ($callback_name:ident, $callback_f:path) => {
+        callback!($callback_name, $callback_f,);
+    };
+    // Callback with extra trait bounds, e.g.
+    //     callback!(Cb, Fn(&str) -> Response, Send, Sync);
+    ($callback_name:ident, $callback_f:path, $($bound:path),*) => {
         /// Callback object
-        pub struct $callback_name(Box<dyn $callback_f + 'static>);
+        pub struct $callback_name(pub(crate) Box<dyn $callback_f + 'static $(+ $bound)*>);
         impl $callback_name {
             /// Create a new callback object
-            pub fn new<F: $callback_f + 'static>(callback: F) -> Self {
+            pub fn new<F: $callback_f + 'static $(+ $bound)*>(callback: F) -> Self {
                 Self(Box::new(callback))
             }
         }
@@ -22,6 +28,7 @@ macro_rules! callback {
         }
     };
 }
+pub(crate) use callback;
 
 callback!(VoidCallback, Fn());
 /// General callback with any argument
