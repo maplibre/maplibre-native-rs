@@ -11,9 +11,7 @@ use std::num::NonZeroU32;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
-use maplibre_native::{
-    FsResponse, Height, ImageRendererBuilder, ResourceKind, Size, Width,
-};
+use maplibre_native::{FsResponse, Height, ImageRendererBuilder, ResourceKind, Size, Width};
 
 // A minimal style that renders a solid background. No tile sources — keeps
 // the test self-contained. We use a bright, unambiguous color so we can
@@ -62,9 +60,7 @@ fn file_source_callback_serves_inline_style() {
     renderer.load_style_from_url(&url);
     renderer.set_map_size(Size::new(Width(64), Height(64)));
 
-    let image = renderer
-        .render_static(0.0, 0.0, 0.0, 0.0, 0.0)
-        .expect("render should succeed");
+    let image = renderer.render_static(0.0, 0.0, 0.0, 0.0, 0.0).expect("render should succeed");
 
     // Dimensions: 64x64 logical * 1.0 ratio = 64x64 physical.
     let buf = image.as_image();
@@ -92,9 +88,11 @@ fn file_source_callback_serves_inline_style() {
     let mut saw_orange = false;
     for p in buf.pixels() {
         let [r, g, b, a] = p.0;
-        if a >= 250 && (r as i32 - 255).abs() <= 2
+        if a >= 250
+            && (r as i32 - 255).abs() <= 2
             && (g as i32 - 128).abs() <= 3
-            && (b as i32 - 0).abs() <= 2 {
+            && (b as i32 - 0).abs() <= 2
+        {
             saw_orange = true;
             break;
         }

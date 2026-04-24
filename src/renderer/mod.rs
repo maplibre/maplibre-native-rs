@@ -14,9 +14,7 @@ pub use bridge::{
     set_log_thread_enabled, Height, ScreenCoordinate, Size, Width, X, Y,
 };
 pub use builder::ImageRendererBuilder;
-pub use file_source::{
-    FileSourceRequestCallback, FsErrorReason, FsResponse, ResourceKind,
-};
+pub use file_source::{FileSourceRequestCallback, FsErrorReason, FsResponse, ResourceKind};
 pub use image_renderer::{Continuous, Image, ImageRenderer, RenderingError, Static, Tile};
 pub use map_observer::MapObserver;
 pub use resource_options::ResourceOptions;
