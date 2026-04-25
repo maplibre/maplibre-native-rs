@@ -4,7 +4,7 @@ slint::include_modules!();
 
 fn main() {
     slint::BackendSelector::new()
-        .require_wgpu_29(slint::wgpu_29::WGPUConfiguration::default())
+        .require_wgpu_29(slint::wgpu::WGPUConfiguration::default())
         .select()
         .unwrap();
     let ui = MainWindow::new().unwrap();
