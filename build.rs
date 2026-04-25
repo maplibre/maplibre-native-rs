@@ -399,6 +399,7 @@ fn build_local(
         GraphicsRenderingAPI::WGPU => {
             config.configure_arg("-DMLN_WITH_WEBGPU=ON");
             config.configure_arg("-DMLN_WEBGPU_IMPL_FFI=ON");
+            config.configure_arg("-DMLN_WEBGPU_IMPL_WGPU=ON");
         }
     }
     if amalgam_lib {

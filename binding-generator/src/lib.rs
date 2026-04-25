@@ -20,6 +20,9 @@ macro_rules! opaque_handle_types {
 	};
 }
 
+pub type WGPUDeviceImpl = wgpu::Device;
+pub type WGPUTextureImpl = wgpu::Texture;
+
 opaque_handle_types!(
     WGPUAdapterImpl,
     WGPUBindGroupImpl,
@@ -29,7 +32,6 @@ opaque_handle_types!(
     WGPUCommandEncoderImpl,
     WGPUComputePassEncoderImpl,
     WGPUComputePipelineImpl,
-    WGPUDeviceImpl,
     WGPUInstanceImpl,
     WGPUPipelineLayoutImpl,
     WGPUQuerySetImpl,
@@ -41,7 +43,6 @@ opaque_handle_types!(
     WGPUSamplerImpl,
     WGPUShaderModuleImpl,
     WGPUSurfaceImpl,
-    WGPUTextureImpl,
     WGPUTextureViewImpl,
 );
 
@@ -627,7 +628,8 @@ pub unsafe extern "C" fn wgpuDeviceCreateTexture(
     device: WGPUDevice,
     descriptor: *const WGPUTextureDescriptor,
 ) -> WGPUTexture {
-    panic!("wgpuDeviceCreateTexture must be implemented");
+    // device.as_ref().create_texture();
+    panic!("Failed");
 }
 
 #[unsafe(no_mangle)]
