@@ -15,19 +15,14 @@
 //! To build the amalgam library [armerge](https://github.com/tux3/armerge) is required:
 //!     - `cargo install armerge`
 //!     - `sudo apt install llvm` llvm-objcopy required
-
-use const_format::formatcp;
 use downloader::{Download, Downloader};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::{env, fs};
 
 // Used when building locally
-const MLN_COMMIT: &str = "cff407fc0a9748eace94d876ce143c1ddf1e7d39";
-/// Version expected in the Cargo.toml. So it will not be forgotten to update WGPU_NATIVE_VERSION
-const WGPU_RUST_VERSION: &str = "29.0.0";
-/// Manually specified, because it is not guaranteed to have always this convention
-const WGPU_NATIVE_VERSION: &str = formatcp!("v{WGPU_RUST_VERSION}.0"); // wgpu-native git tag
+const MLN_REPOSITORY_URL: &str = "https://github.com/Murmele/maplibre-native.git";
+const MLN_COMMIT: &str = "2c6add121f53827baeb518a8056daf5288031ea6";
 
 // Files of the bridge
 const BRIDGE_FILES: &[&str] = &[
@@ -177,7 +172,6 @@ fn download_static(out_dir: &Path, revision: &str) -> (PathBuf, PathBuf) {
 
 struct CargoTomlInformation {
     mln_release: String,
-    wgpu_version: String,
 }
 
 /// Reads `[package.metadata.mln].release` from the crate's `Cargo.toml`.
@@ -209,15 +203,7 @@ fn determine_cargo_toml_information() -> CargoTomlInformation {
         })
         .to_owned();
 
-    let wgpu_version = manifest
-        .get("dependencies")
-        .and_then(|dependencies| dependencies.get("wgpu"))
-        .and_then(|wgpu| wgpu.get("version"))
-        .and_then(toml::Value::as_str)
-        .unwrap_or_else(|| panic!("Missing wgpu version in {}", manifest_path.display()))
-        .to_owned();
-
-    CargoTomlInformation { mln_release, wgpu_version }
+    CargoTomlInformation { mln_release }
 }
 
 /// Extracts the headers from the downloaded tarball
@@ -360,8 +346,6 @@ fn build_local(
     const TARGET_NAME: &str = "mbgl-core";
     let maplibre_native_dir = clone_dir.join(name);
 
-    assert_eq!(determine_cargo_toml_information().wgpu_version, WGPU_RUST_VERSION);
-
     // Some CI cache restores may leave an incomplete directory tree.
     // Require files that prove this is a usable maplibre-native checkout.
     let has_required_checkout_files = maplibre_native_dir.join("CMakeLists.txt").is_file()
@@ -379,15 +363,7 @@ fn build_local(
         println!("cargo:warning=Cloning maplibre-native.");
         let clone_status = Command::new("git")
             .current_dir(clone_dir)
-            .args([
-                "clone",
-                "--depth",
-                "1",
-                "--revision",
-                MLN_COMMIT,
-                "https://github.com/Murmele/maplibre-native.git",
-                name,
-            ])
+            .args(["clone", "--depth", "1", "--revision", MLN_COMMIT, MLN_REPOSITORY_URL, name])
             .status()?;
         if !clone_status.success() {
             return Err(
@@ -421,9 +397,8 @@ fn build_local(
             config.configure_arg("-DMLN_WITH_VULKAN=ON");
         }
         GraphicsRenderingAPI::WGPU => {
-            config.configure_arg(format!("-DMLN_WGPU_NATIVE_VERSION={WGPU_NATIVE_VERSION}"));
             config.configure_arg("-DMLN_WITH_WEBGPU=ON");
-            config.configure_arg("-DMLN_WEBGPU_IMPL_WGPU=ON");
+            config.configure_arg("-DMLN_WEBGPU_IMPL_FFI=ON");
         }
     }
     if amalgam_lib {

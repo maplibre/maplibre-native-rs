@@ -1,0 +1,1468 @@
+#![allow(missing_docs)]
+#![allow(dead_code)]
+#![allow(non_camel_case_types)]
+#![allow(non_snake_case)]
+#![allow(non_upper_case_globals)]
+#![allow(unused_qualifications)]
+#![allow(unused_variables)]
+#![allow(clippy::all)]
+#![allow(clippy::missing_safety_doc)]
+
+macro_rules! opaque_handle_types {
+	($($name:ident),+ $(,)?) => {
+		$(
+			#[repr(C)]
+			#[derive(Debug)]
+			pub struct $name {
+				_unused: [u8; 0],
+			}
+		)+
+	};
+}
+
+opaque_handle_types!(
+    WGPUAdapterImpl,
+    WGPUBindGroupImpl,
+    WGPUBindGroupLayoutImpl,
+    WGPUBufferImpl,
+    WGPUCommandBufferImpl,
+    WGPUCommandEncoderImpl,
+    WGPUComputePassEncoderImpl,
+    WGPUComputePipelineImpl,
+    WGPUDeviceImpl,
+    WGPUInstanceImpl,
+    WGPUPipelineLayoutImpl,
+    WGPUQuerySetImpl,
+    WGPUQueueImpl,
+    WGPURenderBundleImpl,
+    WGPURenderBundleEncoderImpl,
+    WGPURenderPassEncoderImpl,
+    WGPURenderPipelineImpl,
+    WGPUSamplerImpl,
+    WGPUShaderModuleImpl,
+    WGPUSurfaceImpl,
+    WGPUTextureImpl,
+    WGPUTextureViewImpl,
+);
+
+include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuCreateInstance(
+    descriptor: *const WGPUInstanceDescriptor,
+) -> WGPUInstance {
+    panic!("wgpuCreateInstance must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuGetInstanceFeatures(features: *mut WGPUSupportedInstanceFeatures) {
+    panic!("wgpuGetInstanceFeatures must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuGetInstanceLimits(limits: *mut WGPUInstanceLimits) -> WGPUStatus {
+    panic!("wgpuGetInstanceLimits must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuHasInstanceFeature(feature: WGPUInstanceFeatureName) -> WGPUBool {
+    panic!("wgpuHasInstanceFeature must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuGetProcAddress(procName: WGPUStringView) -> WGPUProc {
+    panic!("wgpuGetProcAddress must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuAdapterGetFeatures(
+    adapter: WGPUAdapter,
+    features: *mut WGPUSupportedFeatures,
+) {
+    panic!("wgpuAdapterGetFeatures must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuAdapterGetInfo(
+    adapter: WGPUAdapter,
+    info: *mut WGPUAdapterInfo,
+) -> WGPUStatus {
+    panic!("wgpuAdapterGetInfo must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuAdapterGetLimits(
+    adapter: WGPUAdapter,
+    limits: *mut WGPULimits,
+) -> WGPUStatus {
+    panic!("wgpuAdapterGetLimits must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuAdapterHasFeature(
+    adapter: WGPUAdapter,
+    feature: WGPUFeatureName,
+) -> WGPUBool {
+    panic!("wgpuAdapterHasFeature must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuAdapterRequestDevice(
+    adapter: WGPUAdapter,
+    descriptor: *const WGPUDeviceDescriptor,
+    callbackInfo: WGPURequestDeviceCallbackInfo,
+) -> WGPUFuture {
+    panic!("wgpuAdapterRequestDevice must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuAdapterAddRef(adapter: WGPUAdapter) {
+    panic!("wgpuAdapterAddRef must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuAdapterRelease(adapter: WGPUAdapter) {
+    panic!("wgpuAdapterRelease must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuAdapterInfoFreeMembers(adapterInfo: WGPUAdapterInfo) {
+    panic!("wgpuAdapterInfoFreeMembers must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuBindGroupSetLabel(bindGroup: WGPUBindGroup, label: WGPUStringView) {
+    panic!("wgpuBindGroupSetLabel must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuBindGroupAddRef(bindGroup: WGPUBindGroup) {
+    panic!("wgpuBindGroupAddRef must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuBindGroupRelease(bindGroup: WGPUBindGroup) {
+    panic!("wgpuBindGroupRelease must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuBindGroupLayoutSetLabel(
+    bindGroupLayout: WGPUBindGroupLayout,
+    label: WGPUStringView,
+) {
+    panic!("wgpuBindGroupLayoutSetLabel must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuBindGroupLayoutAddRef(bindGroupLayout: WGPUBindGroupLayout) {
+    panic!("wgpuBindGroupLayoutAddRef must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuBindGroupLayoutRelease(bindGroupLayout: WGPUBindGroupLayout) {
+    panic!("wgpuBindGroupLayoutRelease must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuBufferDestroy(buffer: WGPUBuffer) {
+    panic!("wgpuBufferDestroy must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuBufferGetConstMappedRange(
+    buffer: WGPUBuffer,
+    offset: usize,
+    size: usize,
+) -> *const ::std::os::raw::c_void {
+    panic!("wgpuBufferGetConstMappedRange must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuBufferGetMappedRange(
+    buffer: WGPUBuffer,
+    offset: usize,
+    size: usize,
+) -> *mut ::std::os::raw::c_void {
+    panic!("wgpuBufferGetMappedRange must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuBufferGetMapState(buffer: WGPUBuffer) -> WGPUBufferMapState {
+    panic!("wgpuBufferGetMapState must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuBufferGetSize(buffer: WGPUBuffer) -> u64 {
+    panic!("wgpuBufferGetSize must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuBufferGetUsage(buffer: WGPUBuffer) -> WGPUBufferUsage {
+    panic!("wgpuBufferGetUsage must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuBufferMapAsync(
+    buffer: WGPUBuffer,
+    mode: WGPUMapMode,
+    offset: usize,
+    size: usize,
+    callbackInfo: WGPUBufferMapCallbackInfo,
+) -> WGPUFuture {
+    panic!("wgpuBufferMapAsync must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuBufferReadMappedRange(
+    buffer: WGPUBuffer,
+    offset: usize,
+    data: *mut ::std::os::raw::c_void,
+    size: usize,
+) -> WGPUStatus {
+    panic!("wgpuBufferReadMappedRange must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuBufferSetLabel(buffer: WGPUBuffer, label: WGPUStringView) {
+    panic!("wgpuBufferSetLabel must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuBufferUnmap(buffer: WGPUBuffer) {
+    panic!("wgpuBufferUnmap must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuBufferWriteMappedRange(
+    buffer: WGPUBuffer,
+    offset: usize,
+    data: *const ::std::os::raw::c_void,
+    size: usize,
+) -> WGPUStatus {
+    panic!("wgpuBufferWriteMappedRange must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuBufferAddRef(buffer: WGPUBuffer) {
+    panic!("wgpuBufferAddRef must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuBufferRelease(buffer: WGPUBuffer) {
+    panic!("wgpuBufferRelease must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuCommandBufferSetLabel(
+    commandBuffer: WGPUCommandBuffer,
+    label: WGPUStringView,
+) {
+    panic!("wgpuCommandBufferSetLabel must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuCommandBufferAddRef(commandBuffer: WGPUCommandBuffer) {
+    panic!("wgpuCommandBufferAddRef must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuCommandBufferRelease(commandBuffer: WGPUCommandBuffer) {
+    panic!("wgpuCommandBufferRelease must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuCommandEncoderBeginComputePass(
+    commandEncoder: WGPUCommandEncoder,
+    descriptor: *const WGPUComputePassDescriptor,
+) -> WGPUComputePassEncoder {
+    panic!("wgpuCommandEncoderBeginComputePass must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuCommandEncoderBeginRenderPass(
+    commandEncoder: WGPUCommandEncoder,
+    descriptor: *const WGPURenderPassDescriptor,
+) -> WGPURenderPassEncoder {
+    panic!("wgpuCommandEncoderBeginRenderPass must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuCommandEncoderClearBuffer(
+    commandEncoder: WGPUCommandEncoder,
+    buffer: WGPUBuffer,
+    offset: u64,
+    size: u64,
+) {
+    panic!("wgpuCommandEncoderClearBuffer must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuCommandEncoderCopyBufferToBuffer(
+    commandEncoder: WGPUCommandEncoder,
+    source: WGPUBuffer,
+    sourceOffset: u64,
+    destination: WGPUBuffer,
+    destinationOffset: u64,
+    size: u64,
+) {
+    panic!("wgpuCommandEncoderCopyBufferToBuffer must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuCommandEncoderCopyBufferToTexture(
+    commandEncoder: WGPUCommandEncoder,
+    source: *const WGPUTexelCopyBufferInfo,
+    destination: *const WGPUTexelCopyTextureInfo,
+    copySize: *const WGPUExtent3D,
+) {
+    panic!("wgpuCommandEncoderCopyBufferToTexture must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuCommandEncoderCopyTextureToBuffer(
+    commandEncoder: WGPUCommandEncoder,
+    source: *const WGPUTexelCopyTextureInfo,
+    destination: *const WGPUTexelCopyBufferInfo,
+    copySize: *const WGPUExtent3D,
+) {
+    panic!("wgpuCommandEncoderCopyTextureToBuffer must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuCommandEncoderCopyTextureToTexture(
+    commandEncoder: WGPUCommandEncoder,
+    source: *const WGPUTexelCopyTextureInfo,
+    destination: *const WGPUTexelCopyTextureInfo,
+    copySize: *const WGPUExtent3D,
+) {
+    panic!("wgpuCommandEncoderCopyTextureToTexture must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuCommandEncoderFinish(
+    commandEncoder: WGPUCommandEncoder,
+    descriptor: *const WGPUCommandBufferDescriptor,
+) -> WGPUCommandBuffer {
+    panic!("wgpuCommandEncoderFinish must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuCommandEncoderInsertDebugMarker(
+    commandEncoder: WGPUCommandEncoder,
+    markerLabel: WGPUStringView,
+) {
+    panic!("wgpuCommandEncoderInsertDebugMarker must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuCommandEncoderPopDebugGroup(commandEncoder: WGPUCommandEncoder) {
+    panic!("wgpuCommandEncoderPopDebugGroup must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuCommandEncoderPushDebugGroup(
+    commandEncoder: WGPUCommandEncoder,
+    groupLabel: WGPUStringView,
+) {
+    panic!("wgpuCommandEncoderPushDebugGroup must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuCommandEncoderResolveQuerySet(
+    commandEncoder: WGPUCommandEncoder,
+    querySet: WGPUQuerySet,
+    firstQuery: u32,
+    queryCount: u32,
+    destination: WGPUBuffer,
+    destinationOffset: u64,
+) {
+    panic!("wgpuCommandEncoderResolveQuerySet must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuCommandEncoderSetLabel(
+    commandEncoder: WGPUCommandEncoder,
+    label: WGPUStringView,
+) {
+    panic!("wgpuCommandEncoderSetLabel must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuCommandEncoderWriteTimestamp(
+    commandEncoder: WGPUCommandEncoder,
+    querySet: WGPUQuerySet,
+    queryIndex: u32,
+) {
+    panic!("wgpuCommandEncoderWriteTimestamp must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuCommandEncoderAddRef(commandEncoder: WGPUCommandEncoder) {
+    panic!("wgpuCommandEncoderAddRef must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuCommandEncoderRelease(commandEncoder: WGPUCommandEncoder) {
+    panic!("wgpuCommandEncoderRelease must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuComputePassEncoderDispatchWorkgroups(
+    computePassEncoder: WGPUComputePassEncoder,
+    workgroupCountX: u32,
+    workgroupCountY: u32,
+    workgroupCountZ: u32,
+) {
+    panic!("wgpuComputePassEncoderDispatchWorkgroups must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuComputePassEncoderDispatchWorkgroupsIndirect(
+    computePassEncoder: WGPUComputePassEncoder,
+    indirectBuffer: WGPUBuffer,
+    indirectOffset: u64,
+) {
+    panic!("wgpuComputePassEncoderDispatchWorkgroupsIndirect must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuComputePassEncoderEnd(computePassEncoder: WGPUComputePassEncoder) {
+    panic!("wgpuComputePassEncoderEnd must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuComputePassEncoderInsertDebugMarker(
+    computePassEncoder: WGPUComputePassEncoder,
+    markerLabel: WGPUStringView,
+) {
+    panic!("wgpuComputePassEncoderInsertDebugMarker must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuComputePassEncoderPopDebugGroup(
+    computePassEncoder: WGPUComputePassEncoder,
+) {
+    panic!("wgpuComputePassEncoderPopDebugGroup must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuComputePassEncoderPushDebugGroup(
+    computePassEncoder: WGPUComputePassEncoder,
+    groupLabel: WGPUStringView,
+) {
+    panic!("wgpuComputePassEncoderPushDebugGroup must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuComputePassEncoderSetBindGroup(
+    computePassEncoder: WGPUComputePassEncoder,
+    groupIndex: u32,
+    group: WGPUBindGroup,
+    dynamicOffsetCount: usize,
+    dynamicOffsets: *const u32,
+) {
+    panic!("wgpuComputePassEncoderSetBindGroup must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuComputePassEncoderSetLabel(
+    computePassEncoder: WGPUComputePassEncoder,
+    label: WGPUStringView,
+) {
+    panic!("wgpuComputePassEncoderSetLabel must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuComputePassEncoderSetPipeline(
+    computePassEncoder: WGPUComputePassEncoder,
+    pipeline: WGPUComputePipeline,
+) {
+    panic!("wgpuComputePassEncoderSetPipeline must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuComputePassEncoderAddRef(computePassEncoder: WGPUComputePassEncoder) {
+    panic!("wgpuComputePassEncoderAddRef must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuComputePassEncoderRelease(computePassEncoder: WGPUComputePassEncoder) {
+    panic!("wgpuComputePassEncoderRelease must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuComputePipelineGetBindGroupLayout(
+    computePipeline: WGPUComputePipeline,
+    groupIndex: u32,
+) -> WGPUBindGroupLayout {
+    panic!("wgpuComputePipelineGetBindGroupLayout must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuComputePipelineSetLabel(
+    computePipeline: WGPUComputePipeline,
+    label: WGPUStringView,
+) {
+    panic!("wgpuComputePipelineSetLabel must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuComputePipelineAddRef(computePipeline: WGPUComputePipeline) {
+    panic!("wgpuComputePipelineAddRef must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuComputePipelineRelease(computePipeline: WGPUComputePipeline) {
+    panic!("wgpuComputePipelineRelease must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuDeviceCreateBindGroup(
+    device: WGPUDevice,
+    descriptor: *const WGPUBindGroupDescriptor,
+) -> WGPUBindGroup {
+    panic!("wgpuDeviceCreateBindGroup must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuDeviceCreateBindGroupLayout(
+    device: WGPUDevice,
+    descriptor: *const WGPUBindGroupLayoutDescriptor,
+) -> WGPUBindGroupLayout {
+    panic!("wgpuDeviceCreateBindGroupLayout must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuDeviceCreateBuffer(
+    device: WGPUDevice,
+    descriptor: *const WGPUBufferDescriptor,
+) -> WGPUBuffer {
+    panic!("wgpuDeviceCreateBuffer must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuDeviceCreateCommandEncoder(
+    device: WGPUDevice,
+    descriptor: *const WGPUCommandEncoderDescriptor,
+) -> WGPUCommandEncoder {
+    panic!("wgpuDeviceCreateCommandEncoder must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuDeviceCreateComputePipeline(
+    device: WGPUDevice,
+    descriptor: *const WGPUComputePipelineDescriptor,
+) -> WGPUComputePipeline {
+    panic!("wgpuDeviceCreateComputePipeline must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuDeviceCreateComputePipelineAsync(
+    device: WGPUDevice,
+    descriptor: *const WGPUComputePipelineDescriptor,
+    callbackInfo: WGPUCreateComputePipelineAsyncCallbackInfo,
+) -> WGPUFuture {
+    panic!("wgpuDeviceCreateComputePipelineAsync must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuDeviceCreatePipelineLayout(
+    device: WGPUDevice,
+    descriptor: *const WGPUPipelineLayoutDescriptor,
+) -> WGPUPipelineLayout {
+    panic!("wgpuDeviceCreatePipelineLayout must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuDeviceCreateQuerySet(
+    device: WGPUDevice,
+    descriptor: *const WGPUQuerySetDescriptor,
+) -> WGPUQuerySet {
+    panic!("wgpuDeviceCreateQuerySet must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuDeviceCreateRenderBundleEncoder(
+    device: WGPUDevice,
+    descriptor: *const WGPURenderBundleEncoderDescriptor,
+) -> WGPURenderBundleEncoder {
+    panic!("wgpuDeviceCreateRenderBundleEncoder must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuDeviceCreateRenderPipeline(
+    device: WGPUDevice,
+    descriptor: *const WGPURenderPipelineDescriptor,
+) -> WGPURenderPipeline {
+    panic!("wgpuDeviceCreateRenderPipeline must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuDeviceCreateRenderPipelineAsync(
+    device: WGPUDevice,
+    descriptor: *const WGPURenderPipelineDescriptor,
+    callbackInfo: WGPUCreateRenderPipelineAsyncCallbackInfo,
+) -> WGPUFuture {
+    panic!("wgpuDeviceCreateRenderPipelineAsync must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuDeviceCreateSampler(
+    device: WGPUDevice,
+    descriptor: *const WGPUSamplerDescriptor,
+) -> WGPUSampler {
+    panic!("wgpuDeviceCreateSampler must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuDeviceCreateShaderModule(
+    device: WGPUDevice,
+    descriptor: *const WGPUShaderModuleDescriptor,
+) -> WGPUShaderModule {
+    panic!("wgpuDeviceCreateShaderModule must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuDeviceCreateTexture(
+    device: WGPUDevice,
+    descriptor: *const WGPUTextureDescriptor,
+) -> WGPUTexture {
+    panic!("wgpuDeviceCreateTexture must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuDeviceDestroy(device: WGPUDevice) {
+    panic!("wgpuDeviceDestroy must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuDeviceGetAdapterInfo(
+    device: WGPUDevice,
+    adapterInfo: *mut WGPUAdapterInfo,
+) -> WGPUStatus {
+    panic!("wgpuDeviceGetAdapterInfo must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuDeviceGetFeatures(
+    device: WGPUDevice,
+    features: *mut WGPUSupportedFeatures,
+) {
+    panic!("wgpuDeviceGetFeatures must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuDeviceGetLimits(
+    device: WGPUDevice,
+    limits: *mut WGPULimits,
+) -> WGPUStatus {
+    panic!("wgpuDeviceGetLimits must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuDeviceGetLostFuture(device: WGPUDevice) -> WGPUFuture {
+    panic!("wgpuDeviceGetLostFuture must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuDeviceGetQueue(device: WGPUDevice) -> WGPUQueue {
+    panic!("wgpuDeviceGetQueue must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuDeviceHasFeature(
+    device: WGPUDevice,
+    feature: WGPUFeatureName,
+) -> WGPUBool {
+    panic!("wgpuDeviceHasFeature must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuDevicePopErrorScope(
+    device: WGPUDevice,
+    callbackInfo: WGPUPopErrorScopeCallbackInfo,
+) -> WGPUFuture {
+    panic!("wgpuDevicePopErrorScope must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuDevicePushErrorScope(device: WGPUDevice, filter: WGPUErrorFilter) {
+    panic!("wgpuDevicePushErrorScope must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuDeviceSetLabel(device: WGPUDevice, label: WGPUStringView) {
+    panic!("wgpuDeviceSetLabel must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuDeviceAddRef(device: WGPUDevice) {
+    panic!("wgpuDeviceAddRef must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuDeviceRelease(device: WGPUDevice) {
+    panic!("wgpuDeviceRelease must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuExternalTextureSetLabel(
+    externalTexture: WGPUExternalTexture,
+    label: WGPUStringView,
+) {
+    panic!("wgpuExternalTextureSetLabel must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuExternalTextureAddRef(externalTexture: WGPUExternalTexture) {
+    panic!("wgpuExternalTextureAddRef must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuExternalTextureRelease(externalTexture: WGPUExternalTexture) {
+    panic!("wgpuExternalTextureRelease must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuInstanceCreateSurface(
+    instance: WGPUInstance,
+    descriptor: *const WGPUSurfaceDescriptor,
+) -> WGPUSurface {
+    panic!("wgpuInstanceCreateSurface must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuInstanceGetWGSLLanguageFeatures(
+    instance: WGPUInstance,
+    features: *mut WGPUSupportedWGSLLanguageFeatures,
+) {
+    panic!("wgpuInstanceGetWGSLLanguageFeatures must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuInstanceHasWGSLLanguageFeature(
+    instance: WGPUInstance,
+    feature: WGPUWGSLLanguageFeatureName,
+) -> WGPUBool {
+    panic!("wgpuInstanceHasWGSLLanguageFeature must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuInstanceProcessEvents(instance: WGPUInstance) {
+    panic!("wgpuInstanceProcessEvents must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuInstanceRequestAdapter(
+    instance: WGPUInstance,
+    options: *const WGPURequestAdapterOptions,
+    callbackInfo: WGPURequestAdapterCallbackInfo,
+) -> WGPUFuture {
+    panic!("wgpuInstanceRequestAdapter must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuInstanceWaitAny(
+    instance: WGPUInstance,
+    futureCount: usize,
+    futures: *mut WGPUFutureWaitInfo,
+    timeoutNS: u64,
+) -> WGPUWaitStatus {
+    panic!("wgpuInstanceWaitAny must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuInstanceAddRef(instance: WGPUInstance) {
+    panic!("wgpuInstanceAddRef must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuInstanceRelease(instance: WGPUInstance) {
+    panic!("wgpuInstanceRelease must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuPipelineLayoutSetLabel(
+    pipelineLayout: WGPUPipelineLayout,
+    label: WGPUStringView,
+) {
+    panic!("wgpuPipelineLayoutSetLabel must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuPipelineLayoutAddRef(pipelineLayout: WGPUPipelineLayout) {
+    panic!("wgpuPipelineLayoutAddRef must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuPipelineLayoutRelease(pipelineLayout: WGPUPipelineLayout) {
+    panic!("wgpuPipelineLayoutRelease must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuQuerySetDestroy(querySet: WGPUQuerySet) {
+    panic!("wgpuQuerySetDestroy must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuQuerySetGetCount(querySet: WGPUQuerySet) -> u32 {
+    panic!("wgpuQuerySetGetCount must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuQuerySetGetType(querySet: WGPUQuerySet) -> WGPUQueryType {
+    panic!("wgpuQuerySetGetType must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuQuerySetSetLabel(querySet: WGPUQuerySet, label: WGPUStringView) {
+    panic!("wgpuQuerySetSetLabel must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuQuerySetAddRef(querySet: WGPUQuerySet) {
+    panic!("wgpuQuerySetAddRef must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuQuerySetRelease(querySet: WGPUQuerySet) {
+    panic!("wgpuQuerySetRelease must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuQueueOnSubmittedWorkDone(
+    queue: WGPUQueue,
+    callbackInfo: WGPUQueueWorkDoneCallbackInfo,
+) -> WGPUFuture {
+    panic!("wgpuQueueOnSubmittedWorkDone must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuQueueSetLabel(queue: WGPUQueue, label: WGPUStringView) {
+    panic!("wgpuQueueSetLabel must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuQueueSubmit(
+    queue: WGPUQueue,
+    commandCount: usize,
+    commands: *const WGPUCommandBuffer,
+) {
+    panic!("wgpuQueueSubmit must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuQueueWriteBuffer(
+    queue: WGPUQueue,
+    buffer: WGPUBuffer,
+    bufferOffset: u64,
+    data: *const ::std::os::raw::c_void,
+    size: usize,
+) {
+    panic!("wgpuQueueWriteBuffer must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuQueueWriteTexture(
+    queue: WGPUQueue,
+    destination: *const WGPUTexelCopyTextureInfo,
+    data: *const ::std::os::raw::c_void,
+    dataSize: usize,
+    dataLayout: *const WGPUTexelCopyBufferLayout,
+    writeSize: *const WGPUExtent3D,
+) {
+    panic!("wgpuQueueWriteTexture must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuQueueAddRef(queue: WGPUQueue) {
+    panic!("wgpuQueueAddRef must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuQueueRelease(queue: WGPUQueue) {
+    panic!("wgpuQueueRelease must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuRenderBundleSetLabel(
+    renderBundle: WGPURenderBundle,
+    label: WGPUStringView,
+) {
+    panic!("wgpuRenderBundleSetLabel must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuRenderBundleAddRef(renderBundle: WGPURenderBundle) {
+    panic!("wgpuRenderBundleAddRef must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuRenderBundleRelease(renderBundle: WGPURenderBundle) {
+    panic!("wgpuRenderBundleRelease must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuRenderBundleEncoderDraw(
+    renderBundleEncoder: WGPURenderBundleEncoder,
+    vertexCount: u32,
+    instanceCount: u32,
+    firstVertex: u32,
+    firstInstance: u32,
+) {
+    panic!("wgpuRenderBundleEncoderDraw must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuRenderBundleEncoderDrawIndexed(
+    renderBundleEncoder: WGPURenderBundleEncoder,
+    indexCount: u32,
+    instanceCount: u32,
+    firstIndex: u32,
+    baseVertex: i32,
+    firstInstance: u32,
+) {
+    panic!("wgpuRenderBundleEncoderDrawIndexed must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuRenderBundleEncoderDrawIndexedIndirect(
+    renderBundleEncoder: WGPURenderBundleEncoder,
+    indirectBuffer: WGPUBuffer,
+    indirectOffset: u64,
+) {
+    panic!("wgpuRenderBundleEncoderDrawIndexedIndirect must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuRenderBundleEncoderDrawIndirect(
+    renderBundleEncoder: WGPURenderBundleEncoder,
+    indirectBuffer: WGPUBuffer,
+    indirectOffset: u64,
+) {
+    panic!("wgpuRenderBundleEncoderDrawIndirect must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuRenderBundleEncoderFinish(
+    renderBundleEncoder: WGPURenderBundleEncoder,
+    descriptor: *const WGPURenderBundleDescriptor,
+) -> WGPURenderBundle {
+    panic!("wgpuRenderBundleEncoderFinish must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuRenderBundleEncoderInsertDebugMarker(
+    renderBundleEncoder: WGPURenderBundleEncoder,
+    markerLabel: WGPUStringView,
+) {
+    panic!("wgpuRenderBundleEncoderInsertDebugMarker must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuRenderBundleEncoderPopDebugGroup(
+    renderBundleEncoder: WGPURenderBundleEncoder,
+) {
+    panic!("wgpuRenderBundleEncoderPopDebugGroup must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuRenderBundleEncoderPushDebugGroup(
+    renderBundleEncoder: WGPURenderBundleEncoder,
+    groupLabel: WGPUStringView,
+) {
+    panic!("wgpuRenderBundleEncoderPushDebugGroup must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuRenderBundleEncoderSetBindGroup(
+    renderBundleEncoder: WGPURenderBundleEncoder,
+    groupIndex: u32,
+    group: WGPUBindGroup,
+    dynamicOffsetCount: usize,
+    dynamicOffsets: *const u32,
+) {
+    panic!("wgpuRenderBundleEncoderSetBindGroup must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuRenderBundleEncoderSetIndexBuffer(
+    renderBundleEncoder: WGPURenderBundleEncoder,
+    buffer: WGPUBuffer,
+    format: WGPUIndexFormat,
+    offset: u64,
+    size: u64,
+) {
+    panic!("wgpuRenderBundleEncoderSetIndexBuffer must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuRenderBundleEncoderSetLabel(
+    renderBundleEncoder: WGPURenderBundleEncoder,
+    label: WGPUStringView,
+) {
+    panic!("wgpuRenderBundleEncoderSetLabel must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuRenderBundleEncoderSetPipeline(
+    renderBundleEncoder: WGPURenderBundleEncoder,
+    pipeline: WGPURenderPipeline,
+) {
+    panic!("wgpuRenderBundleEncoderSetPipeline must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuRenderBundleEncoderSetVertexBuffer(
+    renderBundleEncoder: WGPURenderBundleEncoder,
+    slot: u32,
+    buffer: WGPUBuffer,
+    offset: u64,
+    size: u64,
+) {
+    panic!("wgpuRenderBundleEncoderSetVertexBuffer must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuRenderBundleEncoderAddRef(
+    renderBundleEncoder: WGPURenderBundleEncoder,
+) {
+    panic!("wgpuRenderBundleEncoderAddRef must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuRenderBundleEncoderRelease(
+    renderBundleEncoder: WGPURenderBundleEncoder,
+) {
+    panic!("wgpuRenderBundleEncoderRelease must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuRenderPassEncoderBeginOcclusionQuery(
+    renderPassEncoder: WGPURenderPassEncoder,
+    queryIndex: u32,
+) {
+    panic!("wgpuRenderPassEncoderBeginOcclusionQuery must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuRenderPassEncoderDraw(
+    renderPassEncoder: WGPURenderPassEncoder,
+    vertexCount: u32,
+    instanceCount: u32,
+    firstVertex: u32,
+    firstInstance: u32,
+) {
+    panic!("wgpuRenderPassEncoderDraw must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuRenderPassEncoderDrawIndexed(
+    renderPassEncoder: WGPURenderPassEncoder,
+    indexCount: u32,
+    instanceCount: u32,
+    firstIndex: u32,
+    baseVertex: i32,
+    firstInstance: u32,
+) {
+    panic!("wgpuRenderPassEncoderDrawIndexed must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuRenderPassEncoderDrawIndexedIndirect(
+    renderPassEncoder: WGPURenderPassEncoder,
+    indirectBuffer: WGPUBuffer,
+    indirectOffset: u64,
+) {
+    panic!("wgpuRenderPassEncoderDrawIndexedIndirect must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuRenderPassEncoderDrawIndirect(
+    renderPassEncoder: WGPURenderPassEncoder,
+    indirectBuffer: WGPUBuffer,
+    indirectOffset: u64,
+) {
+    panic!("wgpuRenderPassEncoderDrawIndirect must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuRenderPassEncoderEnd(renderPassEncoder: WGPURenderPassEncoder) {
+    panic!("wgpuRenderPassEncoderEnd must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuRenderPassEncoderEndOcclusionQuery(
+    renderPassEncoder: WGPURenderPassEncoder,
+) {
+    panic!("wgpuRenderPassEncoderEndOcclusionQuery must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuRenderPassEncoderExecuteBundles(
+    renderPassEncoder: WGPURenderPassEncoder,
+    bundleCount: usize,
+    bundles: *const WGPURenderBundle,
+) {
+    panic!("wgpuRenderPassEncoderExecuteBundles must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuRenderPassEncoderInsertDebugMarker(
+    renderPassEncoder: WGPURenderPassEncoder,
+    markerLabel: WGPUStringView,
+) {
+    panic!("wgpuRenderPassEncoderInsertDebugMarker must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuRenderPassEncoderPopDebugGroup(
+    renderPassEncoder: WGPURenderPassEncoder,
+) {
+    panic!("wgpuRenderPassEncoderPopDebugGroup must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuRenderPassEncoderPushDebugGroup(
+    renderPassEncoder: WGPURenderPassEncoder,
+    groupLabel: WGPUStringView,
+) {
+    panic!("wgpuRenderPassEncoderPushDebugGroup must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuRenderPassEncoderSetBindGroup(
+    renderPassEncoder: WGPURenderPassEncoder,
+    groupIndex: u32,
+    group: WGPUBindGroup,
+    dynamicOffsetCount: usize,
+    dynamicOffsets: *const u32,
+) {
+    panic!("wgpuRenderPassEncoderSetBindGroup must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuRenderPassEncoderSetBlendConstant(
+    renderPassEncoder: WGPURenderPassEncoder,
+    color: *const WGPUColor,
+) {
+    panic!("wgpuRenderPassEncoderSetBlendConstant must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuRenderPassEncoderSetIndexBuffer(
+    renderPassEncoder: WGPURenderPassEncoder,
+    buffer: WGPUBuffer,
+    format: WGPUIndexFormat,
+    offset: u64,
+    size: u64,
+) {
+    panic!("wgpuRenderPassEncoderSetIndexBuffer must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuRenderPassEncoderSetLabel(
+    renderPassEncoder: WGPURenderPassEncoder,
+    label: WGPUStringView,
+) {
+    panic!("wgpuRenderPassEncoderSetLabel must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuRenderPassEncoderSetPipeline(
+    renderPassEncoder: WGPURenderPassEncoder,
+    pipeline: WGPURenderPipeline,
+) {
+    panic!("wgpuRenderPassEncoderSetPipeline must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuRenderPassEncoderSetScissorRect(
+    renderPassEncoder: WGPURenderPassEncoder,
+    x: u32,
+    y: u32,
+    width: u32,
+    height: u32,
+) {
+    panic!("wgpuRenderPassEncoderSetScissorRect must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuRenderPassEncoderSetStencilReference(
+    renderPassEncoder: WGPURenderPassEncoder,
+    reference: u32,
+) {
+    panic!("wgpuRenderPassEncoderSetStencilReference must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuRenderPassEncoderSetVertexBuffer(
+    renderPassEncoder: WGPURenderPassEncoder,
+    slot: u32,
+    buffer: WGPUBuffer,
+    offset: u64,
+    size: u64,
+) {
+    panic!("wgpuRenderPassEncoderSetVertexBuffer must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuRenderPassEncoderSetViewport(
+    renderPassEncoder: WGPURenderPassEncoder,
+    x: f32,
+    y: f32,
+    width: f32,
+    height: f32,
+    minDepth: f32,
+    maxDepth: f32,
+) {
+    panic!("wgpuRenderPassEncoderSetViewport must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuRenderPassEncoderAddRef(renderPassEncoder: WGPURenderPassEncoder) {
+    panic!("wgpuRenderPassEncoderAddRef must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuRenderPassEncoderRelease(renderPassEncoder: WGPURenderPassEncoder) {
+    panic!("wgpuRenderPassEncoderRelease must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuRenderPipelineGetBindGroupLayout(
+    renderPipeline: WGPURenderPipeline,
+    groupIndex: u32,
+) -> WGPUBindGroupLayout {
+    panic!("wgpuRenderPipelineGetBindGroupLayout must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuRenderPipelineSetLabel(
+    renderPipeline: WGPURenderPipeline,
+    label: WGPUStringView,
+) {
+    panic!("wgpuRenderPipelineSetLabel must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuRenderPipelineAddRef(renderPipeline: WGPURenderPipeline) {
+    panic!("wgpuRenderPipelineAddRef must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuRenderPipelineRelease(renderPipeline: WGPURenderPipeline) {
+    panic!("wgpuRenderPipelineRelease must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuSamplerSetLabel(sampler: WGPUSampler, label: WGPUStringView) {
+    panic!("wgpuSamplerSetLabel must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuSamplerAddRef(sampler: WGPUSampler) {
+    panic!("wgpuSamplerAddRef must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuSamplerRelease(sampler: WGPUSampler) {
+    panic!("wgpuSamplerRelease must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuShaderModuleGetCompilationInfo(
+    shaderModule: WGPUShaderModule,
+    callbackInfo: WGPUCompilationInfoCallbackInfo,
+) -> WGPUFuture {
+    panic!("wgpuShaderModuleGetCompilationInfo must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuShaderModuleSetLabel(
+    shaderModule: WGPUShaderModule,
+    label: WGPUStringView,
+) {
+    panic!("wgpuShaderModuleSetLabel must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuShaderModuleAddRef(shaderModule: WGPUShaderModule) {
+    panic!("wgpuShaderModuleAddRef must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuShaderModuleRelease(shaderModule: WGPUShaderModule) {
+    panic!("wgpuShaderModuleRelease must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuSupportedFeaturesFreeMembers(
+    supportedFeatures: WGPUSupportedFeatures,
+) {
+    panic!("wgpuSupportedFeaturesFreeMembers must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuSupportedInstanceFeaturesFreeMembers(
+    supportedInstanceFeatures: WGPUSupportedInstanceFeatures,
+) {
+    panic!("wgpuSupportedInstanceFeaturesFreeMembers must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuSupportedWGSLLanguageFeaturesFreeMembers(
+    supportedWGSLLanguageFeatures: WGPUSupportedWGSLLanguageFeatures,
+) {
+    panic!("wgpuSupportedWGSLLanguageFeaturesFreeMembers must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuSurfaceConfigure(
+    surface: WGPUSurface,
+    config: *const WGPUSurfaceConfiguration,
+) {
+    panic!("wgpuSurfaceConfigure must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuSurfaceGetCapabilities(
+    surface: WGPUSurface,
+    adapter: WGPUAdapter,
+    capabilities: *mut WGPUSurfaceCapabilities,
+) -> WGPUStatus {
+    panic!("wgpuSurfaceGetCapabilities must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuSurfaceGetCurrentTexture(
+    surface: WGPUSurface,
+    surfaceTexture: *mut WGPUSurfaceTexture,
+) {
+    panic!("wgpuSurfaceGetCurrentTexture must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuSurfacePresent(surface: WGPUSurface) -> WGPUStatus {
+    panic!("wgpuSurfacePresent must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuSurfaceSetLabel(surface: WGPUSurface, label: WGPUStringView) {
+    panic!("wgpuSurfaceSetLabel must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuSurfaceUnconfigure(surface: WGPUSurface) {
+    panic!("wgpuSurfaceUnconfigure must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuSurfaceAddRef(surface: WGPUSurface) {
+    panic!("wgpuSurfaceAddRef must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuSurfaceRelease(surface: WGPUSurface) {
+    panic!("wgpuSurfaceRelease must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuSurfaceCapabilitiesFreeMembers(
+    surfaceCapabilities: WGPUSurfaceCapabilities,
+) {
+    panic!("wgpuSurfaceCapabilitiesFreeMembers must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuTextureCreateView(
+    texture: WGPUTexture,
+    descriptor: *const WGPUTextureViewDescriptor,
+) -> WGPUTextureView {
+    panic!("wgpuTextureCreateView must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuTextureDestroy(texture: WGPUTexture) {
+    panic!("wgpuTextureDestroy must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuTextureGetDepthOrArrayLayers(texture: WGPUTexture) -> u32 {
+    panic!("wgpuTextureGetDepthOrArrayLayers must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuTextureGetDimension(texture: WGPUTexture) -> WGPUTextureDimension {
+    panic!("wgpuTextureGetDimension must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuTextureGetFormat(texture: WGPUTexture) -> WGPUTextureFormat {
+    panic!("wgpuTextureGetFormat must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuTextureGetHeight(texture: WGPUTexture) -> u32 {
+    panic!("wgpuTextureGetHeight must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuTextureGetMipLevelCount(texture: WGPUTexture) -> u32 {
+    panic!("wgpuTextureGetMipLevelCount must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuTextureGetSampleCount(texture: WGPUTexture) -> u32 {
+    panic!("wgpuTextureGetSampleCount must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuTextureGetTextureBindingViewDimension(
+    texture: WGPUTexture,
+) -> WGPUTextureViewDimension {
+    panic!("wgpuTextureGetTextureBindingViewDimension must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuTextureGetUsage(texture: WGPUTexture) -> WGPUTextureUsage {
+    panic!("wgpuTextureGetUsage must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuTextureGetWidth(texture: WGPUTexture) -> u32 {
+    panic!("wgpuTextureGetWidth must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuTextureSetLabel(texture: WGPUTexture, label: WGPUStringView) {
+    panic!("wgpuTextureSetLabel must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuTextureAddRef(texture: WGPUTexture) {
+    panic!("wgpuTextureAddRef must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuTextureRelease(texture: WGPUTexture) {
+    panic!("wgpuTextureRelease must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuTextureViewSetLabel(
+    textureView: WGPUTextureView,
+    label: WGPUStringView,
+) {
+    panic!("wgpuTextureViewSetLabel must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuTextureViewAddRef(textureView: WGPUTextureView) {
+    panic!("wgpuTextureViewAddRef must be implemented");
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuTextureViewRelease(textureView: WGPUTextureView) {
+    panic!("wgpuTextureViewRelease must be implemented");
+}

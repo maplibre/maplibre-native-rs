@@ -23,7 +23,7 @@ default = ["log", "pool"]
 metal = []
 opengl = []
 vulkan = []
-wgpu = ["dep:wgpu"]
+wgpu = ["dep:wgpu", "dep:binding-generator"]
 log = ["dep:log"]
 pool = ["dep:tokio"]
 
@@ -35,6 +35,7 @@ thiserror.workspace = true
 tokio = { workspace = true, features = ["sync"], optional = true }
 url.workspace = true
 wgpu = {workspace = true, optional = true}
+binding-generator = {path = "binding-generator", optional = true}
 
 [build-dependencies]
 cmake.workspace = true
