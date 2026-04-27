@@ -339,12 +339,12 @@ fn bundle_precompiled() -> Info {
 }
 
 fn build_local(
-    clone_dir: PathBuf,
+    respository_dir: PathBuf,
     name: &str,
     amalgam_lib: bool,
 ) -> Result<Info, Box<dyn std::error::Error>> {
     const TARGET_NAME: &str = "mbgl-core";
-    let maplibre_native_dir = clone_dir.join(name);
+    let maplibre_native_dir = respository_dir.join(name);
 
     // Some CI cache restores may leave an incomplete directory tree.
     // Require files that prove this is a usable maplibre-native checkout.
@@ -362,7 +362,7 @@ fn build_local(
     if !maplibre_native_dir.exists() {
         println!("cargo:warning=Cloning maplibre-native.");
         let clone_status = Command::new("git")
-            .current_dir(clone_dir)
+            .current_dir(respository_dir)
             .args(["clone", "--depth", "1", "--revision", MLN_COMMIT, MLN_REPOSITORY_URL, name])
             .status()?;
         if !clone_status.success() {
@@ -463,9 +463,16 @@ fn build_mln() {
     println!("cargo:rerun-if-env-changed=MLN_SYSTEM");
     println!("cargo:rerun-if-env-changed=MLN_PRECOMPILE");
     println!("cargo:rerun-if-env-changed=MLN_CORE_LIBRARY_USE_AMALGAM");
+    println!("cargo:rerun-if-env-changed=MLN_LOCAL_REPOSITORY");
     let amalgam_lib = !env::var("MLN_CORE_LIBRARY_USE_AMALGAM").unwrap_or("0".to_string()).eq("0");
     let precompiled = !env::var("MLN_PRECOMPILE").unwrap_or("0".to_string()).eq("0");
     let system_lib = !env::var("MLN_SYSTEM").unwrap_or("0".to_string()).eq("0");
+    let local_repository = env::var("MLN_LOCAL_REPOSITORY").unwrap_or("".to_owned());
+
+    if !local_repository.is_empty() {
+        println!("cargo:warning=Using local repository from: {:?}", local_repository);
+        println!("cargo:rerun-if-env-changed={}", local_repository);
+    }
 
     // Add system library search paths for macOS
     let target_os = env::var("CARGO_CFG_TARGET_OS").expect("CARGO_CFG_TARGET_OS not set");
@@ -504,13 +511,24 @@ fn build_mln() {
         panic!("Not implemented")
     } else {
         const MAPLIBRE_NATIVE_DIR_NAME: &str = "maplibre-native";
-        let root = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
-        let clone_dir = root.join("target");
+        let respository_dir = if local_repository.is_empty() {
+            let root = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
+            root.join("target")
+        } else {
+            PathBuf::from(local_repository.clone()).parent().unwrap().to_path_buf()
+        };
 
-        match build_local(clone_dir.clone(), MAPLIBRE_NATIVE_DIR_NAME, amalgam_lib) {
+        assert!(
+            local_repository.ends_with(MAPLIBRE_NATIVE_DIR_NAME),
+            "The repository must be called: {MAPLIBRE_NATIVE_DIR_NAME}"
+        );
+
+        match build_local(respository_dir.clone(), MAPLIBRE_NATIVE_DIR_NAME, amalgam_lib) {
             Err(e) => {
-                if clone_dir.join(MAPLIBRE_NATIVE_DIR_NAME).exists() {
-                    // let _ = fs::remove_dir_all(clone_dir.join(MAPLIBRE_NATIVE_DIR_NAME));
+                if respository_dir.join(MAPLIBRE_NATIVE_DIR_NAME).exists() {
+                    if local_repository.is_empty() {
+                        // let _ = fs::remove_dir_all(clone_dir.join(MAPLIBRE_NATIVE_DIR_NAME));
+                    }
                 }
                 panic!("Failed to build maplibre native: {e}")
             }
