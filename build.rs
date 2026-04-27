@@ -563,9 +563,6 @@ fn build_mln() {
             println!("cargo:rustc-link-lib=X11");
             println!("cargo:rustc-link-lib=GL");
             println!("cargo:rustc-link-lib=EGL");
-            println!("cargo:rustc-link-arg=-Wl,-rpath,/home/martin/GIT/maplibre-native/vendor/wgpu-native/target/x86_64-unknown-linux-gnu/release");
-            println!("cargo:rustc-link-search=/home/martin/GIT/maplibre-native/vendor/wgpu-native/target/x86_64-unknown-linux-gnu/release");
-            println!("cargo:rustc-link-lib=wgpu_native");
         }
         GraphicsRenderingAPI::Vulkan => {}
         GraphicsRenderingAPI::OpenGL => {

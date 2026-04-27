@@ -518,6 +518,15 @@ pub unsafe extern "C" fn wgpuComputePipelineRelease(computePipeline: WGPUCompute
 }
 
 #[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuDevicePoll(
+    device: WGPUDevice,
+    wait: bool,
+    submission_index: Option<&WGPUSubmissionIndex>,
+) -> bool {
+    panic!("Not implemented")
+}
+
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuDeviceCreateBindGroup(
     device: WGPUDevice,
     descriptor: *const WGPUBindGroupDescriptor,

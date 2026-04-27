@@ -7,3 +7,6 @@ pub use renderer::*;
 mod pool;
 #[cfg(feature = "pool")]
 pub use pool::{SingleThreadedRenderPool, SingleThreadedRenderPoolError};
+
+#[cfg(feature = "wgpu")]
+pub use binding_generator::*;
