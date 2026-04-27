@@ -3,6 +3,8 @@ mod maplibre;
 slint::include_modules!();
 
 fn main() {
+    env_logger::init();
+
     slint::BackendSelector::new()
         .require_wgpu_29(slint::wgpu::WGPUConfiguration::default())
         .select()

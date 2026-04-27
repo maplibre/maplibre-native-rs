@@ -15,6 +15,7 @@ image = { workspace = true }
 maplibre_native = { path = "../.." }
 # slint = { version = "1.16", features = ["backend-android-activity-06", "unstable-wgpu-29"] }
 slint = { path = "../../../slint/api/rs/slint", features = ["backend-android-activity-06", "renderer-femtovg-wgpu", "unstable-wgpu-29", "compat-1-2"] }
+env_logger = "0.11"
 
 [build-dependencies]
 slint-build = { path = "../../../slint/api/rs/build"  }
