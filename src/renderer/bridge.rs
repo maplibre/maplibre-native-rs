@@ -6,6 +6,7 @@ use crate::renderer::callbacks::{
 use cxx::{SharedPtr, UniquePtr};
 use std::fmt::Display;
 use std::ops::Sub;
+use std::sync::Arc;
 
 // https://maplibre.org/maplibre-native/docs/book/design/ten-thousand-foot-view.html
 
@@ -99,11 +100,28 @@ impl Size {
     }
 }
 
-#[cxx::bridge()]
+#[cfg(feature = "wgpu")]
+pub struct WGPUDeviceWrapper(binding_generator::WGPUDevice);
+#[cfg(feature = "wgpu")]
+pub struct WGPUQueueWrapper(binding_generator::WGPUQueue);
+
+impl From<wgpu::Device> for WGPUDeviceWrapper {
+    fn from(value: wgpu::Device) -> Self {
+        Self(Arc::into_raw(Arc::new(value)))
+    }
+}
+
+impl From<wgpu::Queue> for WGPUQueueWrapper {
+    fn from(value: wgpu::Queue) -> Self {
+        Self(Arc::into_raw(Arc::new(value)))
+    }
+}
+
 /// FFI bindings for map source operations.
 ///
 /// This module provides C++/Rust interoperability for various source types.
 /// Currently supports GeoJSON sources, with extensibility for additional source types.
+#[cxx::bridge()]
 pub mod sources {
     #[namespace = "mbgl::style"]
     extern "C++" {
@@ -549,6 +567,14 @@ pub mod ffi {
         type SymbolLayer = super::layers::SymbolLayer;
     }
 
+    #[namespace = ""]
+    extern "C++" {
+        #[cfg(feature = "wgpu")]
+        type WGPUDevice = super::WGPUDeviceWrapper;
+        #[cfg(feature = "wgpu")]
+        type WGPUQueue = super::WGPUQueueWrapper;
+    }
+
     // Declarations for Rust with implementations in C++
     unsafe extern "C++" {
         include!("map_renderer.h");
@@ -622,6 +648,9 @@ pub mod ffi {
         /// Adds a symbol layer to the style.
         fn style_add_symbol_layer(self: Pin<&mut MapRenderer>, layer: UniquePtr<CxxSymbolLayer>);
 
+        #[cfg(feature = "wgpu")]
+        fn setDeviceAndQueue(self: Pin<&mut MapRenderer>, device: WGPUDevice, queue: WGPUQueue);
+
         // Texture
         // fn getTexture(self: Pin<&mut MapRenderer>) -> SharedPtr<Texture2D>;
     }
@@ -665,6 +694,18 @@ unsafe impl cxx::ExternType for Size {
 
 unsafe impl cxx::ExternType for ScreenCoordinate {
     type Id = cxx::type_id!("mbgl::ScreenCoordinate");
+    type Kind = cxx::kind::Trivial;
+}
+
+#[cfg(feature = "wgpu")]
+unsafe impl cxx::ExternType for WGPUDeviceWrapper {
+    type Id = cxx::type_id!("WGPUDevice");
+    type Kind = cxx::kind::Trivial;
+}
+
+#[cfg(feature = "wgpu")]
+unsafe impl cxx::ExternType for WGPUQueueWrapper {
+    type Id = cxx::type_id!("WGPUQueue");
     type Kind = cxx::kind::Trivial;
 }
 

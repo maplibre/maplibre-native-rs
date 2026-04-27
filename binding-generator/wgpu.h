@@ -20,8 +20,10 @@
  * This type is unique to wgpu-native; there is no analogue in the
  * WebGPU specification.
  */
-typedef uint64_t WGPUSubmissionIndex;
+struct WGPUSubmissionIndex {
+    uint64_t index
+};
 
-WGPUBool wgpuDevicePoll(WGPUDevice device, WGPUBool wait, WGPU_NULLABLE WGPUSubmissionIndex const *submissionIndex);
+WGPUBool wgpuDevicePoll(WGPUDevice device, WGPUBool wait, WGPU_NULLABLE struct WGPUSubmissionIndex const *submissionIndex);
 
 #endif // WGPU_H_

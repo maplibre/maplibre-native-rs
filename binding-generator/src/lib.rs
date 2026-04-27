@@ -1,3 +1,11 @@
+/*
+ * Copyright 2024 wgpu-native contributors
+ * Copyright 2026 MapLibre contributors
+ *
+ * This file contains code copied from wgpu-native (https://github.com/gfx-rs/wgpu-native)
+ * Licensed under the Apache License, Version 2.0 or the MIT License, at your option.
+ */
+
 #![allow(missing_docs)]
 #![allow(dead_code)]
 #![allow(non_camel_case_types)]
@@ -7,6 +15,8 @@
 #![allow(unused_variables)]
 #![allow(clippy::all)]
 #![allow(clippy::missing_safety_doc)]
+
+use wgpu::SubmissionIndex;
 
 macro_rules! opaque_handle_types {
 	($($name:ident),+ $(,)?) => {
@@ -22,6 +32,7 @@ macro_rules! opaque_handle_types {
 
 pub type WGPUDeviceImpl = wgpu::Device;
 pub type WGPUTextureImpl = wgpu::Texture;
+pub type WGPUQueueImpl = wgpu::Queue;
 
 opaque_handle_types!(
     WGPUAdapterImpl,
@@ -35,7 +46,6 @@ opaque_handle_types!(
     WGPUInstanceImpl,
     WGPUPipelineLayoutImpl,
     WGPUQuerySetImpl,
-    WGPUQueueImpl,
     WGPURenderBundleImpl,
     WGPURenderBundleEncoderImpl,
     WGPURenderPassEncoderImpl,
@@ -517,13 +527,36 @@ pub unsafe extern "C" fn wgpuComputePipelineRelease(computePipeline: WGPUCompute
     panic!("wgpuComputePipelineRelease must be implemented");
 }
 
+fn handle_error_fatal(
+    cause: impl std::error::Error + Send + Sync + 'static,
+    operation: &'static str,
+) -> ! {
+    panic!("Error in {operation}"); //: {f}", f = format_error(&cause));
+}
+
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuDevicePoll(
     device: WGPUDevice,
     wait: bool,
     submission_index: Option<&WGPUSubmissionIndex>,
 ) -> bool {
-    panic!("Not implemented")
+    let device = unsafe { device.as_ref() }.expect("invalid device");
+
+    let poll = match wait {
+        true => match submission_index {
+            None => wgpu::PollType::wait_indefinitely(),
+            _ => panic!("Not implemented"),
+        },
+        false => wgpu::PollType::Poll,
+    };
+
+    match device.poll(poll) {
+        Ok(wgpu::PollStatus::QueueEmpty) => true,
+        Ok(_) => false,
+        Err(cause) => {
+            handle_error_fatal(cause, "wgpuDevicePoll");
+        }
+    }
 }
 
 #[unsafe(no_mangle)]

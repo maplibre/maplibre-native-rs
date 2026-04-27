@@ -90,6 +90,11 @@ impl<S> Debug for ImageRenderer<S> {
 }
 
 impl<S> ImageRenderer<S> {
+    #[cfg(feature = "wgpu")]
+    pub fn set_device_queue(&mut self, device: wgpu::Device, queue: wgpu::Queue) {
+        self.instance.pin_mut().setDeviceAndQueue(device.into(), queue.into())
+    }
+
     /// Set the style URL for the map.
     pub fn load_style_from_url(&mut self, url: &url::Url) -> &mut Self {
         self.style_specified = true;

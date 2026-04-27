@@ -3,6 +3,7 @@
 #include <cassert>
 #include <cstdint>
 #include <mbgl/gfx/headless_frontend.hpp>
+#include <mbgl/gfx/renderer_backend.hpp>
 #include <mbgl/style/image.hpp>
 #include <mbgl/style/sources/geojson_source.hpp>
 #include <mbgl/style/layers/symbol_layer.hpp>
@@ -131,6 +132,11 @@ public:
 
     void scaleBy(double scale, const mbgl::ScreenCoordinate& pos) {
         map->scaleBy(scale, pos);
+    }
+
+    void setDeviceAndQueue(WGPUDevice device, WGPUQueue queue) {
+        frontend->getBackend()->setDevice(device);
+        frontend->getBackend()->setQueue(queue);
     }
 public:
     mbgl::util::RunLoop runLoop;
