@@ -19,28 +19,6 @@ namespace bridge {
 
 namespace {
 
-// Compile-time cross-checks: the Rust-side `ResourceKind` and `FsErrorReason`
-// enums duplicate mbgl discriminants over the cxx boundary as raw u8. Pin
-// each discriminant so an upstream mbgl reorder fails the build instead of
-// silently mapping tile requests to spritejson requests.
-static_assert(static_cast<uint8_t>(mbgl::Resource::Kind::Unknown)      == 0, "ResourceKind::Unknown discriminant drift");
-static_assert(static_cast<uint8_t>(mbgl::Resource::Kind::Style)        == 1, "ResourceKind::Style discriminant drift");
-static_assert(static_cast<uint8_t>(mbgl::Resource::Kind::Source)       == 2, "ResourceKind::Source discriminant drift");
-static_assert(static_cast<uint8_t>(mbgl::Resource::Kind::Tile)         == 3, "ResourceKind::Tile discriminant drift");
-static_assert(static_cast<uint8_t>(mbgl::Resource::Kind::Glyphs)       == 4, "ResourceKind::Glyphs discriminant drift");
-static_assert(static_cast<uint8_t>(mbgl::Resource::Kind::SpriteImage)  == 5, "ResourceKind::SpriteImage discriminant drift");
-static_assert(static_cast<uint8_t>(mbgl::Resource::Kind::SpriteJSON)   == 6, "ResourceKind::SpriteJSON discriminant drift");
-static_assert(static_cast<uint8_t>(mbgl::Resource::Kind::Image)        == 7, "ResourceKind::Image discriminant drift");
-
-// RustFsResponse uses `0` as the no-error sentinel. Verify mbgl's Reason
-// enum never produces `0`, and pin the reason discriminants we map onto.
-static_assert(static_cast<uint8_t>(mbgl::Response::Error::Reason::Success)    != 0, "FsErrorReason sentinel 0 collides with Success");
-static_assert(static_cast<uint8_t>(mbgl::Response::Error::Reason::NotFound)   == 2, "FsErrorReason::NotFound discriminant drift");
-static_assert(static_cast<uint8_t>(mbgl::Response::Error::Reason::Server)     == 3, "FsErrorReason::Server discriminant drift");
-static_assert(static_cast<uint8_t>(mbgl::Response::Error::Reason::Connection) == 4, "FsErrorReason::Connection discriminant drift");
-static_assert(static_cast<uint8_t>(mbgl::Response::Error::Reason::RateLimit)  == 5, "FsErrorReason::RateLimit discriminant drift");
-static_assert(static_cast<uint8_t>(mbgl::Response::Error::Reason::Other)      == 6, "FsErrorReason::Other discriminant drift");
-
 // AsyncRequest subclass whose destructor cancels. Our dispatch is synchronous
 // so by the time this handle reaches the caller the callback has already
 // fired — cancellation is a structural no-op.
@@ -93,13 +71,12 @@ public:
 private:
     mbgl::Response invokeCallback(const mbgl::Resource& resource) {
         const rust::Str url(resource.url.data(), resource.url.size());
-        RustFsResponse rr = fs_request_callback(**callback_, url,
-                                                static_cast<uint8_t>(resource.kind));
+        RustFsResponse rr = fs_request_callback(**callback_, url, resource.kind);
 
         mbgl::Response response;
-        if (rr.error_reason != 0) {
+        if (rr.error_reason != FsErrorReason::Success) {
             response.error = std::make_unique<mbgl::Response::Error>(
-                static_cast<mbgl::Response::Error::Reason>(rr.error_reason),
+                rr.error_reason,
                 std::string(rr.error_message.data(), rr.error_message.size()));
             return response;
         }

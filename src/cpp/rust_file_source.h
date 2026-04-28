@@ -16,9 +16,20 @@
 // owning Map is destroyed.
 
 #include "rust/cxx.h"
+#include <mbgl/storage/resource.hpp>
+#include <mbgl/storage/response.hpp>
 
 namespace mln {
 namespace bridge {
+
+// cxx doesn't support nested enums directly, so flatten mbgl's
+// `Resource::Kind` and `Response::Error::Reason` into top-level aliases
+// the cxx::bridge can pick up. Same pattern as `MapObserverCameraChangeMode`
+// in src/cpp/map_observer.h. Names + discriminants must stay aligned with
+// the Rust-side enum declarations in src/renderer/bridge.rs; cxx codegen
+// validates the match at compile time.
+using ResourceKind = mbgl::Resource::Kind;
+using FsErrorReason = mbgl::Response::Error::Reason;
 
 // Opaque Rust type — defined in src/renderer/file_source.rs.
 struct FileSourceRequestCallback;

@@ -2,7 +2,8 @@
 
 use crate::renderer::bridge::ffi;
 use crate::renderer::bridge::file_source::register_rust_file_source_factory;
-use crate::renderer::file_source::{FileSourceRequestCallback, FsResponse, ResourceKind};
+use crate::renderer::bridge::file_source::ResourceKind;
+use crate::renderer::file_source::{FileSourceRequestCallback, FsResponse};
 use crate::renderer::{Continuous, ImageRenderer, MapMode, Static, Tile};
 use crate::ResourceOptions;
 use std::marker::PhantomData;
