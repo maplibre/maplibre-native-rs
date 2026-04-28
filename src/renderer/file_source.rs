@@ -51,6 +51,8 @@ pub(crate) fn fs_request_callback(
     kind: ResourceKind,
 ) -> crate::renderer::bridge::file_source::RustFsResponse {
     use crate::renderer::bridge::file_source::RustFsResponse;
+    #[cfg(feature = "log")]
+    log::debug!("rust-fs request kind={kind:?} url={url}");
     match (callback.0)(url, kind) {
         FsResponse::Ok(bytes) => RustFsResponse {
             data: bytes,

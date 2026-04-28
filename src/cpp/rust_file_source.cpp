@@ -44,10 +44,8 @@ public:
         // deadlock the `frontend->render` call waiting for its own tile.
         // Sync dispatch is safe because Rust-backed sources (mbtiles SQLite,
         // filesystem read) don't block long enough to matter, matching mbgl's
-        // in-memory test doubles.
-        mbgl::Log::Debug(mbgl::Event::General,
-                         "rust-fs request kind=" + std::to_string(static_cast<unsigned>(resource.kind))
-                         + " url=" + resource.url);
+        // in-memory test doubles. Per-request tracing happens on the Rust
+        // side in `fs_request_callback`.
         cb(invokeCallback(resource));
         return std::make_unique<NoopAsyncRequest>();
     }
