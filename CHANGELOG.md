@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.6](https://github.com/maplibre/maplibre-native-rs/compare/v0.4.5...v0.4.6) - 2026-04-28
+
+### Other
+
+- *(deps)* bump the all-actions-version-updates group with 2 updates ([#165](https://github.com/maplibre/maplibre-native-rs/pull/165))
+
 ## [0.4.5](https://github.com/maplibre/maplibre-native-rs/compare/v0.4.4...v0.4.5) - 2026-04-21
 
 ### Added
