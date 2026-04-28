@@ -7,6 +7,7 @@ mod map_observer;
 mod resource_options;
 pub mod style;
 pub mod tile_server_options;
+pub use bridge::file_source::{FsErrorReason, ResourceKind};
 pub use bridge::{
     ffi::{MapDebugOptions, MapMode},
     layers,
@@ -14,7 +15,6 @@ pub use bridge::{
     set_log_thread_enabled, Height, ScreenCoordinate, Size, Width, X, Y,
 };
 pub use builder::ImageRendererBuilder;
-pub use bridge::file_source::{FsErrorReason, ResourceKind};
 pub use file_source::{FileSourceRequestCallback, FsResponse};
 pub use image_renderer::{Continuous, Image, ImageRenderer, RenderingError, Static, Tile};
 pub use map_observer::MapObserver;
