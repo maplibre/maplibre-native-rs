@@ -1,4 +1,4 @@
-//! End-to-end test for the Rust FileSource callback bridge.
+//! End-to-end test for the Rust `FileSource` callback bridge.
 //!
 //! Serves an inline style.json from the callback and renders it. Verifies:
 //! - the callback is actually invoked by mbgl
@@ -89,9 +89,9 @@ fn file_source_callback_serves_inline_style() {
     for p in buf.pixels() {
         let [r, g, b, a] = p.0;
         if a >= 250
-            && (r as i32 - 255).abs() <= 2
-            && (g as i32 - 128).abs() <= 3
-            && (b as i32 - 0).abs() <= 2
+            && (i32::from(r) - 255).abs() <= 2
+            && (i32::from(g) - 128).abs() <= 3
+            && i32::from(b) <= 2
         {
             saw_orange = true;
             break;

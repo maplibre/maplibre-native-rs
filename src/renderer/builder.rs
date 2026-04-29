@@ -33,9 +33,9 @@ pub struct ImageRendererBuilder {
 
     resource_options: Option<ResourceOptions>,
 
-    /// Optional Rust-supplied FileSource callback. When set, installs a
+    /// Optional Rust-supplied `FileSource` callback. When set, installs a
     /// process-global factory at build time that delegates every resource
-    /// request to this closure, bypassing the mbgl default ResourceLoader.
+    /// request to this closure, bypassing the mbgl default `ResourceLoader`.
     file_source_callback: Option<FileSourceRequestCallback>,
 }
 
@@ -88,11 +88,11 @@ impl ImageRendererBuilder {
         self
     }
 
-    /// Install a Rust closure as the FileSource callback.
+    /// Install a Rust closure as the `FileSource` callback.
     ///
     /// The closure is invoked for every resource mbgl needs to render the
     /// style (tiles, glyphs, sprites, etc.). It replaces the mbgl default
-    /// ResourceLoader entirely, so the closure must handle every URL
+    /// `ResourceLoader` entirely, so the closure must handle every URL
     /// scheme referenced by the style — typical schemes are `mbtiles://`,
     /// `file://`, and any custom ones the caller needs.
     ///

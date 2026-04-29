@@ -1,4 +1,4 @@
-//! Rust-supplied FileSource callback.
+//! Rust-supplied `FileSource` callback.
 //!
 //! Pair with the C++ side defined in `src/cpp/rust_file_source.{h,cpp}`. The
 //! Rust closure handed to
