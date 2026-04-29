@@ -17,20 +17,41 @@ use std::cell::RefCell;
 use std::path::Path;
 
 pub fn init(ui: &MainWindow, map: &Rc<RefCell<MapLibre>>) {
-    loop {
-        let mut borrow = map.borrow_mut();
-        borrow.renderer().render_once();
+    // loop {
+    //     let mut borrow = map.borrow_mut();
+    //     borrow.renderer().render_once();
 
-        if let Some(error) = borrow.style_loading_error() {
-            panic!("Failed to load map: {}", error);
-        }
+    //     if let Some(error) = borrow.style_loading_error() {
+    //         panic!("Failed to load map: {}", error);
+    //     }
 
-        if borrow.style_loaded() {
-            drop(borrow);
-            style(map);
-            break;
-        }
-    }
+    //     if borrow.style_loaded() {
+    //         drop(borrow);
+    //         style(map);
+    //         break;
+    //     }
+    // }
+
+    ui.window()
+        .set_rendering_notifier({
+            let map = Rc::downgrade(map);
+            move |state, graphics_api| match state {
+                slint::RenderingState::RenderingSetup => {
+                    let slint::GraphicsAPI::WGPU { instance: _instance, device, queue, .. } =
+                        graphics_api
+                    else {
+                        return;
+                    };
+                    map.upgrade()
+                        .unwrap()
+                        .borrow_mut()
+                        .renderer()
+                        .set_device_queue(device.clone(), queue.clone());
+                }
+                _ => (),
+            }
+        })
+        .unwrap();
 
     ui.on_map_size_changed({
         let map = Rc::downgrade(map);
@@ -58,7 +79,8 @@ pub fn init(ui: &MainWindow, map: &Rc<RefCell<MapLibre>>) {
                     let size = image.size();
                     println!("New image: ({}, {})", size.width, size.height);
                     if let Ok(image) = image.try_into() {
-                        ui_handle.upgrade().unwrap().global::<MapAdapter>().set_map_texture(image); // TODO: check if the image really changed, otherwise we don't need to clone!
+                        ui_handle.upgrade().unwrap().global::<MapAdapter>().set_map_texture(image);
+                        // TODO: check if the image really changed, otherwise we don't need to clone!
                     }
                 }
             }

@@ -293,6 +293,7 @@ fn build_bridge(lib_name: &str, include_dirs: &[PathBuf]) {
     // println!("cargo:warning=Include_dirs: {:?}", include_dirs);
     let mut build = cxx_build::bridge("src/renderer/bridge.rs");
     build.includes(include_dirs).flag_if_supported("-std=c++20");
+    build.flag_if_supported("-DMLN_WEBGPU_IMPL_FFI=1"); // TODO: only with WGPU!
 
     for f in BRIDGE_FILES {
         println!("cargo:rerun-if-changed={f}");

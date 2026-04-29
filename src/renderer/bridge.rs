@@ -100,23 +100,6 @@ impl Size {
     }
 }
 
-#[cfg(feature = "wgpu")]
-pub struct WGPUDeviceWrapper(binding_generator::WGPUDevice);
-#[cfg(feature = "wgpu")]
-pub struct WGPUQueueWrapper(binding_generator::WGPUQueue);
-
-impl From<wgpu::Device> for WGPUDeviceWrapper {
-    fn from(value: wgpu::Device) -> Self {
-        Self(Arc::into_raw(Arc::new(value)))
-    }
-}
-
-impl From<wgpu::Queue> for WGPUQueueWrapper {
-    fn from(value: wgpu::Queue) -> Self {
-        Self(Arc::into_raw(Arc::new(value)))
-    }
-}
-
 /// FFI bindings for map source operations.
 ///
 /// This module provides C++/Rust interoperability for various source types.
@@ -570,9 +553,9 @@ pub mod ffi {
     #[namespace = ""]
     extern "C++" {
         #[cfg(feature = "wgpu")]
-        type WGPUDevice = super::WGPUDeviceWrapper;
+        type WGPUDevice = binding_generator::WGPUDeviceWrapper;
         #[cfg(feature = "wgpu")]
-        type WGPUQueue = super::WGPUQueueWrapper;
+        type WGPUQueue = binding_generator::WGPUQueueWrapper;
     }
 
     // Declarations for Rust with implementations in C++
@@ -694,18 +677,6 @@ unsafe impl cxx::ExternType for Size {
 
 unsafe impl cxx::ExternType for ScreenCoordinate {
     type Id = cxx::type_id!("mbgl::ScreenCoordinate");
-    type Kind = cxx::kind::Trivial;
-}
-
-#[cfg(feature = "wgpu")]
-unsafe impl cxx::ExternType for WGPUDeviceWrapper {
-    type Id = cxx::type_id!("WGPUDevice");
-    type Kind = cxx::kind::Trivial;
-}
-
-#[cfg(feature = "wgpu")]
-unsafe impl cxx::ExternType for WGPUQueueWrapper {
-    type Id = cxx::type_id!("WGPUQueue");
     type Kind = cxx::kind::Trivial;
 }
 

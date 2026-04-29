@@ -16,6 +16,7 @@
 #![allow(clippy::all)]
 #![allow(clippy::missing_safety_doc)]
 
+use std::sync::Arc;
 use wgpu::SubmissionIndex;
 
 macro_rules! opaque_handle_types {
@@ -30,9 +31,48 @@ macro_rules! opaque_handle_types {
 	};
 }
 
-pub type WGPUDeviceImpl = wgpu::Device;
+pub struct WGPUDeviceImpl(wgpu::Device);
+pub struct WGPUQueueImpl(wgpu::Queue);
+
+impl WGPUDeviceImpl {
+    pub fn to_pointer(self) -> WGPUDevice {
+        Arc::into_raw(Arc::new(self))
+    }
+}
+
+impl WGPUQueueImpl {
+    pub fn to_pointer(self) -> WGPUQueue {
+        Arc::into_raw(Arc::new(self))
+    }
+}
+
+pub struct WGPUDeviceWrapper(WGPUDevice);
+pub struct WGPUQueueWrapper(WGPUQueue);
+
+impl From<wgpu::Device> for WGPUDeviceWrapper {
+    fn from(value: wgpu::Device) -> Self {
+        let pointer = WGPUDeviceImpl(value).to_pointer();
+        Self(pointer)
+    }
+}
+
+impl From<wgpu::Queue> for WGPUQueueWrapper {
+    fn from(value: wgpu::Queue) -> Self {
+        Self(WGPUQueueImpl(value).to_pointer())
+    }
+}
+
+unsafe impl cxx::ExternType for WGPUDeviceWrapper {
+    type Id = cxx::type_id!("WGPUDevice");
+    type Kind = cxx::kind::Trivial;
+}
+
+unsafe impl cxx::ExternType for WGPUQueueWrapper {
+    type Id = cxx::type_id!("WGPUQueue");
+    type Kind = cxx::kind::Trivial;
+}
+
 pub type WGPUTextureImpl = wgpu::Texture;
-pub type WGPUQueueImpl = wgpu::Queue;
 
 opaque_handle_types!(
     WGPUAdapterImpl,
@@ -550,7 +590,7 @@ pub unsafe extern "C" fn wgpuDevicePoll(
         false => wgpu::PollType::Poll,
     };
 
-    match device.poll(poll) {
+    match device.0.poll(poll) {
         Ok(wgpu::PollStatus::QueueEmpty) => true,
         Ok(_) => false,
         Err(cause) => {
@@ -676,7 +716,9 @@ pub unsafe extern "C" fn wgpuDeviceCreateTexture(
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuDeviceDestroy(device: WGPUDevice) {
-    panic!("wgpuDeviceDestroy must be implemented");
+    unsafe {
+        device.as_ref().expect("Invalid device").0.destroy();
+    }
 }
 
 #[unsafe(no_mangle)]
