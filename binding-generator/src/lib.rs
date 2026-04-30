@@ -1867,7 +1867,18 @@ pub unsafe extern "C" fn wgpuRenderPassEncoderDrawIndexed(
     baseVertex: i32,
     firstInstance: u32,
 ) {
-    panic!("wgpuRenderPassEncoderDrawIndexed must be implemented");
+    let pass_ref = unsafe { renderPassEncoder.as_ref().expect("Invalid renderPassEncoder") };
+    pass_ref
+        .0
+        .lock()
+        .expect("render pass lock poisoned")
+        .as_mut()
+        .expect("render pass already ended")
+        .draw_indexed(
+            firstIndex..firstIndex.saturating_add(indexCount),
+            baseVertex,
+            firstInstance..firstInstance.saturating_add(instanceCount),
+        );
 }
 
 #[unsafe(no_mangle)]
