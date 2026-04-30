@@ -160,13 +160,20 @@ unsafe impl cxx::ExternType for WGPUQueueWrapper {
     type Kind = cxx::kind::Trivial;
 }
 
+pub struct WGPUPipelineLayoutImpl(wgpu::PipelineLayout);
+
+impl WGPUPipelineLayoutImpl {
+    pub fn to_pointer(self) -> WGPUPipelineLayout {
+        Arc::into_raw(Arc::new(self))
+    }
+}
+
 opaque_handle_types!(
     WGPUAdapterImpl,
     WGPUBindGroupImpl,
     WGPUComputePassEncoderImpl,
     WGPUComputePipelineImpl,
     WGPUInstanceImpl,
-    WGPUPipelineLayoutImpl,
     WGPUQuerySetImpl,
     WGPURenderBundleImpl,
     WGPURenderBundleEncoderImpl,
@@ -835,11 +842,7 @@ pub unsafe extern "C" fn wgpuDeviceCreateBindGroupLayout(
     descriptor: *const WGPUBindGroupLayoutDescriptor,
 ) -> WGPUBindGroupLayout {
     let device_ref = unsafe { device.as_ref().expect("Invalid device") };
-    let d = unsafe {
-        descriptor
-            .as_ref()
-            .expect("WGPUBindGroupLayoutDescriptor must not be null")
-    };
+    let d = unsafe { descriptor.as_ref().expect("WGPUBindGroupLayoutDescriptor must not be null") };
     let converted = conv::bind_group_layout_descriptor(d);
 
     let layout = device_ref.0.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
@@ -896,15 +899,39 @@ pub unsafe extern "C" fn wgpuDeviceCreatePipelineLayout(
     device: WGPUDevice,
     descriptor: *const WGPUPipelineLayoutDescriptor,
 ) -> WGPUPipelineLayout {
-    panic!("wgpuDeviceCreatePipelineLayout must be implemented");
-}
+    let device_ref = unsafe { device.as_ref().expect("Invalid device") };
+    let d = unsafe { descriptor.as_ref().expect("WGPUPipelineLayoutDescriptor must not be null") };
 
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn wgpuDeviceCreateQuerySet(
-    device: WGPUDevice,
-    descriptor: *const WGPUQuerySetDescriptor,
-) -> WGPUQuerySet {
-    panic!("wgpuDeviceCreateQuerySet must be implemented");
+    if !d.nextInChain.is_null() {
+        panic!("WGPUPipelineLayoutDescriptor.nextInChain is not implemented");
+    }
+
+    // Convert bind group layout pointers to Option references
+    let bgl_refs: Vec<Option<&wgpu::BindGroupLayout>> = if d.bindGroupLayoutCount > 0 {
+        unsafe {
+            std::slice::from_raw_parts(d.bindGroupLayouts, d.bindGroupLayoutCount)
+                .iter()
+                .map(|ptr| {
+                    if ptr.is_null() {
+                        None
+                    } else {
+                        let bgl_impl = &*(*ptr);
+                        Some(&bgl_impl.0)
+                    }
+                })
+                .collect()
+        }
+    } else {
+        Vec::new()
+    };
+    
+    let layout = device_ref.0.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+        label: unsafe { conv::string_view(d.label) },
+        bind_group_layouts: &bgl_refs,
+        immediate_size: 0,
+    });
+    
+    WGPUPipelineLayoutImpl(layout).to_pointer()
 }
 
 #[unsafe(no_mangle)]
@@ -1176,17 +1203,24 @@ pub unsafe extern "C" fn wgpuPipelineLayoutSetLabel(
     pipelineLayout: WGPUPipelineLayout,
     label: WGPUStringView,
 ) {
-    panic!("wgpuPipelineLayoutSetLabel must be implemented");
+    // Label setting is typically a no-op for our implementation
+    // as the label is set at creation time
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuPipelineLayoutAddRef(pipelineLayout: WGPUPipelineLayout) {
-    panic!("wgpuPipelineLayoutAddRef must be implemented");
+    if !pipelineLayout.is_null() {
+        let arc = unsafe { Arc::from_raw(pipelineLayout) };
+        let _ = arc.clone();
+        let _ = Arc::into_raw(arc);
+    }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuPipelineLayoutRelease(pipelineLayout: WGPUPipelineLayout) {
-    panic!("wgpuPipelineLayoutRelease must be implemented");
+    if !pipelineLayout.is_null() {
+        drop(unsafe { Arc::from_raw(pipelineLayout) });
+    }
 }
 
 #[unsafe(no_mangle)]

@@ -1,9 +1,9 @@
 use wgpu::{
     AddressMode, BindGroupLayoutEntry, BindingType, BufferBindingType, BufferDescriptor,
     BufferUsages, CommandEncoderDescriptor, CompareFunction, Extent3d, FilterMode,
-    MipmapFilterMode, SamplerBindingType, SamplerDescriptor, ShaderStages,
-    StorageTextureAccess, TextureAspect, TextureDescriptor, TextureDimension, TextureFormat,
-    TextureSampleType, TextureUsages, TextureViewDescriptor, TextureViewDimension,
+    MipmapFilterMode, SamplerBindingType, SamplerDescriptor, ShaderStages, StorageTextureAccess,
+    TextureAspect, TextureDescriptor, TextureDimension, TextureFormat, TextureSampleType,
+    TextureUsages, TextureViewDescriptor, TextureViewDimension,
 };
 
 use std::num::{NonZeroU32, NonZeroU64};
@@ -46,7 +46,7 @@ use crate::{
 /// # Safety
 /// The caller must ensure that `view.data` points to valid UTF-8 memory for
 /// `view.length` bytes (or is null-terminated when `length == WGPU_STRLEN`).
-unsafe fn string_view<'a>(view: WGPUStringView) -> Option<&'a str> {
+pub unsafe fn string_view<'a>(view: WGPUStringView) -> Option<&'a str> {
     if view.data.is_null() {
         return None;
     }
@@ -248,7 +248,10 @@ pub fn bind_group_layout_descriptor<'a>(
         } else if texture_active {
             BindingType::Texture {
                 sample_type: map_texture_sample_type(e.texture.sampleType),
-                view_dimension: map_texture_view_dimension_for_binding(e.texture.viewDimension, true),
+                view_dimension: map_texture_view_dimension_for_binding(
+                    e.texture.viewDimension,
+                    true,
+                ),
                 multisampled: e.texture.multisampled != 0,
             }
         } else {
@@ -262,11 +265,8 @@ pub fn bind_group_layout_descriptor<'a>(
             }
         };
 
-        let count = if e.bindingArraySize == 0 {
-            None
-        } else {
-            NonZeroU32::new(e.bindingArraySize)
-        };
+        let count =
+            if e.bindingArraySize == 0 { None } else { NonZeroU32::new(e.bindingArraySize) };
 
         entries.push(BindGroupLayoutEntry {
             binding: e.binding,
@@ -276,10 +276,7 @@ pub fn bind_group_layout_descriptor<'a>(
         });
     }
 
-    ConvertedBindGroupLayoutDescriptor {
-        label: unsafe { string_view(d.label) },
-        entries,
-    }
+    ConvertedBindGroupLayoutDescriptor { label: unsafe { string_view(d.label) }, entries }
 }
 
 pub fn buffer_descriptor<'a>(d: &'a WGPUBufferDescriptor) -> BufferDescriptor<'a> {
