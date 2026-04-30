@@ -291,7 +291,10 @@ pub unsafe extern "C" fn wgpuBindGroupAddRef(bindGroup: WGPUBindGroup) {
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuBindGroupRelease(bindGroup: WGPUBindGroup) {
-    panic!("wgpuBindGroupRelease must be implemented");
+    let _ = unsafe { bindGroup.as_ref().expect("Invalid bindGroup") };
+    unsafe {
+        drop(Arc::from_raw(bindGroup));
+    }
 }
 
 #[unsafe(no_mangle)]
