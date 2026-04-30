@@ -134,6 +134,14 @@ impl WGPUBindGroupLayoutImpl {
     }
 }
 
+pub struct WGPUBindGroupImpl(wgpu::BindGroup);
+
+impl WGPUBindGroupImpl {
+    pub fn to_pointer(self) -> WGPUBindGroup {
+        Arc::into_raw(Arc::new(self))
+    }
+}
+
 pub struct WGPUDeviceWrapper(WGPUDevice);
 pub struct WGPUQueueWrapper(WGPUQueue);
 
@@ -178,7 +186,6 @@ impl WGPUQuerySetImpl {
 
 opaque_handle_types!(
     WGPUAdapterImpl,
-    WGPUBindGroupImpl,
     WGPUComputePassEncoderImpl,
     WGPUComputePipelineImpl,
     WGPUInstanceImpl,
@@ -840,7 +847,67 @@ pub unsafe extern "C" fn wgpuDeviceCreateBindGroup(
     device: WGPUDevice,
     descriptor: *const WGPUBindGroupDescriptor,
 ) -> WGPUBindGroup {
-    panic!("wgpuDeviceCreateBindGroup must be implemented");
+    let device_ref = unsafe { device.as_ref().expect("Invalid device") };
+    let d = unsafe { descriptor.as_ref().expect("WGPUBindGroupDescriptor must not be null") };
+
+    if !d.nextInChain.is_null() {
+        panic!("WGPUBindGroupDescriptor.nextInChain is not implemented");
+    }
+
+    let layout_ref = unsafe { d.layout.as_ref().expect("Invalid bind group layout") };
+
+    let entries: Vec<wgpu::BindGroupEntry<'_>> = if d.entryCount > 0 {
+        unsafe {
+            std::slice::from_raw_parts(d.entries, d.entryCount)
+                .iter()
+                .map(|e| {
+                    if !e.nextInChain.is_null() {
+                        panic!("WGPUBindGroupEntry.nextInChain is not implemented");
+                    }
+
+                    let resource = if !e.buffer.is_null() {
+                        let buffer_ref = e.buffer.as_ref().expect("Invalid buffer entry");
+                        let size = if e.size == u64::MAX {
+                            None
+                        } else {
+                            Some(
+                                std::num::NonZeroU64::new(e.size)
+                                    .expect("BindGroup buffer size must be non-zero"),
+                            )
+                        };
+                        wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+                            buffer: &buffer_ref.0,
+                            offset: e.offset,
+                            size,
+                        })
+                    } else if !e.sampler.is_null() {
+                        let sampler_ref = e.sampler.as_ref().expect("Invalid sampler entry");
+                        wgpu::BindingResource::Sampler(&sampler_ref.0)
+                    } else if !e.textureView.is_null() {
+                        let view_ref = e.textureView.as_ref().expect("Invalid texture view entry");
+                        wgpu::BindingResource::TextureView(&view_ref.0)
+                    } else {
+                        panic!("WGPUBindGroupEntry must provide buffer, sampler, or textureView");
+                    };
+
+                    wgpu::BindGroupEntry {
+                        binding: e.binding,
+                        resource,
+                    }
+                })
+                .collect()
+        }
+    } else {
+        Vec::new()
+    };
+
+    let bind_group = device_ref.0.create_bind_group(&wgpu::BindGroupDescriptor {
+        label: unsafe { conv::string_view(d.label) },
+        layout: &layout_ref.0,
+        entries: &entries,
+    });
+
+    WGPUBindGroupImpl(bind_group).to_pointer()
 }
 
 #[unsafe(no_mangle)]
