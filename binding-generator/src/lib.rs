@@ -410,7 +410,10 @@ pub unsafe extern "C" fn wgpuCommandBufferAddRef(commandBuffer: WGPUCommandBuffe
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuCommandBufferRelease(commandBuffer: WGPUCommandBuffer) {
-    panic!("wgpuCommandBufferRelease must be implemented");
+    let _ = unsafe { commandBuffer.as_ref().expect("Invalid commandBuffer") };
+    unsafe {
+        drop(Arc::from_raw(commandBuffer));
+    }
 }
 
 #[unsafe(no_mangle)]
@@ -660,7 +663,10 @@ pub unsafe extern "C" fn wgpuCommandEncoderAddRef(commandEncoder: WGPUCommandEnc
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuCommandEncoderRelease(commandEncoder: WGPUCommandEncoder) {
-    panic!("wgpuCommandEncoderRelease must be implemented");
+    let _ = unsafe { commandEncoder.as_ref().expect("Invalid commandEncoder") };
+    unsafe {
+        drop(Arc::from_raw(commandEncoder));
+    }
 }
 
 #[unsafe(no_mangle)]
