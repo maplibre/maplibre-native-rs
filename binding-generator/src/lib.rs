@@ -62,7 +62,7 @@ impl WGPUSamplerImpl {
     }
 }
 
-pub struct WGPUCommandEncoderImpl(Mutex<wgpu::CommandEncoder>);
+pub struct WGPUCommandEncoderImpl(Mutex<Option<wgpu::CommandEncoder>>);
 
 impl WGPUCommandEncoderImpl {
     pub fn to_pointer(self) -> WGPUCommandEncoder {
@@ -505,8 +505,12 @@ pub unsafe extern "C" fn wgpuCommandEncoderBeginRenderPass(
         multiview_mask: None,
     };
 
-    let mut encoder = encoder_ref.0.lock().expect("command encoder lock poisoned");
-    let render_pass = encoder.begin_render_pass(&render_pass_desc).forget_lifetime();
+    let mut encoder_guard = encoder_ref.0.lock().expect("command encoder lock poisoned");
+    let render_pass = encoder_guard
+        .as_mut()
+        .expect("command encoder already finished")
+        .begin_render_pass(&render_pass_desc)
+        .forget_lifetime();
     WGPURenderPassEncoderImpl(Mutex::new(Some(render_pass))).to_pointer()
 }
 
@@ -567,7 +571,15 @@ pub unsafe extern "C" fn wgpuCommandEncoderFinish(
     commandEncoder: WGPUCommandEncoder,
     descriptor: *const WGPUCommandBufferDescriptor,
 ) -> WGPUCommandBuffer {
-    panic!("wgpuCommandEncoderFinish must be implemented");
+    let encoder_ref = unsafe { commandEncoder.as_ref().expect("Invalid commandEncoder") };
+    let encoder = encoder_ref
+        .0
+        .lock()
+        .expect("command encoder lock poisoned")
+        .take()
+        .expect("command encoder already finished");
+    let cmd_buf = encoder.finish();
+    WGPUCommandBufferImpl(cmd_buf).to_pointer()
 }
 
 #[unsafe(no_mangle)]
@@ -810,7 +822,7 @@ pub unsafe extern "C" fn wgpuDeviceCreateCommandEncoder(
     };
     let device_ref = unsafe { device.as_ref().expect("Invalid device") };
     let encoder = device_ref.0.create_command_encoder(&wgpu_desc);
-    WGPUCommandEncoderImpl(Mutex::new(encoder)).to_pointer()
+    WGPUCommandEncoderImpl(Mutex::new(Some(encoder))).to_pointer()
 }
 
 #[unsafe(no_mangle)]
