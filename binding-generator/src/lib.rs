@@ -16,10 +16,16 @@
 #![allow(clippy::all)]
 #![allow(clippy::missing_safety_doc)]
 
-use std::sync::Arc;
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex, OnceLock};
 use wgpu::{SamplerDescriptor, SubmissionIndex};
 
 mod conv;
+
+fn mapped_buffer_views() -> &'static Mutex<HashMap<usize, Vec<wgpu::BufferViewMut>>> {
+    static VIEWS: OnceLock<Mutex<HashMap<usize, Vec<wgpu::BufferViewMut>>>> = OnceLock::new();
+    VIEWS.get_or_init(|| Mutex::new(HashMap::new()))
+}
 
 macro_rules! opaque_handle_types {
 	($($name:ident),+ $(,)?) => {
@@ -72,6 +78,22 @@ impl WGPUBufferImpl {
     }
 }
 
+pub struct WGPUTextureImpl(wgpu::Texture);
+
+impl WGPUTextureImpl {
+    pub fn to_pointer(self) -> WGPUTexture {
+        Arc::into_raw(Arc::new(self))
+    }
+}
+
+pub struct WGPUTextureViewImpl(wgpu::TextureView);
+
+impl WGPUTextureViewImpl {
+    pub fn to_pointer(self) -> WGPUTextureView {
+        Arc::into_raw(Arc::new(self))
+    }
+}
+
 pub struct WGPUDeviceWrapper(WGPUDevice);
 pub struct WGPUQueueWrapper(WGPUQueue);
 
@@ -98,8 +120,6 @@ unsafe impl cxx::ExternType for WGPUQueueWrapper {
     type Kind = cxx::kind::Trivial;
 }
 
-pub type WGPUTextureImpl = wgpu::Texture;
-
 opaque_handle_types!(
     WGPUAdapterImpl,
     WGPUBindGroupImpl,
@@ -116,7 +136,6 @@ opaque_handle_types!(
     WGPURenderPipelineImpl,
     WGPUShaderModuleImpl,
     WGPUSurfaceImpl,
-    WGPUTextureViewImpl,
 );
 
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
@@ -257,7 +276,27 @@ pub unsafe extern "C" fn wgpuBufferGetMappedRange(
     offset: usize,
     size: usize,
 ) -> *mut ::std::os::raw::c_void {
-    panic!("wgpuBufferGetMappedRange must be implemented");
+    let buffer_ref = unsafe { buffer.as_ref().expect("Invalid buffer") };
+    let offset_u64 = u64::try_from(offset).expect("offset does not fit in u64");
+
+    let mut view = if size == usize::MAX {
+        buffer_ref.0.slice(offset_u64..).get_mapped_range_mut()
+    } else {
+        let size_u64 = u64::try_from(size).expect("size does not fit in u64");
+        let end = offset_u64
+            .checked_add(size_u64)
+            .expect("offset + size overflow");
+        buffer_ref.0.slice(offset_u64..end).get_mapped_range_mut()
+    };
+
+    let ptr = view.slice(..).as_raw_element_ptr().as_ptr().cast();
+    mapped_buffer_views()
+        .lock()
+        .expect("mapped buffer registry lock poisoned")
+        .entry(buffer as usize)
+        .or_default()
+        .push(view);
+    ptr
 }
 
 #[unsafe(no_mangle)]
@@ -303,7 +342,13 @@ pub unsafe extern "C" fn wgpuBufferSetLabel(buffer: WGPUBuffer, label: WGPUStrin
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuBufferUnmap(buffer: WGPUBuffer) {
-    panic!("wgpuBufferUnmap must be implemented");
+    let buffer_ref = unsafe { buffer.as_ref().expect("Invalid buffer") };
+    let mut views = mapped_buffer_views()
+        .lock()
+        .expect("mapped buffer registry lock poisoned");
+    views.remove(&(buffer as usize));
+    drop(views);
+    buffer_ref.0.unmap();
 }
 
 #[unsafe(no_mangle)]
@@ -748,8 +793,21 @@ pub unsafe extern "C" fn wgpuDeviceCreateTexture(
     device: WGPUDevice,
     descriptor: *const WGPUTextureDescriptor,
 ) -> WGPUTexture {
-    // device.as_ref().create_texture();
-    panic!("Failed");
+    let d = unsafe { descriptor.as_ref().expect("WGPUTextureDescriptor must not be null") };
+    let mut wgpu_desc = conv::texture_descriptor(d);
+    let mut mapped_view_formats = Vec::new();
+    if d.viewFormatCount > 0 && !d.viewFormats.is_null() {
+        let c_view_formats =
+            unsafe { std::slice::from_raw_parts(d.viewFormats, d.viewFormatCount) };
+        mapped_view_formats.reserve(c_view_formats.len());
+        for &format in c_view_formats {
+            mapped_view_formats.push(conv::map_texture_format(format));
+        }
+        wgpu_desc.view_formats = mapped_view_formats.as_slice();
+    }
+    let device_ref = unsafe { device.as_ref().expect("Invalid device") };
+    let texture = device_ref.0.create_texture(&wgpu_desc);
+    WGPUTextureImpl(texture).to_pointer()
 }
 
 #[unsafe(no_mangle)]
@@ -1510,7 +1568,24 @@ pub unsafe extern "C" fn wgpuTextureCreateView(
     texture: WGPUTexture,
     descriptor: *const WGPUTextureViewDescriptor,
 ) -> WGPUTextureView {
-    panic!("wgpuTextureCreateView must be implemented");
+    let texture_ref = unsafe { texture.as_ref().expect("Invalid texture") };
+    let default_desc = wgpu::TextureViewDescriptor {
+        label: None,
+        format: None,
+        dimension: None,
+        usage: None,
+        aspect: wgpu::TextureAspect::All,
+        base_mip_level: 0,
+        mip_level_count: None,
+        base_array_layer: 0,
+        array_layer_count: None,
+    };
+    let wgpu_desc = match unsafe { descriptor.as_ref() } {
+        Some(d) => conv::texture_view_descriptor(d),
+        None => default_desc,
+    };
+    let view = texture_ref.0.create_view(&wgpu_desc);
+    WGPUTextureViewImpl(view).to_pointer()
 }
 
 #[unsafe(no_mangle)]
@@ -1590,10 +1665,16 @@ pub unsafe extern "C" fn wgpuTextureViewSetLabel(
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuTextureViewAddRef(textureView: WGPUTextureView) {
-    panic!("wgpuTextureViewAddRef must be implemented");
+    let _ = unsafe { textureView.as_ref().expect("Invalid textureView") };
+    unsafe {
+        Arc::increment_strong_count(textureView);
+    }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuTextureViewRelease(textureView: WGPUTextureView) {
-    panic!("wgpuTextureViewRelease must be implemented");
+    let _ = unsafe { textureView.as_ref().expect("Invalid textureView") };
+    unsafe {
+        drop(Arc::from_raw(textureView));
+    }
 }

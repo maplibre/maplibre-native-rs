@@ -1,6 +1,8 @@
 use wgpu::{
     AddressMode, BufferDescriptor, BufferUsages, CommandEncoderDescriptor, CompareFunction,
-    FilterMode, MipmapFilterMode, SamplerDescriptor,
+    Extent3d, FilterMode, MipmapFilterMode, SamplerDescriptor, TextureDescriptor,
+    TextureAspect, TextureDimension, TextureFormat, TextureUsages, TextureViewDescriptor,
+    TextureViewDimension,
 };
 
 use crate::{
@@ -9,6 +11,34 @@ use crate::{
     WGPUCompareFunction_Greater, WGPUCompareFunction_GreaterEqual, WGPUCompareFunction_Less,
     WGPUCompareFunction_LessEqual, WGPUCompareFunction_Never, WGPUCompareFunction_NotEqual,
     WGPUFilterMode_Linear, WGPUMipmapFilterMode_Linear, WGPUSamplerDescriptor, WGPUStringView,
+    WGPUTextureDescriptor, WGPUTextureDimension_1D, WGPUTextureDimension_3D,
+    WGPUTextureFormat_BGRA8Unorm, WGPUTextureFormat_BGRA8UnormSrgb,
+    WGPUTextureFormat_Depth16Unorm, WGPUTextureFormat_Depth24Plus,
+    WGPUTextureFormat_Depth24PlusStencil8, WGPUTextureFormat_Depth32Float,
+    WGPUTextureFormat_Depth32FloatStencil8, WGPUTextureFormat_R16Float,
+    WGPUTextureFormat_R16Sint, WGPUTextureFormat_R16Snorm, WGPUTextureFormat_R16Uint,
+    WGPUTextureFormat_R16Unorm, WGPUTextureFormat_R32Float, WGPUTextureFormat_R32Sint,
+    WGPUTextureFormat_R32Uint, WGPUTextureFormat_R8Sint, WGPUTextureFormat_R8Snorm,
+    WGPUTextureFormat_R8Uint, WGPUTextureFormat_R8Unorm, WGPUTextureFormat_RG11B10Ufloat,
+    WGPUTextureFormat_RG16Float, WGPUTextureFormat_RG16Sint, WGPUTextureFormat_RG16Snorm,
+    WGPUTextureFormat_RG16Uint, WGPUTextureFormat_RG16Unorm, WGPUTextureFormat_RG32Float,
+    WGPUTextureFormat_RG32Sint, WGPUTextureFormat_RG32Uint, WGPUTextureFormat_RG8Sint,
+    WGPUTextureFormat_RG8Snorm, WGPUTextureFormat_RG8Uint, WGPUTextureFormat_RG8Unorm,
+    WGPUTextureFormat_RGB10A2Uint, WGPUTextureFormat_RGB10A2Unorm,
+    WGPUTextureFormat_RGB9E5Ufloat, WGPUTextureFormat_RGBA16Float,
+    WGPUTextureFormat_RGBA16Sint, WGPUTextureFormat_RGBA16Snorm,
+    WGPUTextureFormat_RGBA16Uint, WGPUTextureFormat_RGBA16Unorm,
+    WGPUTextureFormat_RGBA32Float, WGPUTextureFormat_RGBA32Sint,
+    WGPUTextureFormat_RGBA32Uint, WGPUTextureFormat_RGBA8Sint,
+    WGPUTextureFormat_RGBA8Snorm, WGPUTextureFormat_RGBA8Uint,
+    WGPUTextureFormat_RGBA8Unorm, WGPUTextureFormat_RGBA8UnormSrgb,
+    WGPUTextureFormat_Stencil8, WGPUTextureFormat_Undefined, WGPUTextureUsage_None,
+    WGPUTextureViewDescriptor, WGPUTextureViewDimension_1D, WGPUTextureViewDimension_2D,
+    WGPUTextureViewDimension_2DArray, WGPUTextureViewDimension_3D,
+    WGPUTextureViewDimension_Cube, WGPUTextureViewDimension_CubeArray,
+    WGPUTextureViewDimension_Undefined, WGPUTextureAspect_DepthOnly, WGPUTextureAspect_StencilOnly,
+    WGPUTextureAspect_Undefined, WGPU_MIP_LEVEL_COUNT_UNDEFINED,
+    WGPU_ARRAY_LAYER_COUNT_UNDEFINED,
 };
 
 /// Convert a `WGPUStringView` to an `Option<&str>`.
@@ -95,5 +125,139 @@ pub fn buffer_descriptor<'a>(d: &'a WGPUBufferDescriptor) -> BufferDescriptor<'a
         size: d.size,
         usage: BufferUsages::from_bits_truncate(d.usage as u32),
         mapped_at_creation: d.mappedAtCreation != 0,
+    }
+}
+
+pub fn texture_descriptor<'a>(d: &'a WGPUTextureDescriptor) -> TextureDescriptor<'a> {
+    TextureDescriptor {
+        label: unsafe { string_view(d.label) },
+        size: Extent3d {
+            width: d.size.width,
+            height: d.size.height,
+            depth_or_array_layers: d.size.depthOrArrayLayers,
+        },
+        mip_level_count: d.mipLevelCount,
+        sample_count: d.sampleCount,
+        dimension: map_texture_dimension(d.dimension),
+        format: map_texture_format(d.format),
+        usage: TextureUsages::from_bits_truncate(d.usage as u32),
+        view_formats: &[],
+    }
+}
+
+fn map_texture_dimension(dimension: crate::WGPUTextureDimension) -> TextureDimension {
+    match dimension {
+        WGPUTextureDimension_1D => TextureDimension::D1,
+        WGPUTextureDimension_3D => TextureDimension::D3,
+        _ => TextureDimension::D2,
+    }
+}
+
+pub fn map_texture_format(format: crate::WGPUTextureFormat) -> TextureFormat {
+    match format {
+        WGPUTextureFormat_R8Unorm => TextureFormat::R8Unorm,
+        WGPUTextureFormat_R8Snorm => TextureFormat::R8Snorm,
+        WGPUTextureFormat_R8Uint => TextureFormat::R8Uint,
+        WGPUTextureFormat_R8Sint => TextureFormat::R8Sint,
+        WGPUTextureFormat_R16Unorm => TextureFormat::R16Unorm,
+        WGPUTextureFormat_R16Snorm => TextureFormat::R16Snorm,
+        WGPUTextureFormat_R16Uint => TextureFormat::R16Uint,
+        WGPUTextureFormat_R16Sint => TextureFormat::R16Sint,
+        WGPUTextureFormat_R16Float => TextureFormat::R16Float,
+        WGPUTextureFormat_RG8Unorm => TextureFormat::Rg8Unorm,
+        WGPUTextureFormat_RG8Snorm => TextureFormat::Rg8Snorm,
+        WGPUTextureFormat_RG8Uint => TextureFormat::Rg8Uint,
+        WGPUTextureFormat_RG8Sint => TextureFormat::Rg8Sint,
+        WGPUTextureFormat_R32Float => TextureFormat::R32Float,
+        WGPUTextureFormat_R32Uint => TextureFormat::R32Uint,
+        WGPUTextureFormat_R32Sint => TextureFormat::R32Sint,
+        WGPUTextureFormat_RG16Unorm => TextureFormat::Rg16Unorm,
+        WGPUTextureFormat_RG16Snorm => TextureFormat::Rg16Snorm,
+        WGPUTextureFormat_RG16Uint => TextureFormat::Rg16Uint,
+        WGPUTextureFormat_RG16Sint => TextureFormat::Rg16Sint,
+        WGPUTextureFormat_RG16Float => TextureFormat::Rg16Float,
+        WGPUTextureFormat_RGBA8Unorm => TextureFormat::Rgba8Unorm,
+        WGPUTextureFormat_RGBA8UnormSrgb => TextureFormat::Rgba8UnormSrgb,
+        WGPUTextureFormat_RGBA8Snorm => TextureFormat::Rgba8Snorm,
+        WGPUTextureFormat_RGBA8Uint => TextureFormat::Rgba8Uint,
+        WGPUTextureFormat_RGBA8Sint => TextureFormat::Rgba8Sint,
+        WGPUTextureFormat_BGRA8Unorm => TextureFormat::Bgra8Unorm,
+        WGPUTextureFormat_BGRA8UnormSrgb => TextureFormat::Bgra8UnormSrgb,
+        WGPUTextureFormat_RGB10A2Uint => TextureFormat::Rgb10a2Uint,
+        WGPUTextureFormat_RGB10A2Unorm => TextureFormat::Rgb10a2Unorm,
+        WGPUTextureFormat_RG11B10Ufloat => TextureFormat::Rg11b10Ufloat,
+        WGPUTextureFormat_RGB9E5Ufloat => TextureFormat::Rgb9e5Ufloat,
+        WGPUTextureFormat_RG32Float => TextureFormat::Rg32Float,
+        WGPUTextureFormat_RG32Uint => TextureFormat::Rg32Uint,
+        WGPUTextureFormat_RG32Sint => TextureFormat::Rg32Sint,
+        WGPUTextureFormat_RGBA16Unorm => TextureFormat::Rgba16Unorm,
+        WGPUTextureFormat_RGBA16Snorm => TextureFormat::Rgba16Snorm,
+        WGPUTextureFormat_RGBA16Uint => TextureFormat::Rgba16Uint,
+        WGPUTextureFormat_RGBA16Sint => TextureFormat::Rgba16Sint,
+        WGPUTextureFormat_RGBA16Float => TextureFormat::Rgba16Float,
+        WGPUTextureFormat_RGBA32Float => TextureFormat::Rgba32Float,
+        WGPUTextureFormat_RGBA32Uint => TextureFormat::Rgba32Uint,
+        WGPUTextureFormat_RGBA32Sint => TextureFormat::Rgba32Sint,
+        WGPUTextureFormat_Stencil8 => TextureFormat::Stencil8,
+        WGPUTextureFormat_Depth16Unorm => TextureFormat::Depth16Unorm,
+        WGPUTextureFormat_Depth24Plus => TextureFormat::Depth24Plus,
+        WGPUTextureFormat_Depth24PlusStencil8 => TextureFormat::Depth24PlusStencil8,
+        WGPUTextureFormat_Depth32Float => TextureFormat::Depth32Float,
+        WGPUTextureFormat_Depth32FloatStencil8 => TextureFormat::Depth32FloatStencil8,
+        _ => panic!("Unsupported texture format value: {format}"),
+    }
+}
+
+pub fn texture_view_descriptor<'a>(d: &'a WGPUTextureViewDescriptor) -> TextureViewDescriptor<'a> {
+    TextureViewDescriptor {
+        label: unsafe { string_view(d.label) },
+        format: if d.format == WGPUTextureFormat_Undefined {
+            None
+        } else {
+            Some(map_texture_format(d.format))
+        },
+        dimension: map_texture_view_dimension(d.dimension),
+        usage: if d.usage == WGPUTextureUsage_None {
+            None
+        } else {
+            Some(TextureUsages::from_bits_truncate(d.usage as u32))
+        },
+        aspect: map_texture_aspect(d.aspect),
+        base_mip_level: d.baseMipLevel,
+        mip_level_count: if d.mipLevelCount == WGPU_MIP_LEVEL_COUNT_UNDEFINED {
+            None
+        } else {
+            Some(d.mipLevelCount)
+        },
+        base_array_layer: d.baseArrayLayer,
+        array_layer_count: if d.arrayLayerCount == WGPU_ARRAY_LAYER_COUNT_UNDEFINED {
+            None
+        } else {
+            Some(d.arrayLayerCount)
+        },
+    }
+}
+
+fn map_texture_view_dimension(
+    dimension: crate::WGPUTextureViewDimension,
+) -> Option<TextureViewDimension> {
+    match dimension {
+        WGPUTextureViewDimension_Undefined => None,
+        WGPUTextureViewDimension_1D => Some(TextureViewDimension::D1),
+        WGPUTextureViewDimension_2D => Some(TextureViewDimension::D2),
+        WGPUTextureViewDimension_2DArray => Some(TextureViewDimension::D2Array),
+        WGPUTextureViewDimension_Cube => Some(TextureViewDimension::Cube),
+        WGPUTextureViewDimension_CubeArray => Some(TextureViewDimension::CubeArray),
+        WGPUTextureViewDimension_3D => Some(TextureViewDimension::D3),
+        _ => None,
+    }
+}
+
+fn map_texture_aspect(aspect: crate::WGPUTextureAspect) -> TextureAspect {
+    match aspect {
+        WGPUTextureAspect_StencilOnly => TextureAspect::StencilOnly,
+        WGPUTextureAspect_DepthOnly => TextureAspect::DepthOnly,
+        WGPUTextureAspect_Undefined => TextureAspect::All,
+        _ => TextureAspect::All,
     }
 }
