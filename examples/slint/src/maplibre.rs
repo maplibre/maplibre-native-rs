@@ -75,7 +75,7 @@ pub fn init(ui: &MainWindow, map: &Rc<RefCell<MapLibre>>) {
             let mut map = map.borrow_mut();
             map.renderer().render_once();
             if map.updated() {
-                if let Some(image) = map.renderer().get_texture() {
+                if let Some(image) = map.renderer().take_texture() {
                     let size = image.size();
                     println!("New image: ({}, {})", size.width, size.height);
                     if let Ok(image) = image.try_into() {

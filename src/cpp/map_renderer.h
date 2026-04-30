@@ -50,9 +50,9 @@ public:
         return mapObserverInstance;
     }
 
-    std::shared_ptr<mbgl::webgpu::Texture2D> getTexture() {
+    std::shared_ptr<mbgl::webgpu::Texture2D> takeTexture() {
         // TODO: don't like the static pointer cast
-        auto ptr = std::static_pointer_cast<mbgl::webgpu::Texture2D>(this->frontend->getTexture());
+        auto ptr = std::static_pointer_cast<mbgl::webgpu::Texture2D>(this->frontend->takeTexture());
         assert(ptr);
         return ptr;
     }

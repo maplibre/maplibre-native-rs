@@ -1,6 +1,7 @@
 #pragma once
 
 #include <mbgl/webgpu/texture2d.hpp>
+#include <cstdint>
 
 namespace mln::bridge::texture {
     WGPUExtent3D getExtend3d(const std::shared_ptr<mbgl::webgpu::Texture2D>&);
@@ -9,4 +10,5 @@ namespace mln::bridge::texture {
     WGPUTextureDimension getDimension(const std::shared_ptr<mbgl::webgpu::Texture2D>&);
     WGPUTextureFormat getFormat(const std::shared_ptr<mbgl::webgpu::Texture2D>&);
     WGPUTextureUsage getUsage(const std::shared_ptr<mbgl::webgpu::Texture2D>&);
+    uintptr_t getRawTextureHandle(const std::shared_ptr<mbgl::webgpu::Texture2D>&);
 }

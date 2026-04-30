@@ -8,9 +8,10 @@ fn main() {
     let mut wgpu_settings = slint::wgpu::WGPUSettings::default();
     // MapLibre's shaders use multiple storage buffers in the vertex stage.
     wgpu_settings.device_required_limits.max_storage_buffers_per_shader_stage = 8;
-    // Some drivers/backends end up with 0 here in downlevel defaults, which fails bind group validation.
-    wgpu_settings.device_required_limits.max_uniform_buffer_binding_size = 4096;
-    wgpu_settings.device_required_limits.max_storage_buffer_binding_size = 4096;
+    // Keep these non-zero and high enough for MapLibre shader bind groups.
+    // 65536 covers the observed 6656-byte binding and aligns with common WebGPU minimums.
+    wgpu_settings.device_required_limits.max_uniform_buffer_binding_size = 65_536;
+    wgpu_settings.device_required_limits.max_storage_buffer_binding_size = 65_536;
 
     slint::BackendSelector::new()
         .require_wgpu_29(slint::wgpu::WGPUConfiguration::Automatic(wgpu_settings))

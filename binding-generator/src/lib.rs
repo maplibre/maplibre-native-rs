@@ -102,6 +102,10 @@ impl WGPUTextureImpl {
     }
 }
 
+pub unsafe fn clone_texture_from_handle(texture: WGPUTexture) -> Option<wgpu::Texture> {
+    unsafe { texture.as_ref().map(|texture_ref| texture_ref.0.clone()) }
+}
+
 pub struct WGPUTextureViewImpl(wgpu::TextureView);
 
 impl WGPUTextureViewImpl {
@@ -2373,7 +2377,10 @@ pub unsafe extern "C" fn wgpuTextureSetLabel(texture: WGPUTexture, label: WGPUSt
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuTextureAddRef(texture: WGPUTexture) {
-    panic!("wgpuTextureAddRef must be implemented");
+    let _ = unsafe { texture.as_ref().expect("Invalid texture") };
+    unsafe {
+        Arc::increment_strong_count(texture);
+    }
 }
 
 #[unsafe(no_mangle)]

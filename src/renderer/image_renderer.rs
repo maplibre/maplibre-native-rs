@@ -250,8 +250,23 @@ impl ImageRenderer<Continuous> {
     }
 
     #[cfg(feature = "wgpu")]
-    pub fn get_texture(&mut self) -> Option<wgpu::Texture> {
-        None
+    pub fn take_texture(&mut self) -> Option<wgpu::Texture> {
+        let texture_2d = self.instance.pin_mut().takeTexture();
+        if texture_2d.is_null() {
+            return None;
+        }
+
+        let raw_texture = ffi::getRawTextureHandle(&texture_2d);
+        if raw_texture == 0 {
+            return None;
+        }
+
+        let texture_handle = raw_texture as binding_generator::WGPUTexture;
+        let texture = unsafe { binding_generator::clone_texture_from_handle(texture_handle) };
+        unsafe {
+            binding_generator::wgpuTextureRelease(texture_handle);
+        }
+        texture
     }
 }
 

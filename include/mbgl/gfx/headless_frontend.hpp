@@ -59,6 +59,7 @@ public:
 
     PremultipliedImage readStillImage();
     const gfx::Texture2DPtr getTexture();
+    gfx::Texture2DPtr takeTexture();
     RenderResult render(Map&);
 
     void renderOnce(Map&);

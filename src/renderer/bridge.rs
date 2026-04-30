@@ -550,6 +550,12 @@ pub mod ffi {
         type SymbolLayer = super::layers::SymbolLayer;
     }
 
+    #[namespace = "mbgl::webgpu"]
+    extern "C++" {
+        #[cfg(feature = "wgpu")]
+        type Texture2D;
+    }
+
     #[namespace = ""]
     extern "C++" {
         #[cfg(feature = "wgpu")]
@@ -634,8 +640,16 @@ pub mod ffi {
         #[cfg(feature = "wgpu")]
         fn setDeviceAndQueue(self: Pin<&mut MapRenderer>, device: WGPUDevice, queue: WGPUQueue);
 
-        // Texture
-        // fn getTexture(self: Pin<&mut MapRenderer>) -> SharedPtr<Texture2D>;
+        #[cfg(feature = "wgpu")]
+        fn takeTexture(self: Pin<&mut MapRenderer>) -> SharedPtr<Texture2D>;
+    }
+
+    #[namespace = "mln::bridge::texture"]
+    unsafe extern "C++" {
+        include!("texture.h");
+
+        #[cfg(feature = "wgpu")]
+        fn getRawTextureHandle(texture: &SharedPtr<Texture2D>) -> usize;
     }
 
     // Declarations for C++ with implementations in Rust

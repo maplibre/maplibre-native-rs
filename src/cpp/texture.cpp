@@ -29,6 +29,19 @@ namespace mln::bridge::texture {
     WGPUTextureUsage getUsage(const std::shared_ptr<mbgl::webgpu::Texture2D>& texture2d) {
         return wgpuTextureGetUsage(texture2d->getTexture());
     }
+
+    uintptr_t getRawTextureHandle(const std::shared_ptr<mbgl::webgpu::Texture2D>& texture2d) {
+        if (!texture2d) {
+            return 0;
+        }
+        WGPUTexture texture = texture2d->getTexture();
+        if (!texture) {
+            return 0;
+        }
+        // Retain so Rust can safely clone and then release its temporary handle.
+        wgpuTextureAddRef(texture);
+        return reinterpret_cast<uintptr_t>(texture);
+    }
 }
 
 
