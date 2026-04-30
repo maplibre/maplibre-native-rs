@@ -17,20 +17,7 @@ use std::cell::RefCell;
 use std::path::Path;
 
 pub fn init(ui: &MainWindow, map: &Rc<RefCell<MapLibre>>) {
-    // loop {
-    //     let mut borrow = map.borrow_mut();
-    //     borrow.renderer().render_once();
-
-    //     if let Some(error) = borrow.style_loading_error() {
-    //         panic!("Failed to load map: {}", error);
-    //     }
-
-    //     if borrow.style_loaded() {
-    //         drop(borrow);
-    //         style(map);
-    //         break;
-    //     }
-    // }
+    style(map);
 
     ui.window()
         .set_rendering_notifier({
@@ -56,7 +43,6 @@ pub fn init(ui: &MainWindow, map: &Rc<RefCell<MapLibre>>) {
     ui.on_map_size_changed({
         let map = Rc::downgrade(map);
         move |size| {
-            println!("on_map_size_changed: {:?}", size);
             if size.width > 0. && size.height > 0. {
                 let size = maplibre_native::Size::new(
                     Width(size.width as u32),
@@ -77,10 +63,8 @@ pub fn init(ui: &MainWindow, map: &Rc<RefCell<MapLibre>>) {
             if map.updated() {
                 if let Some(image) = map.renderer().take_texture() {
                     let size = image.size();
-                    println!("New image: ({}, {})", size.width, size.height);
                     if let Ok(image) = image.try_into() {
                         ui_handle.upgrade().unwrap().global::<MapAdapter>().set_map_texture(image);
-                        // TODO: check if the image really changed, otherwise we don't need to clone!
                     }
                 }
             }
@@ -120,6 +104,7 @@ pub fn init(ui: &MainWindow, map: &Rc<RefCell<MapLibre>>) {
     });
 }
 
+// Style the map and add a marker
 fn style(map: &Rc<RefCell<MapLibre>>) {
     let mut map_borrow = map.borrow_mut();
     let mut style = Style::get_ref(map_borrow.renderer());
