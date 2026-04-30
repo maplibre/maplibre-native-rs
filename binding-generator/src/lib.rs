@@ -983,7 +983,14 @@ pub unsafe extern "C" fn wgpuQueueWriteBuffer(
     data: *const ::std::os::raw::c_void,
     size: usize,
 ) {
-    panic!("wgpuQueueWriteBuffer must be implemented");
+    let queue_ref = unsafe { queue.as_ref().expect("Invalid queue") };
+    let buffer_ref = unsafe { buffer.as_ref().expect("Invalid buffer") };
+    let bytes: &[u8] = if size == 0 {
+        &[]
+    } else {
+        unsafe { std::slice::from_raw_parts(data.cast::<u8>(), size) }
+    };
+    queue_ref.0.write_buffer(&buffer_ref.0, bufferOffset, bytes);
 }
 
 #[unsafe(no_mangle)]
