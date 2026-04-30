@@ -2045,7 +2045,14 @@ pub unsafe extern "C" fn wgpuRenderPassEncoderSetStencilReference(
     renderPassEncoder: WGPURenderPassEncoder,
     reference: u32,
 ) {
-    panic!("wgpuRenderPassEncoderSetStencilReference must be implemented");
+    let pass_ref = unsafe { renderPassEncoder.as_ref().expect("Invalid renderPassEncoder") };
+    pass_ref
+        .0
+        .lock()
+        .expect("render pass lock poisoned")
+        .as_mut()
+        .expect("render pass already ended")
+        .set_stencil_reference(reference);
 }
 
 #[unsafe(no_mangle)]
