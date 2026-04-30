@@ -1912,7 +1912,15 @@ pub unsafe extern "C" fn wgpuRenderPassEncoderSetPipeline(
     renderPassEncoder: WGPURenderPassEncoder,
     pipeline: WGPURenderPipeline,
 ) {
-    panic!("wgpuRenderPassEncoderSetPipeline must be implemented");
+    let pass_ref = unsafe { renderPassEncoder.as_ref().expect("Invalid renderPassEncoder") };
+    let pipeline_ref = unsafe { pipeline.as_ref().expect("Invalid renderPipeline") };
+    pass_ref
+        .0
+        .lock()
+        .expect("render pass lock poisoned")
+        .as_mut()
+        .expect("render pass already ended")
+        .set_pipeline(&pipeline_ref.0);
 }
 
 #[unsafe(no_mangle)]
@@ -1949,7 +1957,23 @@ pub unsafe extern "C" fn wgpuRenderPassEncoderSetVertexBuffer(
     offset: u64,
     size: u64,
 ) {
-    panic!("wgpuRenderPassEncoderSetVertexBuffer must be implemented");
+    let pass_ref = unsafe { renderPassEncoder.as_ref().expect("Invalid renderPassEncoder") };
+    let buffer_ref = unsafe { buffer.as_ref().expect("Invalid buffer") };
+
+    let slice = if size == u64::MAX {
+        buffer_ref.0.slice(offset..)
+    } else {
+        let end = offset.checked_add(size).expect("offset + size overflow");
+        buffer_ref.0.slice(offset..end)
+    };
+
+    pass_ref
+        .0
+        .lock()
+        .expect("render pass lock poisoned")
+        .as_mut()
+        .expect("render pass already ended")
+        .set_vertex_buffer(slot, slice);
 }
 
 #[unsafe(no_mangle)]
