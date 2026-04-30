@@ -392,7 +392,10 @@ pub unsafe extern "C" fn wgpuBufferAddRef(buffer: WGPUBuffer) {
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuBufferRelease(buffer: WGPUBuffer) {
-    panic!("wgpuBufferRelease must be implemented");
+    let _ = unsafe { buffer.as_ref().expect("Invalid buffer") };
+    unsafe {
+        drop(Arc::from_raw(buffer));
+    }
 }
 
 #[unsafe(no_mangle)]
@@ -1637,7 +1640,10 @@ pub unsafe extern "C" fn wgpuSamplerAddRef(sampler: WGPUSampler) {
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuSamplerRelease(sampler: WGPUSampler) {
-    panic!("wgpuSamplerRelease must be implemented");
+    let _ = unsafe { sampler.as_ref().expect("Invalid sampler") };
+    unsafe {
+        drop(Arc::from_raw(sampler));
+    }
 }
 
 #[unsafe(no_mangle)]
@@ -1833,7 +1839,10 @@ pub unsafe extern "C" fn wgpuTextureAddRef(texture: WGPUTexture) {
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuTextureRelease(texture: WGPUTexture) {
-    panic!("wgpuTextureRelease must be implemented");
+    let _ = unsafe { texture.as_ref().expect("Invalid texture") };
+    unsafe {
+        drop(Arc::from_raw(texture));
+    }
 }
 
 #[unsafe(no_mangle)]
