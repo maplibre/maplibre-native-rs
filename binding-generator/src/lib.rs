@@ -56,6 +56,14 @@ impl WGPUSamplerImpl {
     }
 }
 
+pub struct WGPUCommandEncoderImpl(wgpu::CommandEncoder);
+
+impl WGPUCommandEncoderImpl {
+    pub fn to_pointer(self) -> WGPUCommandEncoder {
+        Arc::into_raw(Arc::new(self))
+    }
+}
+
 pub struct WGPUDeviceWrapper(WGPUDevice);
 pub struct WGPUQueueWrapper(WGPUQueue);
 
@@ -90,7 +98,6 @@ opaque_handle_types!(
     WGPUBindGroupLayoutImpl,
     WGPUBufferImpl,
     WGPUCommandBufferImpl,
-    WGPUCommandEncoderImpl,
     WGPUComputePassEncoderImpl,
     WGPUComputePipelineImpl,
     WGPUInstanceImpl,
@@ -637,7 +644,13 @@ pub unsafe extern "C" fn wgpuDeviceCreateCommandEncoder(
     device: WGPUDevice,
     descriptor: *const WGPUCommandEncoderDescriptor,
 ) -> WGPUCommandEncoder {
-    panic!("wgpuDeviceCreateCommandEncoder must be implemented");
+    let wgpu_desc = match unsafe { descriptor.as_ref() } {
+        Some(d) => conv::command_encoder_descriptor(d),
+        None => wgpu::CommandEncoderDescriptor::default(),
+    };
+    let device_ref = unsafe { device.as_ref().expect("Invalid device") };
+    let encoder = device_ref.0.create_command_encoder(&wgpu_desc);
+    WGPUCommandEncoderImpl(encoder).to_pointer()
 }
 
 #[unsafe(no_mangle)]

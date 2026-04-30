@@ -1,11 +1,14 @@
-use wgpu::{AddressMode, CompareFunction, FilterMode, MipmapFilterMode, SamplerDescriptor};
+use wgpu::{
+    AddressMode, CommandEncoderDescriptor, CompareFunction, FilterMode, MipmapFilterMode,
+    SamplerDescriptor,
+};
 
 use crate::{
-    WGPUAddressMode_MirrorRepeat, WGPUAddressMode_Repeat, WGPUCompareFunction_Always,
-    WGPUCompareFunction_Equal, WGPUCompareFunction_Greater, WGPUCompareFunction_GreaterEqual,
-    WGPUCompareFunction_Less, WGPUCompareFunction_LessEqual, WGPUCompareFunction_Never,
-    WGPUCompareFunction_NotEqual, WGPUFilterMode_Linear, WGPUMipmapFilterMode_Linear,
-    WGPUSamplerDescriptor, WGPUStringView,
+    WGPUAddressMode_MirrorRepeat, WGPUAddressMode_Repeat, WGPUCommandEncoderDescriptor,
+    WGPUCompareFunction_Always, WGPUCompareFunction_Equal, WGPUCompareFunction_Greater,
+    WGPUCompareFunction_GreaterEqual, WGPUCompareFunction_Less, WGPUCompareFunction_LessEqual,
+    WGPUCompareFunction_Never, WGPUCompareFunction_NotEqual, WGPUFilterMode_Linear,
+    WGPUMipmapFilterMode_Linear, WGPUSamplerDescriptor, WGPUStringView,
 };
 
 /// Convert a `WGPUStringView` to an `Option<&str>`.
@@ -78,4 +81,10 @@ fn map_compare_function(func: crate::WGPUCompareFunction) -> Option<CompareFunct
         WGPUCompareFunction_Always => Some(CompareFunction::Always),
         _ => None,
     }
+}
+
+pub fn command_encoder_descriptor<'a>(
+    d: &'a WGPUCommandEncoderDescriptor,
+) -> CommandEncoderDescriptor<'a> {
+    CommandEncoderDescriptor { label: unsafe { string_view(d.label) } }
 }
