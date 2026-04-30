@@ -1,9 +1,6 @@
 use super::MapObserver;
 use crate::renderer::bridge::ffi;
 use crate::renderer::bridge::ffi::BridgeImage;
-use crate::renderer::callbacks::{
-    CameraDidChangeCallback, FailingLoadingMapCallback, FinishRenderingFrameCallback, VoidCallback,
-};
 use crate::renderer::MapDebugOptions;
 use crate::{ScreenCoordinate, Size};
 use cxx::UniquePtr;
@@ -91,6 +88,7 @@ impl<S> Debug for ImageRenderer<S> {
 
 impl<S> ImageRenderer<S> {
     #[cfg(feature = "wgpu")]
+    /// Bind the renderer to the WGPU device and queue provided by the host UI.
     pub fn set_device_queue(&mut self, device: wgpu::Device, queue: wgpu::Queue) {
         self.instance.pin_mut().setDeviceAndQueue(device.into(), queue.into())
     }
@@ -234,6 +232,16 @@ impl ImageRenderer<Continuous> {
         self.instance.pin_mut().scaleBy(scale, &pos);
     }
 
+    /// Adjust the map pitch by the given delta in degrees.
+    pub fn pitch_by(&mut self, pitch: f64) {
+        self.instance.pin_mut().pitchBy(pitch);
+    }
+
+    /// Rotate the map using two screen coordinates that represent the gesture delta.
+    pub fn rotate_by(&mut self, first: ScreenCoordinate, second: ScreenCoordinate) {
+        self.instance.pin_mut().rotateBy(&first, &second);
+    }
+
     /// Set the map size. It determines also the rendered image size
     pub fn set_map_size(&mut self, size: Size) {
         self.instance.pin_mut().setSize(&size);
@@ -250,6 +258,7 @@ impl ImageRenderer<Continuous> {
     }
 
     #[cfg(feature = "wgpu")]
+    /// Take the latest rendered map texture, if one is available.
     pub fn take_texture(&mut self) -> Option<wgpu::Texture> {
         let texture_2d = self.instance.pin_mut().takeTexture();
         if texture_2d.is_null() {

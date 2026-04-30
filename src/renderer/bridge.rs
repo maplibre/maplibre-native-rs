@@ -3,10 +3,8 @@ use crate::renderer::callbacks::{
     void_callback, CameraDidChangeCallback, FailingLoadingMapCallback,
     FinishRenderingFrameCallback, VoidCallback,
 };
-use cxx::{SharedPtr, UniquePtr};
 use std::fmt::Display;
 use std::ops::Sub;
-use std::sync::Arc;
 
 // https://maplibre.org/maplibre-native/docs/book/design/ten-thousand-foot-view.html
 
@@ -61,6 +59,18 @@ impl ScreenCoordinate {
     #[allow(clippy::needless_pass_by_value)]
     pub fn new(x: X, y: Y) -> Self {
         Self { x: x.0, y: y.0 }
+    }
+
+    /// Get the x coordinate.
+    #[must_use]
+    pub fn x(self) -> f64 {
+        self.x
+    }
+
+    /// Get the y coordinate.
+    #[must_use]
+    pub fn y(self) -> f64 {
+        self.y
     }
 }
 
@@ -613,6 +623,14 @@ pub mod ffi {
         fn moveBy(self: Pin<&mut MapRenderer>, delta: &ScreenCoordinate);
         /// Scales the camera based on the given scale factor.
         fn scaleBy(self: Pin<&mut MapRenderer>, scale: f64, pos: &ScreenCoordinate);
+        /// Adjusts the camera pitch by the given delta in degrees.
+        fn pitchBy(self: Pin<&mut MapRenderer>, pitch: f64);
+        /// Rotates the camera using two screen coordinates that define the gesture delta.
+        fn rotateBy(
+            self: Pin<&mut MapRenderer>,
+            first: &ScreenCoordinate,
+            second: &ScreenCoordinate,
+        );
         /// Loads a style from a URL.
         fn style_load_from_url(self: Pin<&mut MapRenderer>, url: &str);
         /// Sets the renderer size.

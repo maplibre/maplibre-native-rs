@@ -5,7 +5,9 @@ use maplibre_native::ImageRendererBuilder;
 use maplibre_native::MapLoadError;
 use maplibre_native::ResourceOptions;
 use maplibre_native::ScreenCoordinate;
+use maplibre_native::Size as MapSize;
 use maplibre_native::tile_server_options::TileServerOptions;
+use maplibre_native::{X, Y};
 use std::cell::RefCell;
 use std::num::NonZeroU32;
 use std::path::Path;
@@ -23,11 +25,12 @@ pub struct MapLibre {
     flags: Rc<RefCell<Flags>>,
     renderer: ImageRenderer<Continuous>,
     last_pos: ScreenCoordinate,
+    map_size: MapSize,
 }
 
 impl MapLibre {
-    pub fn new(renderer: ImageRenderer<Continuous>) -> Self {
-        Self { renderer, flags: Rc::default(), last_pos: ScreenCoordinate::default() }
+    pub fn new(renderer: ImageRenderer<Continuous>, map_size: MapSize) -> Self {
+        Self { renderer, flags: Rc::default(), last_pos: ScreenCoordinate::default(), map_size }
     }
 
     pub fn style_loaded(&self) -> bool {
@@ -55,6 +58,41 @@ impl MapLibre {
     pub fn position(&self) -> ScreenCoordinate {
         self.last_pos
     }
+
+    pub fn set_map_size(&mut self, size: MapSize) {
+        self.map_size = size;
+        self.renderer.set_map_size(size);
+    }
+
+    // Invers the map rotation logic from MapLibre's `Map::rotateBy` to convert a control+wheel delta into a synthetic drag gesture.
+    pub fn rotate_by(&mut self, delta: f32) {
+        let first = self.position();
+        let mut center = ScreenCoordinate::new(
+            X(f64::from(self.map_size.width()) / 2.0),
+            Y(f64::from(self.map_size.height()) / 2.0),
+        );
+
+        let offset = first - center;
+        let distance = offset.x().hypot(offset.y());
+
+        if distance < 200.0 {
+            let height_offset = -200.0;
+            let rotate_bearing = offset.y().atan2(offset.x());
+            center = ScreenCoordinate::new(
+                X(first.x() + rotate_bearing.cos() * height_offset),
+                Y(first.y() + rotate_bearing.sin() * height_offset),
+            );
+        }
+
+        let relative = first - center;
+        let angle = f64::from(delta).to_radians();
+        let second = ScreenCoordinate::new(
+            X(center.x() + relative.x() * angle.cos() - relative.y() * angle.sin()),
+            Y(center.y() + relative.x() * angle.sin() + relative.y() * angle.cos()),
+        );
+
+        self.renderer.rotate_by(first, second);
+    }
 }
 
 pub fn create_map(size: Size) -> Rc<RefCell<MapLibre>> {
@@ -64,7 +102,12 @@ pub fn create_map(size: Size) -> Rc<RefCell<MapLibre>> {
         .with_cache_path(Path::new(env!("CARGO_MANIFEST_DIR")).join("maplibre_database.sqlite"));
 
     let mut renderer = ImageRendererBuilder::new();
+    let mut map_size = MapSize::new(maplibre_native::Width(0), maplibre_native::Height(0));
     if size.width > 0. && size.height > 0. {
+        map_size = MapSize::new(
+            maplibre_native::Width(size.width as u32),
+            maplibre_native::Height(size.height as u32),
+        );
         renderer = renderer.with_size(
             NonZeroU32::new(size.width as u32).unwrap(),
             NonZeroU32::new(size.height as u32).unwrap(),
@@ -77,7 +120,7 @@ pub fn create_map(size: Size) -> Rc<RefCell<MapLibre>> {
     renderer.set_camera(0, 0, 0, 0., 0.); // setting the camera is important, otherwise map libre does nothing (no logs are comming and no map gets generated)
     renderer.load_style_from_url(&"https://demotiles.maplibre.org/style.json".parse().unwrap());
 
-    let map = Rc::new(RefCell::new(MapLibre::new(renderer)));
+    let map = Rc::new(RefCell::new(MapLibre::new(renderer, map_size)));
 
     let map_observer = map.borrow_mut().renderer().map_observer();
     map_observer.set_did_become_idle_callback({

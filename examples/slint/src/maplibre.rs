@@ -48,7 +48,7 @@ pub fn init(ui: &MainWindow, map: &Rc<RefCell<MapLibre>>) {
                     Width(size.width as u32),
                     Height(size.height as u32),
                 );
-                map.upgrade().unwrap().borrow_mut().renderer().set_map_size(size);
+                map.upgrade().unwrap().borrow_mut().set_map_size(size);
             }
         }
     });
@@ -62,7 +62,6 @@ pub fn init(ui: &MainWindow, map: &Rc<RefCell<MapLibre>>) {
             map.renderer().render_once();
             if map.updated() {
                 if let Some(image) = map.renderer().take_texture() {
-                    let size = image.size();
                     if let Ok(image) = image.try_into() {
                         ui_handle.upgrade().unwrap().global::<MapAdapter>().set_map_texture(image);
                     }
@@ -100,6 +99,22 @@ pub fn init(ui: &MainWindow, map: &Rc<RefCell<MapLibre>>) {
             let pos = ScreenCoordinate::new(X(x.into()), Y(y.into()));
             let scale = if delta > 0. { STEP } else { 1.0 / STEP };
             map.upgrade().unwrap().borrow_mut().renderer().scale_by(scale, pos);
+        }
+    });
+
+    ui.global::<MapAdapter>().on_bearing_changed({
+        let map = Rc::downgrade(map);
+        move |delta: f32| {
+            // MapLibre's rotateBy API expects a gesture from one pointer position to another.
+            // Control+wheel provides only a scalar delta, so convert it into a small synthetic drag.
+            map.upgrade().unwrap().borrow_mut().rotate_by(delta);
+        }
+    });
+
+    ui.global::<MapAdapter>().on_pitch_changed({
+        let map = Rc::downgrade(map);
+        move |delta: f32| {
+            map.upgrade().unwrap().borrow_mut().renderer().pitch_by(delta.into());
         }
     });
 }

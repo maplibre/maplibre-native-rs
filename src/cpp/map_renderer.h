@@ -134,6 +134,14 @@ public:
         map->scaleBy(scale, pos);
     }
 
+    void pitchBy(double pitch) {
+        map->pitchBy(pitch);
+    }
+
+    void rotateBy(const mbgl::ScreenCoordinate& first, const mbgl::ScreenCoordinate& second) {
+        map->rotateBy(first, second);
+    }
+
     void setDeviceAndQueue(WGPUDevice device, WGPUQueue queue) {
         frontend->getBackend()->setDevice(device);
         frontend->getBackend()->setQueue(queue);
