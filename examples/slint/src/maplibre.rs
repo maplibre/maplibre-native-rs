@@ -3,22 +3,15 @@ use crate::MapAdapter;
 use maplibre_native::Height;
 use maplibre_native::ScreenCoordinate;
 use maplibre_native::Width;
-use maplibre_native::layers::SymbolAnchorType;
 use slint::ComponentHandle;
 use std::rc::Rc;
 mod headless;
 pub use headless::MapLibre;
 pub use headless::create_map;
-use image::ImageReader;
-use maplibre_native::Style;
-use maplibre_native::{GeoJsonSource, Latitude, Longitude, SymbolLayer};
 use maplibre_native::{X, Y};
 use std::cell::RefCell;
-use std::path::Path;
 
 pub fn init(ui: &MainWindow, map: &Rc<RefCell<MapLibre>>) {
-    style(map);
-
     ui.window()
         .set_rendering_notifier({
             let map = Rc::downgrade(map);
@@ -117,27 +110,4 @@ pub fn init(ui: &MainWindow, map: &Rc<RefCell<MapLibre>>) {
             map.upgrade().unwrap().borrow_mut().renderer().pitch_by(delta.into());
         }
     });
-}
-
-// Style the map and add a marker
-fn style(map: &Rc<RefCell<MapLibre>>) {
-    let mut map_borrow = map.borrow_mut();
-    let mut style = Style::get_ref(map_borrow.renderer());
-
-    let image = ImageReader::open(
-        Path::new(env!("CARGO_MANIFEST_DIR")).join("ui").join("icons").join("Marker.png"),
-    )
-    .unwrap()
-    .decode()
-    .unwrap();
-    let image_id = style.add_image("The id", &image, true);
-
-    let mut geo_json_source = GeoJsonSource::new("geojsonsourceid");
-    geo_json_source.set_point(Latitude(52.67655), Longitude(13.28387));
-    let source_id = style.add_source(geo_json_source);
-
-    let layer = SymbolLayer::new("Layer id", &source_id);
-    layer.set_icon_image(&image_id);
-    layer.set_icon_anchor(SymbolAnchorType::Bottom);
-    style.add_layer(layer);
 }
