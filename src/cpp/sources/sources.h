@@ -7,7 +7,11 @@ namespace mbgl::style {
 }
 
 namespace mln::bridge::style::sources::geojson {
-    std::unique_ptr<mbgl::style::GeoJSONSource> create(rust::Str id);
+    /// Creates a new GeoJSON source with default options.
+    std::unique_ptr<mbgl::style::GeoJSONSource> createWithDefaultOptions(rust::Str id);
+
+    /// Sets the URL for loading GeoJSON data.
+    void setURL(const std::unique_ptr<mbgl::style::GeoJSONSource>& source, rust::Str url);
 
     void setPoint(const std::unique_ptr<mbgl::style::GeoJSONSource>& source, double latitude, double longitude);
 }

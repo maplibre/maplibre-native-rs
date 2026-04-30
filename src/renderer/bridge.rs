@@ -119,6 +119,7 @@ pub mod sources {
     #[namespace = "mbgl::style"]
     extern "C++" {
         include!("mbgl/style/sources/geojson_source.hpp");
+        
         // Opaque types
         /// A GeoJSON source for MapLibre rendering.
         type GeoJSONSource;
@@ -128,8 +129,10 @@ pub mod sources {
     unsafe extern "C++" {
         include!("sources/sources.h");
 
-        /// Creates a new GeoJSON source with the given ID.
-        fn create(id: &str) -> UniquePtr<GeoJSONSource>;
+        /// Creates a new GeoJSON source with default options.
+        fn createWithDefaultOptions(id: &str) -> UniquePtr<GeoJSONSource>;
+        /// Sets the URL for loading GeoJSON data.
+        fn setURL(source: &UniquePtr<GeoJSONSource>, url: &str);
         /// Sets a point for the GeoJSON source.
         fn setPoint(source: &UniquePtr<GeoJSONSource>, latitude: f64, longitude: f64);
     }
