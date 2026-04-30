@@ -110,6 +110,14 @@ impl WGPUTextureViewImpl {
     }
 }
 
+pub struct WGPUShaderModuleImpl(wgpu::ShaderModule);
+
+impl WGPUShaderModuleImpl {
+    pub fn to_pointer(self) -> WGPUShaderModule {
+        Arc::into_raw(Arc::new(self))
+    }
+}
+
 pub struct WGPURenderPipelineImpl(wgpu::RenderPipeline);
 
 impl WGPURenderPipelineImpl {
@@ -162,7 +170,6 @@ opaque_handle_types!(
     WGPUQuerySetImpl,
     WGPURenderBundleImpl,
     WGPURenderBundleEncoderImpl,
-    WGPUShaderModuleImpl,
     WGPUSurfaceImpl,
 );
 
@@ -932,7 +939,49 @@ pub unsafe extern "C" fn wgpuDeviceCreateShaderModule(
     device: WGPUDevice,
     descriptor: *const WGPUShaderModuleDescriptor,
 ) -> WGPUShaderModule {
-    panic!("wgpuDeviceCreateShaderModule must be implemented");
+    let device_ref = unsafe { device.as_ref().expect("Invalid device") };
+    let d = unsafe { descriptor.as_ref().expect("WGPUShaderModuleDescriptor must not be null") };
+
+    let string_view = |view: WGPUStringView| -> Option<&str> {
+        if view.data.is_null() {
+            return None;
+        }
+        let bytes = if view.length == usize::MAX {
+            unsafe { std::ffi::CStr::from_ptr(view.data) }.to_bytes()
+        } else {
+            unsafe { std::slice::from_raw_parts(view.data as *const u8, view.length) }
+        };
+        std::str::from_utf8(bytes).ok()
+    };
+
+    let label = string_view(d.label);
+    let chain = unsafe {
+        d.nextInChain.as_ref().expect("WGPUShaderModuleDescriptor.nextInChain must not be null")
+    };
+
+    let source = match chain.sType {
+        WGPUSType_ShaderSourceWGSL => {
+            let wgsl = unsafe {
+                (d.nextInChain as *const WGPUShaderSourceWGSL)
+                    .as_ref()
+                    .expect("Invalid WGPUShaderSourceWGSL chain")
+            };
+            if !wgsl.chain.next.is_null() {
+                panic!("Only a single chained shader source is supported");
+            }
+            let code = string_view(wgsl.code).expect("WGSL source must be valid UTF-8");
+            wgpu::ShaderSource::Wgsl(code.into())
+        }
+        WGPUSType_ShaderSourceSPIRV => {
+            panic!("WGPUShaderSourceSPIRV is not implemented");
+        }
+        _ => {
+            panic!("Unsupported shader source chain type");
+        }
+    };
+
+    let module = device_ref.0.create_shader_module(wgpu::ShaderModuleDescriptor { label, source });
+    WGPUShaderModuleImpl(module).to_pointer()
 }
 
 #[unsafe(no_mangle)]
@@ -1224,7 +1273,65 @@ pub unsafe extern "C" fn wgpuQueueWriteTexture(
     dataLayout: *const WGPUTexelCopyBufferLayout,
     writeSize: *const WGPUExtent3D,
 ) {
-    panic!("wgpuQueueWriteTexture must be implemented");
+    let queue_ref = unsafe { queue.as_ref().expect("Invalid queue") };
+    let destination_ref =
+        unsafe { destination.as_ref().expect("WGPUTexelCopyTextureInfo must not be null") };
+    let data_layout_ref =
+        unsafe { dataLayout.as_ref().expect("WGPUTexelCopyBufferLayout must not be null") };
+    let write_size_ref = unsafe { writeSize.as_ref().expect("WGPUExtent3D must not be null") };
+    let texture_ref =
+        unsafe { destination_ref.texture.as_ref().expect("Invalid destination texture") };
+
+    if dataSize > 0 && data.is_null() {
+        panic!("data must not be null when dataSize > 0");
+    }
+
+    let bytes: &[u8] = if dataSize == 0 {
+        &[]
+    } else {
+        unsafe { std::slice::from_raw_parts(data.cast::<u8>(), dataSize) }
+    };
+
+    let aspect = match destination_ref.aspect {
+        WGPUTextureAspect_DepthOnly => wgpu::TextureAspect::DepthOnly,
+        WGPUTextureAspect_StencilOnly => wgpu::TextureAspect::StencilOnly,
+        _ => wgpu::TextureAspect::All,
+    };
+
+    let bytes_per_row = if data_layout_ref.bytesPerRow == u32::MAX {
+        None
+    } else {
+        Some(data_layout_ref.bytesPerRow)
+    };
+    let rows_per_image = if data_layout_ref.rowsPerImage == u32::MAX {
+        None
+    } else {
+        Some(data_layout_ref.rowsPerImage)
+    };
+
+    queue_ref.0.write_texture(
+        wgpu::TexelCopyTextureInfo {
+            texture: &texture_ref.0,
+            mip_level: destination_ref.mipLevel,
+            origin: wgpu::Origin3d {
+                x: destination_ref.origin.x,
+                y: destination_ref.origin.y,
+                z: destination_ref.origin.z,
+            },
+            aspect,
+        },
+        bytes,
+        wgpu::TexelCopyBufferLayout {
+            offset: data_layout_ref.offset,
+            bytes_per_row,
+            rows_per_image,
+        },
+        wgpu::Extent3d {
+            width: write_size_ref.width,
+            height: write_size_ref.height,
+            depth_or_array_layers: write_size_ref.depthOrArrayLayers,
+        },
+    );
 }
 
 #[unsafe(no_mangle)]
