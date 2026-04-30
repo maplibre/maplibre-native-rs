@@ -70,6 +70,14 @@ impl WGPUCommandEncoderImpl {
     }
 }
 
+pub struct WGPUCommandBufferImpl(wgpu::CommandBuffer);
+
+impl WGPUCommandBufferImpl {
+    pub fn to_pointer(self) -> WGPUCommandBuffer {
+        Arc::into_raw(Arc::new(self))
+    }
+}
+
 pub struct WGPURenderPassEncoderImpl(Mutex<Option<wgpu::RenderPass<'static>>>);
 
 impl WGPURenderPassEncoderImpl {
@@ -98,6 +106,22 @@ pub struct WGPUTextureViewImpl(wgpu::TextureView);
 
 impl WGPUTextureViewImpl {
     pub fn to_pointer(self) -> WGPUTextureView {
+        Arc::into_raw(Arc::new(self))
+    }
+}
+
+pub struct WGPURenderPipelineImpl(wgpu::RenderPipeline);
+
+impl WGPURenderPipelineImpl {
+    pub fn to_pointer(self) -> WGPURenderPipeline {
+        Arc::into_raw(Arc::new(self))
+    }
+}
+
+pub struct WGPUBindGroupLayoutImpl(wgpu::BindGroupLayout);
+
+impl WGPUBindGroupLayoutImpl {
+    pub fn to_pointer(self) -> WGPUBindGroupLayout {
         Arc::into_raw(Arc::new(self))
     }
 }
@@ -131,8 +155,6 @@ unsafe impl cxx::ExternType for WGPUQueueWrapper {
 opaque_handle_types!(
     WGPUAdapterImpl,
     WGPUBindGroupImpl,
-    WGPUBindGroupLayoutImpl,
-    WGPUCommandBufferImpl,
     WGPUComputePassEncoderImpl,
     WGPUComputePipelineImpl,
     WGPUInstanceImpl,
@@ -140,7 +162,6 @@ opaque_handle_types!(
     WGPUQuerySetImpl,
     WGPURenderBundleImpl,
     WGPURenderBundleEncoderImpl,
-    WGPURenderPipelineImpl,
     WGPUShaderModuleImpl,
     WGPUSurfaceImpl,
 );
@@ -1567,7 +1588,9 @@ pub unsafe extern "C" fn wgpuRenderPipelineGetBindGroupLayout(
     renderPipeline: WGPURenderPipeline,
     groupIndex: u32,
 ) -> WGPUBindGroupLayout {
-    panic!("wgpuRenderPipelineGetBindGroupLayout must be implemented");
+    let pipeline_ref = unsafe { renderPipeline.as_ref().expect("Invalid renderPipeline") };
+    let layout = pipeline_ref.0.get_bind_group_layout(groupIndex);
+    WGPUBindGroupLayoutImpl(layout).to_pointer()
 }
 
 #[unsafe(no_mangle)]
