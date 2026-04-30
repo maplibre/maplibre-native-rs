@@ -70,7 +70,7 @@ impl WGPUCommandEncoderImpl {
     }
 }
 
-pub struct WGPUCommandBufferImpl(wgpu::CommandBuffer);
+pub struct WGPUCommandBufferImpl(Mutex<Option<wgpu::CommandBuffer>>);
 
 impl WGPUCommandBufferImpl {
     pub fn to_pointer(self) -> WGPUCommandBuffer {
@@ -603,7 +603,7 @@ pub unsafe extern "C" fn wgpuCommandEncoderFinish(
         .take()
         .expect("command encoder already finished");
     let cmd_buf = encoder.finish();
-    WGPUCommandBufferImpl(cmd_buf).to_pointer()
+    WGPUCommandBufferImpl(Mutex::new(Some(cmd_buf))).to_pointer()
 }
 
 #[unsafe(no_mangle)]
@@ -1175,13 +1175,21 @@ pub unsafe extern "C" fn wgpuQueueSubmit(
     commands: *const WGPUCommandBuffer,
 ) {
     let queue_ref = unsafe { queue.as_ref().expect("Invalid queue") };
+    if commandCount > 0 && commands.is_null() {
+        panic!("commands must not be null when commandCount > 0");
+    }
+
     let mut cmd_bufs = Vec::with_capacity(commandCount);
     for i in 0..commandCount {
         let ptr = unsafe { *commands.add(i) };
-        let arc = unsafe { Arc::from_raw(ptr) };
-        let impl_ = Arc::try_unwrap(arc)
-            .unwrap_or_else(|_| panic!("CommandBuffer has extra references on submit"));
-        cmd_bufs.push(impl_.0);
+        let cmd_ref = unsafe { ptr.as_ref().expect("Invalid commandBuffer") };
+        let cmd = cmd_ref
+            .0
+            .lock()
+            .expect("command buffer lock poisoned")
+            .take()
+            .expect("command buffer already submitted or released");
+        cmd_bufs.push(cmd);
     }
     queue_ref.0.submit(cmd_bufs);
 }
