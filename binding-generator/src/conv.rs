@@ -1,14 +1,14 @@
 use wgpu::{
-    AddressMode, CommandEncoderDescriptor, CompareFunction, FilterMode, MipmapFilterMode,
-    SamplerDescriptor,
+    AddressMode, BufferDescriptor, BufferUsages, CommandEncoderDescriptor, CompareFunction,
+    FilterMode, MipmapFilterMode, SamplerDescriptor,
 };
 
 use crate::{
-    WGPUAddressMode_MirrorRepeat, WGPUAddressMode_Repeat, WGPUCommandEncoderDescriptor,
-    WGPUCompareFunction_Always, WGPUCompareFunction_Equal, WGPUCompareFunction_Greater,
-    WGPUCompareFunction_GreaterEqual, WGPUCompareFunction_Less, WGPUCompareFunction_LessEqual,
-    WGPUCompareFunction_Never, WGPUCompareFunction_NotEqual, WGPUFilterMode_Linear,
-    WGPUMipmapFilterMode_Linear, WGPUSamplerDescriptor, WGPUStringView,
+    WGPUAddressMode_MirrorRepeat, WGPUAddressMode_Repeat, WGPUBufferDescriptor,
+    WGPUCommandEncoderDescriptor, WGPUCompareFunction_Always, WGPUCompareFunction_Equal,
+    WGPUCompareFunction_Greater, WGPUCompareFunction_GreaterEqual, WGPUCompareFunction_Less,
+    WGPUCompareFunction_LessEqual, WGPUCompareFunction_Never, WGPUCompareFunction_NotEqual,
+    WGPUFilterMode_Linear, WGPUMipmapFilterMode_Linear, WGPUSamplerDescriptor, WGPUStringView,
 };
 
 /// Convert a `WGPUStringView` to an `Option<&str>`.
@@ -87,4 +87,13 @@ pub fn command_encoder_descriptor<'a>(
     d: &'a WGPUCommandEncoderDescriptor,
 ) -> CommandEncoderDescriptor<'a> {
     CommandEncoderDescriptor { label: unsafe { string_view(d.label) } }
+}
+
+pub fn buffer_descriptor<'a>(d: &'a WGPUBufferDescriptor) -> BufferDescriptor<'a> {
+    BufferDescriptor {
+        label: unsafe { string_view(d.label) },
+        size: d.size,
+        usage: BufferUsages::from_bits_truncate(d.usage as u32),
+        mapped_at_creation: d.mappedAtCreation != 0,
+    }
 }

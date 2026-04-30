@@ -64,6 +64,14 @@ impl WGPUCommandEncoderImpl {
     }
 }
 
+pub struct WGPUBufferImpl(wgpu::Buffer);
+
+impl WGPUBufferImpl {
+    pub fn to_pointer(self) -> WGPUBuffer {
+        Arc::into_raw(Arc::new(self))
+    }
+}
+
 pub struct WGPUDeviceWrapper(WGPUDevice);
 pub struct WGPUQueueWrapper(WGPUQueue);
 
@@ -96,7 +104,6 @@ opaque_handle_types!(
     WGPUAdapterImpl,
     WGPUBindGroupImpl,
     WGPUBindGroupLayoutImpl,
-    WGPUBufferImpl,
     WGPUCommandBufferImpl,
     WGPUComputePassEncoderImpl,
     WGPUComputePipelineImpl,
@@ -636,7 +643,10 @@ pub unsafe extern "C" fn wgpuDeviceCreateBuffer(
     device: WGPUDevice,
     descriptor: *const WGPUBufferDescriptor,
 ) -> WGPUBuffer {
-    panic!("wgpuDeviceCreateBuffer must be implemented");
+    let d = unsafe { descriptor.as_ref().expect("WGPUBufferDescriptor must not be null") };
+    let device_ref = unsafe { device.as_ref().expect("Invalid device") };
+    let buffer = device_ref.0.create_buffer(&conv::buffer_descriptor(d));
+    WGPUBufferImpl(buffer).to_pointer()
 }
 
 #[unsafe(no_mangle)]
