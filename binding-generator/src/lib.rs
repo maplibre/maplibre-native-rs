@@ -890,10 +890,7 @@ pub unsafe extern "C" fn wgpuDeviceCreateBindGroup(
                         panic!("WGPUBindGroupEntry must provide buffer, sampler, or textureView");
                     };
 
-                    wgpu::BindGroupEntry {
-                        binding: e.binding,
-                        resource,
-                    }
+                    wgpu::BindGroupEntry { binding: e.binding, resource }
                 })
                 .collect()
         }
@@ -1944,7 +1941,26 @@ pub unsafe extern "C" fn wgpuRenderPassEncoderSetBindGroup(
     dynamicOffsetCount: usize,
     dynamicOffsets: *const u32,
 ) {
-    panic!("wgpuRenderPassEncoderSetBindGroup must be implemented");
+    let pass_ref = unsafe { renderPassEncoder.as_ref().expect("Invalid renderPassEncoder") };
+    let group_ref = unsafe { group.as_ref().expect("Invalid bindGroup") };
+
+    if dynamicOffsetCount > 0 && dynamicOffsets.is_null() {
+        panic!("dynamicOffsets must not be null when dynamicOffsetCount > 0");
+    }
+
+    let dynamic_offsets = if dynamicOffsetCount == 0 {
+        &[]
+    } else {
+        unsafe { std::slice::from_raw_parts(dynamicOffsets, dynamicOffsetCount) }
+    };
+
+    pass_ref
+        .0
+        .lock()
+        .expect("render pass lock poisoned")
+        .as_mut()
+        .expect("render pass already ended")
+        .set_bind_group(groupIndex, &group_ref.0, dynamic_offsets);
 }
 
 #[unsafe(no_mangle)]
