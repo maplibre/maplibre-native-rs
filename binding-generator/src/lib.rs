@@ -17,7 +17,9 @@
 #![allow(clippy::missing_safety_doc)]
 
 use std::sync::Arc;
-use wgpu::SubmissionIndex;
+use wgpu::{SamplerDescriptor, SubmissionIndex};
+
+mod conv;
 
 macro_rules! opaque_handle_types {
 	($($name:ident),+ $(,)?) => {
@@ -42,6 +44,14 @@ impl WGPUDeviceImpl {
 
 impl WGPUQueueImpl {
     pub fn to_pointer(self) -> WGPUQueue {
+        Arc::into_raw(Arc::new(self))
+    }
+}
+
+pub struct WGPUSamplerImpl(wgpu::Sampler);
+
+impl WGPUSamplerImpl {
+    pub fn to_pointer(self) -> WGPUSampler {
         Arc::into_raw(Arc::new(self))
     }
 }
@@ -90,7 +100,6 @@ opaque_handle_types!(
     WGPURenderBundleEncoderImpl,
     WGPURenderPassEncoderImpl,
     WGPURenderPipelineImpl,
-    WGPUSamplerImpl,
     WGPUShaderModuleImpl,
     WGPUSurfaceImpl,
     WGPUTextureViewImpl,
@@ -694,7 +703,13 @@ pub unsafe extern "C" fn wgpuDeviceCreateSampler(
     device: WGPUDevice,
     descriptor: *const WGPUSamplerDescriptor,
 ) -> WGPUSampler {
-    panic!("wgpuDeviceCreateSampler must be implemented");
+    let wgpu_desc = match unsafe { descriptor.as_ref() } {
+        Some(d) => conv::sampler_descriptor(d),
+        None => SamplerDescriptor::default(),
+    };
+    let device_ref = unsafe { device.as_ref().expect("Invalid device") };
+    let sampler = device_ref.0.create_sampler(&wgpu_desc);
+    WGPUSamplerImpl(sampler).to_pointer()
 }
 
 #[unsafe(no_mangle)]
