@@ -1483,7 +1483,14 @@ pub unsafe extern "C" fn wgpuRenderPassEncoderSetScissorRect(
     width: u32,
     height: u32,
 ) {
-    panic!("wgpuRenderPassEncoderSetScissorRect must be implemented");
+    let pass_ref = unsafe { renderPassEncoder.as_ref().expect("Invalid renderPassEncoder") };
+    pass_ref
+        .0
+        .lock()
+        .expect("render pass lock poisoned")
+        .as_mut()
+        .expect("render pass already ended")
+        .set_scissor_rect(x, y, width, height);
 }
 
 #[unsafe(no_mangle)]
@@ -1515,7 +1522,14 @@ pub unsafe extern "C" fn wgpuRenderPassEncoderSetViewport(
     minDepth: f32,
     maxDepth: f32,
 ) {
-    panic!("wgpuRenderPassEncoderSetViewport must be implemented");
+    let pass_ref = unsafe { renderPassEncoder.as_ref().expect("Invalid renderPassEncoder") };
+    pass_ref
+        .0
+        .lock()
+        .expect("render pass lock poisoned")
+        .as_mut()
+        .expect("render pass already ended")
+        .set_viewport(x, y, width, height, minDepth, maxDepth);
 }
 
 #[unsafe(no_mangle)]
