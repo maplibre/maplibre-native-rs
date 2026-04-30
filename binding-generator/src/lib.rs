@@ -1896,7 +1896,23 @@ pub unsafe extern "C" fn wgpuRenderPassEncoderSetIndexBuffer(
     offset: u64,
     size: u64,
 ) {
-    panic!("wgpuRenderPassEncoderSetIndexBuffer must be implemented");
+    let pass_ref = unsafe { renderPassEncoder.as_ref().expect("Invalid renderPassEncoder") };
+    let buffer_ref = unsafe { buffer.as_ref().expect("Invalid buffer") };
+
+    let slice = if size == u64::MAX {
+        buffer_ref.0.slice(offset..)
+    } else {
+        let end = offset.checked_add(size).expect("offset + size overflow");
+        buffer_ref.0.slice(offset..end)
+    };
+
+    pass_ref
+        .0
+        .lock()
+        .expect("render pass lock poisoned")
+        .as_mut()
+        .expect("render pass already ended")
+        .set_index_buffer(slice, conv::map_index_format(format));
 }
 
 #[unsafe(no_mangle)]
