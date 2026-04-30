@@ -70,7 +70,7 @@ impl WGPUCommandEncoderImpl {
     }
 }
 
-pub struct WGPURenderPassEncoderImpl(Mutex<wgpu::RenderPass<'static>>);
+pub struct WGPURenderPassEncoderImpl(Mutex<Option<wgpu::RenderPass<'static>>>);
 
 impl WGPURenderPassEncoderImpl {
     pub fn to_pointer(self) -> WGPURenderPassEncoder {
@@ -507,7 +507,7 @@ pub unsafe extern "C" fn wgpuCommandEncoderBeginRenderPass(
 
     let mut encoder = encoder_ref.0.lock().expect("command encoder lock poisoned");
     let render_pass = encoder.begin_render_pass(&render_pass_desc).forget_lifetime();
-    WGPURenderPassEncoderImpl(Mutex::new(render_pass)).to_pointer()
+    WGPURenderPassEncoderImpl(Mutex::new(Some(render_pass))).to_pointer()
 }
 
 #[unsafe(no_mangle)]
@@ -1382,7 +1382,12 @@ pub unsafe extern "C" fn wgpuRenderPassEncoderDrawIndirect(
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuRenderPassEncoderEnd(renderPassEncoder: WGPURenderPassEncoder) {
-    panic!("wgpuRenderPassEncoderEnd must be implemented");
+    let pass_ref = unsafe { renderPassEncoder.as_ref().expect("Invalid renderPassEncoder") };
+    pass_ref
+        .0
+        .lock()
+        .expect("render pass lock poisoned")
+        .take(); // dropping the RenderPass ends it
 }
 
 #[unsafe(no_mangle)]
