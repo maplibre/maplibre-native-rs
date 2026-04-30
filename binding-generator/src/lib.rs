@@ -312,12 +312,16 @@ pub unsafe extern "C" fn wgpuBindGroupLayoutAddRef(bindGroupLayout: WGPUBindGrou
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuBindGroupLayoutRelease(bindGroupLayout: WGPUBindGroupLayout) {
-    panic!("wgpuBindGroupLayoutRelease must be implemented");
+    let _ = unsafe { bindGroupLayout.as_ref().expect("Invalid bindGroupLayout") };
+    unsafe {
+        drop(Arc::from_raw(bindGroupLayout));
+    }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuBufferDestroy(buffer: WGPUBuffer) {
-    panic!("wgpuBufferDestroy must be implemented");
+    let buffer_ref = unsafe { buffer.as_ref().expect("Invalid buffer") };
+    buffer_ref.0.destroy();
 }
 
 #[unsafe(no_mangle)]
@@ -2201,7 +2205,10 @@ pub unsafe extern "C" fn wgpuShaderModuleAddRef(shaderModule: WGPUShaderModule) 
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuShaderModuleRelease(shaderModule: WGPUShaderModule) {
-    panic!("wgpuShaderModuleRelease must be implemented");
+    let _ = unsafe { shaderModule.as_ref().expect("Invalid shaderModule") };
+    unsafe {
+        drop(Arc::from_raw(shaderModule));
+    }
 }
 
 #[unsafe(no_mangle)]
