@@ -18,7 +18,7 @@
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, OnceLock};
-use wgpu::{SamplerDescriptor, SubmissionIndex};
+use wgpu::SamplerDescriptor;
 
 mod conv;
 
@@ -168,13 +168,20 @@ impl WGPUPipelineLayoutImpl {
     }
 }
 
+pub struct WGPUQuerySetImpl(wgpu::QuerySet);
+
+impl WGPUQuerySetImpl {
+    pub fn to_pointer(self) -> WGPUQuerySet {
+        Arc::into_raw(Arc::new(self))
+    }
+}
+
 opaque_handle_types!(
     WGPUAdapterImpl,
     WGPUBindGroupImpl,
     WGPUComputePassEncoderImpl,
     WGPUComputePipelineImpl,
     WGPUInstanceImpl,
-    WGPUQuerySetImpl,
     WGPURenderBundleImpl,
     WGPURenderBundleEncoderImpl,
     WGPUSurfaceImpl,
@@ -924,14 +931,35 @@ pub unsafe extern "C" fn wgpuDeviceCreatePipelineLayout(
     } else {
         Vec::new()
     };
-    
+
     let layout = device_ref.0.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
         label: unsafe { conv::string_view(d.label) },
         bind_group_layouts: &bgl_refs,
         immediate_size: 0,
     });
-    
+
     WGPUPipelineLayoutImpl(layout).to_pointer()
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn wgpuDeviceCreateQuerySet(
+    device: WGPUDevice,
+    descriptor: *const WGPUQuerySetDescriptor,
+) -> WGPUQuerySet {
+    let device_ref = unsafe { device.as_ref().expect("Invalid device") };
+    let d = unsafe { descriptor.as_ref().expect("WGPUQuerySetDescriptor must not be null") };
+
+    if !d.nextInChain.is_null() {
+        panic!("WGPUQuerySetDescriptor.nextInChain is not implemented");
+    }
+
+    let query_set = device_ref.0.create_query_set(&wgpu::QuerySetDescriptor {
+        label: unsafe { conv::string_view(d.label) },
+        ty: conv::map_query_type(d.type_),
+        count: d.count,
+    });
+
+    WGPUQuerySetImpl(query_set).to_pointer()
 }
 
 #[unsafe(no_mangle)]
@@ -947,7 +975,199 @@ pub unsafe extern "C" fn wgpuDeviceCreateRenderPipeline(
     device: WGPUDevice,
     descriptor: *const WGPURenderPipelineDescriptor,
 ) -> WGPURenderPipeline {
-    panic!("wgpuDeviceCreateRenderPipeline must be implemented");
+    let device_ref = unsafe { device.as_ref().expect("Invalid device") };
+    let d = unsafe { descriptor.as_ref().expect("WGPURenderPipelineDescriptor must not be null") };
+
+    if !d.nextInChain.is_null() {
+        panic!("WGPURenderPipelineDescriptor.nextInChain is not implemented");
+    }
+
+    // Get layout reference
+    let layout_ref: Option<&wgpu::PipelineLayout> = if d.layout.is_null() {
+        None
+    } else {
+        let layout_impl = unsafe { &*(d.layout as *const WGPUPipelineLayoutImpl) };
+        Some(&layout_impl.0)
+    };
+
+    // Vertex state
+    let vertex_module = unsafe { &*(d.vertex.module as *const WGPUShaderModuleImpl) };
+    let vertex_entry_point = unsafe { conv::string_view(d.vertex.entryPoint) };
+
+    // Build all vertex buffer attributes first (we need them to outlive the descriptor)
+    let mut all_vertex_attributes: Vec<Vec<wgpu::VertexAttribute>> = Vec::new();
+    let mut vertex_buffer_info: Vec<(u64, wgpu::VertexStepMode)> = Vec::new();
+
+    if d.vertex.bufferCount > 0 {
+        unsafe {
+            for vb in std::slice::from_raw_parts(d.vertex.buffers, d.vertex.bufferCount) {
+                let attributes: Vec<wgpu::VertexAttribute> = if vb.attributeCount > 0 {
+                    std::slice::from_raw_parts(vb.attributes, vb.attributeCount)
+                        .iter()
+                        .map(|attr| wgpu::VertexAttribute {
+                            format: conv::map_vertex_format(attr.format),
+                            offset: attr.offset,
+                            shader_location: attr.shaderLocation,
+                        })
+                        .collect()
+                } else {
+                    Vec::new()
+                };
+                all_vertex_attributes.push(attributes);
+                vertex_buffer_info.push((vb.arrayStride, conv::map_vertex_step_mode(vb.stepMode)));
+            }
+        }
+    }
+
+    // Now create vertex buffer layouts with references to the attributes
+    let vertex_buffers: Vec<wgpu::VertexBufferLayout> = all_vertex_attributes
+        .iter()
+        .zip(vertex_buffer_info.iter())
+        .map(|(attrs, (stride, step_mode))| wgpu::VertexBufferLayout {
+            array_stride: *stride,
+            step_mode: *step_mode,
+            attributes: attrs,
+        })
+        .collect();
+
+    // Fragment state (optional)
+    let mut all_targets: Vec<Option<wgpu::ColorTargetState>> = Vec::new();
+    let fragment = if d.fragment.is_null() {
+        None
+    } else {
+        let frag = unsafe { &*(d.fragment as *const WGPUFragmentState) };
+        let frag_module = unsafe { &*(frag.module as *const WGPUShaderModuleImpl) };
+        let frag_entry_point = unsafe { conv::string_view(frag.entryPoint) };
+
+        if frag.targetCount > 0 {
+            unsafe {
+                std::slice::from_raw_parts(frag.targets, frag.targetCount).iter().for_each(
+                    |target| {
+                        if target.nextInChain.is_null() {
+                            all_targets.push(Some(wgpu::ColorTargetState {
+                                format: conv::map_texture_format(target.format),
+                                blend: if target.blend.is_null() {
+                                    None
+                                } else {
+                                    let blend = &*(target.blend);
+                                    Some(wgpu::BlendState {
+                                        color: wgpu::BlendComponent {
+                                            src_factor: conv::map_blend_factor(
+                                                blend.color.srcFactor,
+                                            ),
+                                            dst_factor: conv::map_blend_factor(
+                                                blend.color.dstFactor,
+                                            ),
+                                            operation: conv::map_blend_operation(
+                                                blend.color.operation,
+                                            ),
+                                        },
+                                        alpha: wgpu::BlendComponent {
+                                            src_factor: conv::map_blend_factor(
+                                                blend.alpha.srcFactor,
+                                            ),
+                                            dst_factor: conv::map_blend_factor(
+                                                blend.alpha.dstFactor,
+                                            ),
+                                            operation: conv::map_blend_operation(
+                                                blend.alpha.operation,
+                                            ),
+                                        },
+                                    })
+                                },
+                                write_mask: wgpu::ColorWrites::from_bits_truncate(
+                                    target.writeMask as u32,
+                                ),
+                            }));
+                        } else {
+                            panic!("ColorTargetState.nextInChain is not implemented");
+                        }
+                    },
+                );
+            }
+        }
+
+        Some(wgpu::FragmentState {
+            module: &frag_module.0,
+            entry_point: frag_entry_point,
+            targets: &all_targets,
+            compilation_options: Default::default(),
+        })
+    };
+
+    // Depth-stencil state (optional)
+    let depth_stencil = if d.depthStencil.is_null() {
+        None
+    } else {
+        let ds = unsafe { &*(d.depthStencil) };
+        Some(wgpu::DepthStencilState {
+            format: conv::map_texture_format(ds.format),
+            depth_write_enabled: Some(ds.depthWriteEnabled != 0),
+            depth_compare: conv::map_compare_function(ds.depthCompare),
+            stencil: wgpu::StencilState {
+                front: wgpu::StencilFaceState {
+                    compare: conv::map_compare_function(ds.stencilFront.compare)
+                        .unwrap_or(wgpu::CompareFunction::Always),
+                    fail_op: conv::map_stencil_operation(ds.stencilFront.failOp),
+                    depth_fail_op: conv::map_stencil_operation(ds.stencilFront.depthFailOp),
+                    pass_op: conv::map_stencil_operation(ds.stencilFront.passOp),
+                },
+                back: wgpu::StencilFaceState {
+                    compare: conv::map_compare_function(ds.stencilBack.compare)
+                        .unwrap_or(wgpu::CompareFunction::Always),
+                    fail_op: conv::map_stencil_operation(ds.stencilBack.failOp),
+                    depth_fail_op: conv::map_stencil_operation(ds.stencilBack.depthFailOp),
+                    pass_op: conv::map_stencil_operation(ds.stencilBack.passOp),
+                },
+                read_mask: ds.stencilReadMask,
+                write_mask: ds.stencilWriteMask,
+            },
+            bias: wgpu::DepthBiasState {
+                constant: ds.depthBias,
+                slope_scale: ds.depthBiasSlopeScale,
+                clamp: ds.depthBiasClamp,
+            },
+        })
+    };
+
+    let pipeline = device_ref.0.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+        label: unsafe { conv::string_view(d.label) },
+        layout: layout_ref,
+        vertex: wgpu::VertexState {
+            module: &vertex_module.0,
+            entry_point: vertex_entry_point,
+            buffers: &vertex_buffers,
+            compilation_options: Default::default(),
+        },
+        primitive: wgpu::PrimitiveState {
+            topology: conv::map_primitive_topology(d.primitive.topology),
+            strip_index_format: if d.primitive.stripIndexFormat == WGPUIndexFormat_Undefined {
+                None
+            } else {
+                Some(conv::map_index_format(d.primitive.stripIndexFormat))
+            },
+            front_face: conv::map_front_face(d.primitive.frontFace),
+            cull_mode: conv::map_cull_mode(d.primitive.cullMode),
+            unclipped_depth: d.primitive.unclippedDepth != 0,
+            polygon_mode: if d.primitive.nextInChain.is_null() {
+                wgpu::PolygonMode::Fill
+            } else {
+                panic!("PrimitiveState.nextInChain (polygon mode) is not implemented");
+            },
+            conservative: false,
+        },
+        depth_stencil,
+        multisample: wgpu::MultisampleState {
+            count: d.multisample.count,
+            mask: d.multisample.mask as u64,
+            alpha_to_coverage_enabled: d.multisample.alphaToCoverageEnabled != 0,
+        },
+        fragment,
+        cache: None,
+        multiview_mask: None,
+    });
+
+    WGPURenderPipelineImpl(pipeline).to_pointer()
 }
 
 #[unsafe(no_mangle)]
@@ -1225,7 +1445,11 @@ pub unsafe extern "C" fn wgpuPipelineLayoutRelease(pipelineLayout: WGPUPipelineL
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuQuerySetDestroy(querySet: WGPUQuerySet) {
-    panic!("wgpuQuerySetDestroy must be implemented");
+    unsafe {
+        if !querySet.is_null() {
+            let _ = Arc::from_raw(querySet as *const WGPUQuerySetImpl);
+        }
+    }
 }
 
 #[unsafe(no_mangle)]
@@ -1240,17 +1464,25 @@ pub unsafe extern "C" fn wgpuQuerySetGetType(querySet: WGPUQuerySet) -> WGPUQuer
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuQuerySetSetLabel(querySet: WGPUQuerySet, label: WGPUStringView) {
-    panic!("wgpuQuerySetSetLabel must be implemented");
+    // No-op: labels are not fully supported in this FFI
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuQuerySetAddRef(querySet: WGPUQuerySet) {
-    panic!("wgpuQuerySetAddRef must be implemented");
+    unsafe {
+        let arc = Arc::from_raw(querySet as *const WGPUQuerySetImpl);
+        let _ = Arc::clone(&arc);
+        let _ = Arc::into_raw(arc);
+    }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuQuerySetRelease(querySet: WGPUQuerySet) {
-    panic!("wgpuQuerySetRelease must be implemented");
+    unsafe {
+        if !querySet.is_null() {
+            let _ = Arc::from_raw(querySet as *const WGPUQuerySetImpl);
+        }
+    }
 }
 
 #[unsafe(no_mangle)]

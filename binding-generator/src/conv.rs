@@ -1,9 +1,11 @@
 use wgpu::{
     AddressMode, BindGroupLayoutEntry, BindingType, BufferBindingType, BufferDescriptor,
-    BufferUsages, CommandEncoderDescriptor, CompareFunction, Extent3d, FilterMode,
+    BufferUsages, CommandEncoderDescriptor, CompareFunction, Extent3d, Face, FilterMode,
     MipmapFilterMode, SamplerBindingType, SamplerDescriptor, ShaderStages, StorageTextureAccess,
     TextureAspect, TextureDescriptor, TextureDimension, TextureFormat, TextureSampleType,
-    TextureUsages, TextureViewDescriptor, TextureViewDimension,
+    TextureUsages, TextureViewDescriptor, TextureViewDimension, VertexFormat, VertexStepMode,
+    BlendFactor, BlendOperation, FrontFace, StencilOperation, PrimitiveTopology,
+    IndexFormat, QueryType,
 };
 
 use std::num::{NonZeroU32, NonZeroU64};
@@ -37,7 +39,36 @@ use crate::{
     WGPUTextureFormat_Undefined, WGPUTextureUsage_None, WGPUTextureViewDescriptor,
     WGPUTextureViewDimension_1D, WGPUTextureViewDimension_2D, WGPUTextureViewDimension_2DArray,
     WGPUTextureViewDimension_3D, WGPUTextureViewDimension_Cube, WGPUTextureViewDimension_CubeArray,
-    WGPUTextureViewDimension_Undefined,
+    WGPUTextureViewDimension_Undefined, WGPUVertexFormat_Uint8, WGPUVertexFormat_Uint8x2,
+    WGPUVertexFormat_Uint8x4, WGPUVertexFormat_Sint8, WGPUVertexFormat_Sint8x2,
+    WGPUVertexFormat_Sint8x4, WGPUVertexFormat_Unorm8, WGPUVertexFormat_Unorm8x2,
+    WGPUVertexFormat_Unorm8x4, WGPUVertexFormat_Snorm8, WGPUVertexFormat_Snorm8x2,
+    WGPUVertexFormat_Snorm8x4, WGPUVertexFormat_Uint16, WGPUVertexFormat_Uint16x2,
+    WGPUVertexFormat_Uint16x4, WGPUVertexFormat_Sint16, WGPUVertexFormat_Sint16x2,
+    WGPUVertexFormat_Sint16x4, WGPUVertexFormat_Unorm16, WGPUVertexFormat_Unorm16x2,
+    WGPUVertexFormat_Unorm16x4, WGPUVertexFormat_Snorm16, WGPUVertexFormat_Snorm16x2,
+    WGPUVertexFormat_Snorm16x4, WGPUVertexFormat_Float16, WGPUVertexFormat_Float16x2,
+    WGPUVertexFormat_Float16x4, WGPUVertexFormat_Float32, WGPUVertexFormat_Float32x2,
+    WGPUVertexFormat_Float32x3, WGPUVertexFormat_Float32x4, WGPUVertexFormat_Uint32,
+    WGPUVertexFormat_Uint32x2, WGPUVertexFormat_Uint32x3, WGPUVertexFormat_Uint32x4,
+    WGPUVertexFormat_Sint32, WGPUVertexFormat_Sint32x2, WGPUVertexFormat_Sint32x3,
+    WGPUVertexFormat_Sint32x4, WGPUVertexFormat_Unorm10_10_10_2, WGPUVertexFormat_Unorm8x4BGRA,
+    WGPUVertexStepMode_Vertex, WGPUVertexStepMode_Instance,
+    WGPUBlendFactor_Zero, WGPUBlendFactor_One, WGPUBlendFactor_Src, WGPUBlendFactor_OneMinusSrc,
+    WGPUBlendFactor_SrcAlpha, WGPUBlendFactor_OneMinusSrcAlpha, WGPUBlendFactor_Dst,
+    WGPUBlendFactor_OneMinusDst, WGPUBlendFactor_DstAlpha, WGPUBlendFactor_OneMinusDstAlpha,
+    WGPUBlendFactor_SrcAlphaSaturated, WGPUBlendFactor_Constant, WGPUBlendFactor_OneMinusConstant,
+    WGPUBlendOperation_Add, WGPUBlendOperation_Subtract, WGPUBlendOperation_ReverseSubtract,
+    WGPUBlendOperation_Min, WGPUBlendOperation_Max,
+    WGPUCullMode_None, WGPUCullMode_Front, WGPUCullMode_Back,
+    WGPUFrontFace_CCW, WGPUFrontFace_CW,
+    WGPUStencilOperation_Keep, WGPUStencilOperation_Zero, WGPUStencilOperation_Replace,
+    WGPUStencilOperation_Invert, WGPUStencilOperation_IncrementClamp, WGPUStencilOperation_DecrementClamp,
+    WGPUStencilOperation_IncrementWrap, WGPUStencilOperation_DecrementWrap,
+    WGPUPrimitiveTopology_PointList, WGPUPrimitiveTopology_LineList, WGPUPrimitiveTopology_LineStrip,
+    WGPUPrimitiveTopology_TriangleList, WGPUPrimitiveTopology_TriangleStrip,
+    WGPUIndexFormat_Uint16, WGPUIndexFormat_Uint32,
+    WGPUQueryType_Occlusion, WGPUQueryType_Timestamp,
 };
 
 /// Convert a `WGPUStringView` to an `Option<&str>`.
@@ -98,7 +129,7 @@ fn map_mipmap_filter_mode(mode: crate::WGPUMipmapFilterMode) -> MipmapFilterMode
     }
 }
 
-fn map_compare_function(func: crate::WGPUCompareFunction) -> Option<CompareFunction> {
+pub fn map_compare_function(func: crate::WGPUCompareFunction) -> Option<CompareFunction> {
     match func {
         WGPUCompareFunction_Never => Some(CompareFunction::Never),
         WGPUCompareFunction_Less => Some(CompareFunction::Less),
@@ -419,5 +450,148 @@ fn map_texture_aspect(aspect: crate::WGPUTextureAspect) -> TextureAspect {
         WGPUTextureAspect_DepthOnly => TextureAspect::DepthOnly,
         WGPUTextureAspect_Undefined => TextureAspect::All,
         _ => TextureAspect::All,
+    }
+}
+
+pub fn map_vertex_format(format: crate::WGPUVertexFormat) -> VertexFormat {
+    match format {
+        WGPUVertexFormat_Uint8 => VertexFormat::Uint8x2,
+        WGPUVertexFormat_Uint8x2 => VertexFormat::Uint8x2,
+        WGPUVertexFormat_Uint8x4 => VertexFormat::Uint8x4,
+        WGPUVertexFormat_Sint8 => VertexFormat::Sint8x2,
+        WGPUVertexFormat_Sint8x2 => VertexFormat::Sint8x2,
+        WGPUVertexFormat_Sint8x4 => VertexFormat::Sint8x4,
+        WGPUVertexFormat_Unorm8 => VertexFormat::Unorm8x2,
+        WGPUVertexFormat_Unorm8x2 => VertexFormat::Unorm8x2,
+        WGPUVertexFormat_Unorm8x4 => VertexFormat::Unorm8x4,
+        WGPUVertexFormat_Snorm8 => VertexFormat::Snorm8x2,
+        WGPUVertexFormat_Snorm8x2 => VertexFormat::Snorm8x2,
+        WGPUVertexFormat_Snorm8x4 => VertexFormat::Snorm8x4,
+        WGPUVertexFormat_Uint16 => VertexFormat::Uint16x2,
+        WGPUVertexFormat_Uint16x2 => VertexFormat::Uint16x2,
+        WGPUVertexFormat_Uint16x4 => VertexFormat::Uint16x4,
+        WGPUVertexFormat_Sint16 => VertexFormat::Sint16x2,
+        WGPUVertexFormat_Sint16x2 => VertexFormat::Sint16x2,
+        WGPUVertexFormat_Sint16x4 => VertexFormat::Sint16x4,
+        WGPUVertexFormat_Unorm16 => VertexFormat::Unorm16x2,
+        WGPUVertexFormat_Unorm16x2 => VertexFormat::Unorm16x2,
+        WGPUVertexFormat_Unorm16x4 => VertexFormat::Unorm16x4,
+        WGPUVertexFormat_Snorm16 => VertexFormat::Snorm16x2,
+        WGPUVertexFormat_Snorm16x2 => VertexFormat::Snorm16x2,
+        WGPUVertexFormat_Snorm16x4 => VertexFormat::Snorm16x4,
+        WGPUVertexFormat_Float16 => VertexFormat::Float16x2,
+        WGPUVertexFormat_Float16x2 => VertexFormat::Float16x2,
+        WGPUVertexFormat_Float16x4 => VertexFormat::Float16x4,
+        WGPUVertexFormat_Float32 => VertexFormat::Float32,
+        WGPUVertexFormat_Float32x2 => VertexFormat::Float32x2,
+        WGPUVertexFormat_Float32x3 => VertexFormat::Float32x3,
+        WGPUVertexFormat_Float32x4 => VertexFormat::Float32x4,
+        WGPUVertexFormat_Uint32 => VertexFormat::Uint32,
+        WGPUVertexFormat_Uint32x2 => VertexFormat::Uint32x2,
+        WGPUVertexFormat_Uint32x3 => VertexFormat::Uint32x3,
+        WGPUVertexFormat_Uint32x4 => VertexFormat::Uint32x4,
+        WGPUVertexFormat_Sint32 => VertexFormat::Sint32,
+        WGPUVertexFormat_Sint32x2 => VertexFormat::Sint32x2,
+        WGPUVertexFormat_Sint32x3 => VertexFormat::Sint32x3,
+        WGPUVertexFormat_Sint32x4 => VertexFormat::Sint32x4,
+        WGPUVertexFormat_Unorm10_10_10_2 => VertexFormat::Uint32,
+        WGPUVertexFormat_Unorm8x4BGRA => VertexFormat::Unorm8x4,
+        _ => VertexFormat::Float32,
+    }
+}
+
+pub fn map_vertex_step_mode(mode: crate::WGPUVertexStepMode) -> VertexStepMode {
+    match mode {
+        WGPUVertexStepMode_Vertex => VertexStepMode::Vertex,
+        WGPUVertexStepMode_Instance => VertexStepMode::Instance,
+        _ => VertexStepMode::Vertex,
+    }
+}
+
+pub fn map_blend_factor(factor: crate::WGPUBlendFactor) -> BlendFactor {
+    match factor {
+        WGPUBlendFactor_Zero => BlendFactor::Zero,
+        WGPUBlendFactor_One => BlendFactor::One,
+        WGPUBlendFactor_Src => BlendFactor::Src,
+        WGPUBlendFactor_OneMinusSrc => BlendFactor::OneMinusSrc,
+        WGPUBlendFactor_SrcAlpha => BlendFactor::SrcAlpha,
+        WGPUBlendFactor_OneMinusSrcAlpha => BlendFactor::OneMinusSrcAlpha,
+        WGPUBlendFactor_Dst => BlendFactor::Dst,
+        WGPUBlendFactor_OneMinusDst => BlendFactor::OneMinusDst,
+        WGPUBlendFactor_DstAlpha => BlendFactor::DstAlpha,
+        WGPUBlendFactor_OneMinusDstAlpha => BlendFactor::OneMinusDstAlpha,
+        WGPUBlendFactor_SrcAlphaSaturated => BlendFactor::SrcAlphaSaturated,
+        WGPUBlendFactor_Constant => BlendFactor::Constant,
+        WGPUBlendFactor_OneMinusConstant => BlendFactor::OneMinusConstant,
+        _ => BlendFactor::Zero,
+    }
+}
+
+pub fn map_blend_operation(operation: crate::WGPUBlendOperation) -> BlendOperation {
+    match operation {
+        WGPUBlendOperation_Add => BlendOperation::Add,
+        WGPUBlendOperation_Subtract => BlendOperation::Subtract,
+        WGPUBlendOperation_ReverseSubtract => BlendOperation::ReverseSubtract,
+        WGPUBlendOperation_Min => BlendOperation::Min,
+        WGPUBlendOperation_Max => BlendOperation::Max,
+        _ => BlendOperation::Add,
+    }
+}
+
+pub fn map_cull_mode(mode: crate::WGPUCullMode) -> Option<Face> {
+    match mode {
+        WGPUCullMode_None => None,
+        WGPUCullMode_Front => Some(Face::Front),
+        WGPUCullMode_Back => Some(Face::Back),
+        _ => None,
+    }
+}
+
+pub fn map_front_face(face: crate::WGPUFrontFace) -> FrontFace {
+    match face {
+        WGPUFrontFace_CCW => FrontFace::Ccw,
+        WGPUFrontFace_CW => FrontFace::Cw,
+        _ => FrontFace::Ccw,
+    }
+}
+
+pub fn map_stencil_operation(operation: crate::WGPUStencilOperation) -> StencilOperation {
+    match operation {
+        WGPUStencilOperation_Keep => StencilOperation::Keep,
+        WGPUStencilOperation_Zero => StencilOperation::Zero,
+        WGPUStencilOperation_Replace => StencilOperation::Replace,
+        WGPUStencilOperation_Invert => StencilOperation::Invert,
+        WGPUStencilOperation_IncrementClamp => StencilOperation::IncrementClamp,
+        WGPUStencilOperation_DecrementClamp => StencilOperation::DecrementClamp,
+        WGPUStencilOperation_IncrementWrap => StencilOperation::IncrementWrap,
+        WGPUStencilOperation_DecrementWrap => StencilOperation::DecrementWrap,
+        _ => StencilOperation::Keep,
+    }
+}
+
+pub fn map_primitive_topology(topology: crate::WGPUPrimitiveTopology) -> PrimitiveTopology {
+    match topology {
+        WGPUPrimitiveTopology_PointList => PrimitiveTopology::PointList,
+        WGPUPrimitiveTopology_LineList => PrimitiveTopology::LineList,
+        WGPUPrimitiveTopology_LineStrip => PrimitiveTopology::LineStrip,
+        WGPUPrimitiveTopology_TriangleList => PrimitiveTopology::TriangleList,
+        WGPUPrimitiveTopology_TriangleStrip => PrimitiveTopology::TriangleStrip,
+        _ => PrimitiveTopology::TriangleList,
+    }
+}
+
+pub fn map_index_format(format: crate::WGPUIndexFormat) -> IndexFormat {
+    match format {
+        WGPUIndexFormat_Uint16 => IndexFormat::Uint16,
+        WGPUIndexFormat_Uint32 => IndexFormat::Uint32,
+        _ => IndexFormat::Uint32,
+    }
+}
+
+pub fn map_query_type(query_type: crate::WGPUQueryType) -> QueryType {
+    match query_type {
+        WGPUQueryType_Occlusion => QueryType::Occlusion,
+        WGPUQueryType_Timestamp => QueryType::Timestamp,
+        _ => QueryType::Occlusion,
     }
 }
