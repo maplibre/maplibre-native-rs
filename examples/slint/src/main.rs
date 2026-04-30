@@ -22,6 +22,9 @@ fn main() {
     let size = ui.get_map_size();
     // println!("Size: {:?}", size);
     let map = maplibre::create_map(size);
+    map.borrow_mut()
+        .renderer()
+        .load_style_from_url(&"https://tiles.openfreemap.org/styles/liberty".parse().unwrap());
 
     maplibre::init(&ui, &map);
 
