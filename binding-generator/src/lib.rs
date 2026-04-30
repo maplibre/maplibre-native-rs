@@ -1383,11 +1383,7 @@ pub unsafe extern "C" fn wgpuRenderPassEncoderDrawIndirect(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuRenderPassEncoderEnd(renderPassEncoder: WGPURenderPassEncoder) {
     let pass_ref = unsafe { renderPassEncoder.as_ref().expect("Invalid renderPassEncoder") };
-    pass_ref
-        .0
-        .lock()
-        .expect("render pass lock poisoned")
-        .take(); // dropping the RenderPass ends it
+    pass_ref.0.lock().expect("render pass lock poisoned").take(); // dropping the RenderPass ends it
 }
 
 #[unsafe(no_mangle)]
