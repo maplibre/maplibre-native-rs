@@ -2154,7 +2154,10 @@ pub unsafe extern "C" fn wgpuRenderPipelineAddRef(renderPipeline: WGPURenderPipe
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuRenderPipelineRelease(renderPipeline: WGPURenderPipeline) {
-    panic!("wgpuRenderPipelineRelease must be implemented");
+    let _ = unsafe { renderPipeline.as_ref().expect("Invalid renderPipeline") };
+    unsafe {
+        drop(Arc::from_raw(renderPipeline));
+    }
 }
 
 #[unsafe(no_mangle)]
