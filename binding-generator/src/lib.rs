@@ -1535,7 +1535,10 @@ pub unsafe extern "C" fn wgpuRenderPassEncoderAddRef(renderPassEncoder: WGPURend
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuRenderPassEncoderRelease(renderPassEncoder: WGPURenderPassEncoder) {
-    panic!("wgpuRenderPassEncoderRelease must be implemented");
+    let _ = unsafe { renderPassEncoder.as_ref().expect("Invalid renderPassEncoder") };
+    unsafe {
+        drop(Arc::from_raw(renderPassEncoder));
+    }
 }
 
 #[unsafe(no_mangle)]
