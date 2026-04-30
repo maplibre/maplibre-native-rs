@@ -1147,7 +1147,16 @@ pub unsafe extern "C" fn wgpuQueueSubmit(
     commandCount: usize,
     commands: *const WGPUCommandBuffer,
 ) {
-    panic!("wgpuQueueSubmit must be implemented");
+    let queue_ref = unsafe { queue.as_ref().expect("Invalid queue") };
+    let mut cmd_bufs = Vec::with_capacity(commandCount);
+    for i in 0..commandCount {
+        let ptr = unsafe { *commands.add(i) };
+        let arc = unsafe { Arc::from_raw(ptr) };
+        let impl_ = Arc::try_unwrap(arc)
+            .unwrap_or_else(|_| panic!("CommandBuffer has extra references on submit"));
+        cmd_bufs.push(impl_.0);
+    }
+    queue_ref.0.submit(cmd_bufs);
 }
 
 #[unsafe(no_mangle)]
