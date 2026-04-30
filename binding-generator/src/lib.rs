@@ -834,7 +834,19 @@ pub unsafe extern "C" fn wgpuDeviceCreateBindGroupLayout(
     device: WGPUDevice,
     descriptor: *const WGPUBindGroupLayoutDescriptor,
 ) -> WGPUBindGroupLayout {
-    panic!("wgpuDeviceCreateBindGroupLayout must be implemented");
+    let device_ref = unsafe { device.as_ref().expect("Invalid device") };
+    let d = unsafe {
+        descriptor
+            .as_ref()
+            .expect("WGPUBindGroupLayoutDescriptor must not be null")
+    };
+    let converted = conv::bind_group_layout_descriptor(d);
+
+    let layout = device_ref.0.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+        label: converted.label,
+        entries: converted.entries.as_slice(),
+    });
+    WGPUBindGroupLayoutImpl(layout).to_pointer()
 }
 
 #[unsafe(no_mangle)]

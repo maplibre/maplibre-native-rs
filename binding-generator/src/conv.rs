@@ -1,8 +1,12 @@
 use wgpu::{
-    AddressMode, BufferDescriptor, BufferUsages, CommandEncoderDescriptor, CompareFunction,
-    Extent3d, FilterMode, MipmapFilterMode, SamplerDescriptor, TextureAspect, TextureDescriptor,
-    TextureDimension, TextureFormat, TextureUsages, TextureViewDescriptor, TextureViewDimension,
+    AddressMode, BindGroupLayoutEntry, BindingType, BufferBindingType, BufferDescriptor,
+    BufferUsages, CommandEncoderDescriptor, CompareFunction, Extent3d, FilterMode,
+    MipmapFilterMode, SamplerBindingType, SamplerDescriptor, ShaderStages,
+    StorageTextureAccess, TextureAspect, TextureDescriptor, TextureDimension, TextureFormat,
+    TextureSampleType, TextureUsages, TextureViewDescriptor, TextureViewDimension,
 };
+
+use std::num::{NonZeroU32, NonZeroU64};
 
 use crate::{
     WGPU_ARRAY_LAYER_COUNT_UNDEFINED, WGPU_MIP_LEVEL_COUNT_UNDEFINED, WGPUAddressMode_MirrorRepeat,
@@ -112,6 +116,170 @@ pub fn command_encoder_descriptor<'a>(
     d: &'a WGPUCommandEncoderDescriptor,
 ) -> CommandEncoderDescriptor<'a> {
     CommandEncoderDescriptor { label: unsafe { string_view(d.label) } }
+}
+
+fn map_buffer_binding_type(ty: crate::WGPUBufferBindingType) -> BufferBindingType {
+    match ty {
+        crate::WGPUBufferBindingType_Undefined | crate::WGPUBufferBindingType_Uniform => {
+            BufferBindingType::Uniform
+        }
+        crate::WGPUBufferBindingType_Storage => BufferBindingType::Storage { read_only: false },
+        crate::WGPUBufferBindingType_ReadOnlyStorage => {
+            BufferBindingType::Storage { read_only: true }
+        }
+        _ => panic!("Unsupported WGPUBufferBindingType value"),
+    }
+}
+
+fn map_sampler_binding_type(ty: crate::WGPUSamplerBindingType) -> SamplerBindingType {
+    match ty {
+        crate::WGPUSamplerBindingType_Undefined | crate::WGPUSamplerBindingType_Filtering => {
+            SamplerBindingType::Filtering
+        }
+        crate::WGPUSamplerBindingType_NonFiltering => SamplerBindingType::NonFiltering,
+        crate::WGPUSamplerBindingType_Comparison => SamplerBindingType::Comparison,
+        _ => panic!("Unsupported WGPUSamplerBindingType value"),
+    }
+}
+
+fn map_texture_sample_type(sample_type: crate::WGPUTextureSampleType) -> TextureSampleType {
+    match sample_type {
+        crate::WGPUTextureSampleType_Undefined | crate::WGPUTextureSampleType_Float => {
+            TextureSampleType::Float { filterable: true }
+        }
+        crate::WGPUTextureSampleType_UnfilterableFloat => {
+            TextureSampleType::Float { filterable: false }
+        }
+        crate::WGPUTextureSampleType_Depth => TextureSampleType::Depth,
+        crate::WGPUTextureSampleType_Sint => TextureSampleType::Sint,
+        crate::WGPUTextureSampleType_Uint => TextureSampleType::Uint,
+        _ => panic!("Unsupported WGPUTextureSampleType value"),
+    }
+}
+
+fn map_storage_texture_access(access: crate::WGPUStorageTextureAccess) -> StorageTextureAccess {
+    match access {
+        crate::WGPUStorageTextureAccess_Undefined | crate::WGPUStorageTextureAccess_WriteOnly => {
+            StorageTextureAccess::WriteOnly
+        }
+        crate::WGPUStorageTextureAccess_ReadOnly => StorageTextureAccess::ReadOnly,
+        crate::WGPUStorageTextureAccess_ReadWrite => StorageTextureAccess::ReadWrite,
+        _ => panic!("Unsupported WGPUStorageTextureAccess value"),
+    }
+}
+
+fn map_texture_view_dimension_for_binding(
+    dimension: crate::WGPUTextureViewDimension,
+    allow_cube: bool,
+) -> TextureViewDimension {
+    match dimension {
+        crate::WGPUTextureViewDimension_Undefined | crate::WGPUTextureViewDimension_2D => {
+            TextureViewDimension::D2
+        }
+        crate::WGPUTextureViewDimension_1D => TextureViewDimension::D1,
+        crate::WGPUTextureViewDimension_2DArray => TextureViewDimension::D2Array,
+        crate::WGPUTextureViewDimension_3D => TextureViewDimension::D3,
+        crate::WGPUTextureViewDimension_Cube if allow_cube => TextureViewDimension::Cube,
+        crate::WGPUTextureViewDimension_CubeArray if allow_cube => TextureViewDimension::CubeArray,
+        _ if allow_cube => panic!("Unsupported WGPUTextureViewDimension value"),
+        _ => panic!("Unsupported storage texture view dimension (cube dimensions are invalid)"),
+    }
+}
+
+pub struct ConvertedBindGroupLayoutDescriptor<'a> {
+    pub label: Option<&'a str>,
+    pub entries: Vec<BindGroupLayoutEntry>,
+}
+
+pub fn bind_group_layout_descriptor<'a>(
+    d: &'a crate::WGPUBindGroupLayoutDescriptor,
+) -> ConvertedBindGroupLayoutDescriptor<'a> {
+    if !d.nextInChain.is_null() {
+        panic!("WGPUBindGroupLayoutDescriptor.nextInChain is not implemented");
+    }
+    if d.entryCount > 0 && d.entries.is_null() {
+        panic!("WGPUBindGroupLayoutDescriptor.entries must not be null when entryCount > 0");
+    }
+
+    let c_entries: &[crate::WGPUBindGroupLayoutEntry] = if d.entryCount == 0 {
+        &[]
+    } else {
+        unsafe { std::slice::from_raw_parts(d.entries, d.entryCount) }
+    };
+
+    let mut entries = Vec::with_capacity(c_entries.len());
+    for e in c_entries {
+        if !e.nextInChain.is_null() {
+            panic!("WGPUBindGroupLayoutEntry.nextInChain is not implemented");
+        }
+        if !e.buffer.nextInChain.is_null()
+            || !e.sampler.nextInChain.is_null()
+            || !e.texture.nextInChain.is_null()
+            || !e.storageTexture.nextInChain.is_null()
+        {
+            panic!("Chained binding layout extension structs are not implemented");
+        }
+
+        let buffer_active = e.buffer.type_ != crate::WGPUBufferBindingType_BindingNotUsed;
+        let sampler_active = e.sampler.type_ != crate::WGPUSamplerBindingType_BindingNotUsed;
+        let texture_active = e.texture.sampleType != crate::WGPUTextureSampleType_BindingNotUsed;
+        let storage_texture_active =
+            e.storageTexture.access != crate::WGPUStorageTextureAccess_BindingNotUsed;
+
+        let active_count = u32::from(buffer_active)
+            + u32::from(sampler_active)
+            + u32::from(texture_active)
+            + u32::from(storage_texture_active);
+        if active_count != 1 {
+            panic!(
+                "Exactly one binding type must be active per WGPUBindGroupLayoutEntry (binding {})",
+                e.binding
+            );
+        }
+
+        let ty = if buffer_active {
+            BindingType::Buffer {
+                ty: map_buffer_binding_type(e.buffer.type_),
+                has_dynamic_offset: e.buffer.hasDynamicOffset != 0,
+                min_binding_size: NonZeroU64::new(e.buffer.minBindingSize),
+            }
+        } else if sampler_active {
+            BindingType::Sampler(map_sampler_binding_type(e.sampler.type_))
+        } else if texture_active {
+            BindingType::Texture {
+                sample_type: map_texture_sample_type(e.texture.sampleType),
+                view_dimension: map_texture_view_dimension_for_binding(e.texture.viewDimension, true),
+                multisampled: e.texture.multisampled != 0,
+            }
+        } else {
+            BindingType::StorageTexture {
+                access: map_storage_texture_access(e.storageTexture.access),
+                format: map_texture_format(e.storageTexture.format),
+                view_dimension: map_texture_view_dimension_for_binding(
+                    e.storageTexture.viewDimension,
+                    false,
+                ),
+            }
+        };
+
+        let count = if e.bindingArraySize == 0 {
+            None
+        } else {
+            NonZeroU32::new(e.bindingArraySize)
+        };
+
+        entries.push(BindGroupLayoutEntry {
+            binding: e.binding,
+            visibility: ShaderStages::from_bits_truncate(e.visibility as u32),
+            ty,
+            count,
+        });
+    }
+
+    ConvertedBindGroupLayoutDescriptor {
+        label: unsafe { string_view(d.label) },
+        entries,
+    }
 }
 
 pub fn buffer_descriptor<'a>(d: &'a WGPUBufferDescriptor) -> BufferDescriptor<'a> {
