@@ -12,10 +12,10 @@ opengl = ["maplibre_native/opengl"]
 metal = ["maplibre_native/metal"]
 
 [dependencies]
+env_logger = "0.11"
 image = { workspace = true }
 maplibre_native = { path = "../.." }
 slint = { git = "https://github.com/Murmele/slint.git", branch = "mm/wgpu-29", features = ["backend-android-activity-06", "renderer-femtovg-wgpu", "unstable-wgpu-29", "compat-1-2"] }
-env_logger = "0.11"
 
 [build-dependencies]
-slint-build = { git = "https://github.com/Murmele/slint.git", branch = "mm/wgpu-29"  }
+slint-build = { git = "https://github.com/Murmele/slint.git", branch = "mm/wgpu-29" }
