@@ -22,7 +22,7 @@ use std::{env, fs};
 
 // Used when building locally
 const MLN_REPOSITORY_URL: &str = "https://github.com/Murmele/maplibre-native.git";
-const MLN_COMMIT: &str = "2c6add121f53827baeb518a8056daf5288031ea6";
+const MLN_COMMIT: &str = "a93548c7c67441b8244885b5e85e320ae7b451e2";
 
 // Files of the bridge
 const BRIDGE_FILES: &[&str] = &[
@@ -281,7 +281,7 @@ fn resolve_mln_core() -> (PathBuf, Vec<PathBuf>) {
 }
 
 /// Gather include directories and build the C++ bridge using `cxx_build`.
-fn build_bridge(lib_name: &str, include_dirs: &[PathBuf]) {
+fn build_bridge(lib_name: &str, include_dirs: &[PathBuf], api: GraphicsRenderingAPI) {
     // println!("cargo:warning=Include_dirs: {:?}", include_dirs);
     let root = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
     let bridge_include_dirs: Vec<PathBuf> =
@@ -291,9 +291,12 @@ fn build_bridge(lib_name: &str, include_dirs: &[PathBuf]) {
         .includes(&bridge_include_dirs)
         .includes(include_dirs)
         .flag_if_supported("-std=c++20")
-        .flag_if_supported("-DMLN_WEBGPU_IMPL_FFI=1"); // TODO: only with WGPU!
         .warnings(true)
         .warnings_into_errors(true);
+
+    if matches!(api, GraphicsRenderingAPI::WGPU) {
+        build.flag_if_supported("-DMLN_WEBGPU_IMPL_FFI=1");
+    }
 
     for f in BRIDGE_FILES {
         println!("cargo:rerun-if-changed={f}");
@@ -361,7 +364,7 @@ fn build_local(
 
     if !maplibre_native_dir.exists() {
         println!("cargo:warning=Cloning maplibre-native.");
-        fs::create_dir_all(&clone_dir)?;
+        fs::create_dir_all(&respository_dir)?;
         let clone_status = Command::new("git")
             .current_dir(respository_dir)
             .args(["clone", "--depth", "1", "--revision", MLN_COMMIT, MLN_REPOSITORY_URL, name])
@@ -426,7 +429,8 @@ fn build_local(
     // println!("cargo:warning=Building maplibre-native done.");
 
     // maplibre-native include directories
-    let include_dirs: Vec<PathBuf> = [
+    let mut include_dirs = Vec::new();
+    let mut maplibre_native_include_dirs = vec![
         "include",
         "src", // contains offscreen_texture.hpp
         "platform/default/include",
@@ -438,23 +442,23 @@ fn build_local(
         "vendor/expected-lite/include",
     ];
     if matches!(api, GraphicsRenderingAPI::WGPU) {
-        maplibre_include_dirs.push("vendor/wgpu-native/ffi");
-        maplibre_include_dirs.push("vendor/wgpu-native/ffi/webgpu-headers");
-
+        maplibre_native_include_dirs.push("vendor/wgpu-native/ffi");
+        maplibre_native_include_dirs.push("vendor/wgpu-native/ffi/webgpu-headers");
         include_dirs.push(dest.join("build").join("webgpu-cpp"));
     }
-
-    include_dirs.append(
-        &mut maplibre_include_dirs
-            .into_iter()
-            .map(|path| maplibre_native_dir.clone().join(path))
-            .collect::<Vec<PathBuf>>(),
-    );
 
     // maplibre-rs include dirs
     for i in BRIDGE_INCLUDE_DIRS {
         include_dirs.push(Path::new(i).to_path_buf());
     }
+
+    // Move maplibre-native include dirs into maplibre-rs include dirs
+    include_dirs.append(
+        &mut maplibre_native_include_dirs
+            .into_iter()
+            .map(|path| maplibre_native_dir.clone().join(path))
+            .collect::<Vec<PathBuf>>(),
+    );
 
     Ok(Info {
         lib_name: format!("{TARGET_NAME}{}", if amalgam_lib { "-amalgam" } else { "" }),
@@ -529,7 +533,12 @@ fn build_mln() {
             PathBuf::from(local_repository.clone()).parent().unwrap().to_path_buf()
         };
 
-        match build_local(respository_dir.clone(), MAPLIBRE_NATIVE_DIR_NAME, amalgam_lib, &target_os) {
+        match build_local(
+            respository_dir.clone(),
+            MAPLIBRE_NATIVE_DIR_NAME,
+            amalgam_lib,
+            &target_os,
+        ) {
             Err(e) => {
                 if respository_dir.join(MAPLIBRE_NATIVE_DIR_NAME).exists() {
                     if local_repository.is_empty() {
@@ -542,9 +551,9 @@ fn build_mln() {
         }
     };
 
-    build_bridge(&info.lib_name, &info.include_dirs);
-    let is_apple = target_os == "macos" || target_os == "ios";
     let backend = GraphicsRenderingAPI::from_selected_features();
+    build_bridge(&info.lib_name, &info.include_dirs, backend);
+    let is_apple = target_os == "macos" || target_os == "ios";
     if !amalgam_lib {
         // The dependent libs are not bundled in the core lib, so we have to link manually
         // Required for mlt-cpp. Cpp root link search was already added above
