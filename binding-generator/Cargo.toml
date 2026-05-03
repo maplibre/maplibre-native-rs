@@ -6,8 +6,8 @@ edition = "2024"
 [features]
 
 [dependencies]
-wgpu = {workspace = true}
-cxx = {workspace = true}
+cxx = { workspace = true }
+wgpu = { workspace = true }
 
 [build-dependencies]
 bindgen = "0.71.0"
