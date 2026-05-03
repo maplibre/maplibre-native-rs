@@ -28,15 +28,15 @@ fn mapped_buffer_views() -> &'static Mutex<HashMap<usize, Vec<wgpu::BufferViewMu
 }
 
 macro_rules! opaque_handle_types {
-	($($name:ident),+ $(,)?) => {
-		$(
-			#[repr(C)]
-			#[derive(Debug)]
-			pub struct $name {
-				_unused: [u8; 0],
-			}
-		)+
-	};
+    ($($name:ident),+ $(,)?) => {
+        $(
+            #[repr(C)]
+            #[derive(Debug)]
+            pub struct $name {
+                _unused: [u8; 0],
+            }
+        )+
+    };
 }
 
 pub struct WGPUDeviceImpl(wgpu::Device);

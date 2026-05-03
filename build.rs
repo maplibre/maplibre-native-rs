@@ -291,7 +291,7 @@ fn build_bridge(lib_name: &str, include_dirs: &[PathBuf]) {
         .includes(&bridge_include_dirs)
         .includes(include_dirs)
         .flag_if_supported("-std=c++20")
-		.flag_if_supported("-DMLN_WEBGPU_IMPL_FFI=1"); // TODO: only with WGPU!
+        .flag_if_supported("-DMLN_WEBGPU_IMPL_FFI=1"); // TODO: only with WGPU!
         .warnings(true)
         .warnings_into_errors(true);
 
@@ -522,12 +522,12 @@ fn build_mln() {
             let root = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
             root.join("target")
         } else {
-			assert!(
-				local_repository.ends_with(MAPLIBRE_NATIVE_DIR_NAME),
-				"The repository must be called: {MAPLIBRE_NATIVE_DIR_NAME}"
-			);
+            assert!(
+                local_repository.ends_with(MAPLIBRE_NATIVE_DIR_NAME),
+                "The repository must be called: {MAPLIBRE_NATIVE_DIR_NAME}"
+            );
             PathBuf::from(local_repository.clone()).parent().unwrap().to_path_buf()
-        };        
+        };
 
         match build_local(respository_dir.clone(), MAPLIBRE_NATIVE_DIR_NAME, amalgam_lib, &target_os) {
             Err(e) => {
@@ -619,12 +619,12 @@ fn build_mln() {
             println!("cargo:rustc-link-lib=framework=AppKit");
             println!("cargo:rustc-link-lib=framework=CoreLocation");
         }
-		GraphicsRenderingAPI::WGPU => {
+        GraphicsRenderingAPI::WGPU => {
             // TODO: check to use vulkan!
             // println!("cargo:rustc-link-lib=X11");
             // println!("cargo:rustc-link-lib=GL");
             // println!("cargo:rustc-link-lib=EGL");
-		}
+        }
     }
 }
 
