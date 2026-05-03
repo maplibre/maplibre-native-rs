@@ -29,7 +29,7 @@ jobs:
       - run: echo "MLN_PRECOMPILE=0" >> $GITHUB_ENV
       - run: echo "MLN_CORE_LIBRARY_USE_AMALGAM=0" >> $GITHUB_ENV
       - run: rustup update stable && rustup default stable && rustup component add rustfmt && rustup component add clippy
-      - uses: taiki-e/install-action@7a562dfa955aa2e4d5b0fd6ebd57ff9715c07b0b # v2.73.0
+      - uses: taiki-e/install-action@cf525cb33f51aca27cd6fa02034117ab963ff9f1 # v2.75.22
         with: { tool: 'just' }
       - run: just env-info install-dependencies 'vulkan'
       - run: just ci-lint
@@ -61,24 +61,28 @@ jobs:
             precompiled: 0
             amalgam: 0
           # macOS ARM
-          #- runs-on: macos-latest
-          #  backend: metal
-          #  precompiled: 0
-          #  amalgam: 0
-          #- runs-on: macos-latest
-          #  backend: vulkan
-          #  precompiled: 0
-          #  amalgam: 0
+          - runs-on: macos-latest
+            backend: metal
+            precompiled: 0
+            amalgam: 0
+          - runs-on: macos-latest
+            backend: vulkan
+            precompiled: 0
+            amalgam: 0
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with: { persist-credentials: false }
       - if: github.event_name != 'release' && github.event_name != 'workflow_dispatch'
         uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
-      - uses: taiki-e/install-action@7a562dfa955aa2e4d5b0fd6ebd57ff9715c07b0b # v2.73.0
+      - uses: taiki-e/install-action@cf525cb33f51aca27cd6fa02034117ab963ff9f1 # v2.75.22
         with: { tool: 'just' }
       - run: echo "MLN_PRECOMPILE=${{ matrix.precompiled }}" >> $GITHUB_ENV
       - run: echo "MLN_CORE_LIBRARY_USE_AMALGAM=${{ matrix.amalgam }}" >> $GITHUB_ENV
       - run: just env-info install-dependencies '${{ matrix.backend }}'
+      - if: startsWith(matrix.runs-on, 'macos') && matrix.backend == 'vulkan'
+        run: |
+          echo "VK_ICD_FILENAMES=$(brew --prefix molten-vk)/etc/vulkan/icd.d/MoltenVK_icd.json" >> $GITHUB_ENV
+          echo "DYLD_LIBRARY_PATH=$(brew --prefix vulkan-loader)/lib" >> $GITHUB_ENV
       - run: rustup update stable && rustup default stable
       - name: Run CI tests (Linux OpenGL via Xvfb)
         if: startsWith(matrix.runs-on, 'ubuntu') && matrix.backend == 'opengl'
@@ -111,24 +115,28 @@ jobs:
             precompiled: 0
             amalgam: 0
           # macOS ARM
-          #- runs-on: macos-latest
-          #  backend: metal
-          #  precompiled: 0
-          #  amalgam: 0
-          #- runs-on: macos-latest
-          #  backend: vulkan
-          #  precompiled: 0
-          #  amalgam: 0
+          - runs-on: macos-latest
+            backend: metal
+            precompiled: 0
+            amalgam: 0
+          - runs-on: macos-latest
+            backend: vulkan
+            precompiled: 0
+            amalgam: 0
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with: { persist-credentials: false }
       - if: github.event_name != 'release' && github.event_name != 'workflow_dispatch'
         uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
-      - uses: taiki-e/install-action@7a562dfa955aa2e4d5b0fd6ebd57ff9715c07b0b # v2.73.0
+      - uses: taiki-e/install-action@cf525cb33f51aca27cd6fa02034117ab963ff9f1 # v2.75.22
         with: { tool: 'just' }
       - run: echo "MLN_PRECOMPILE=${{ matrix.precompiled }}" >> $GITHUB_ENV
       - run: echo "MLN_CORE_LIBRARY_USE_AMALGAM=${{ matrix.amalgam }}" >> $GITHUB_ENV
       - run: just env-info install-dependencies '${{ matrix.backend }}'
+      - if: startsWith(matrix.runs-on, 'macos') && matrix.backend == 'vulkan'
+        run: |
+          echo "VK_ICD_FILENAMES=$(brew --prefix molten-vk)/etc/vulkan/icd.d/MoltenVK_icd.json" >> $GITHUB_ENV
+          echo "DYLD_LIBRARY_PATH=$(brew --prefix vulkan-loader)/lib" >> $GITHUB_ENV
       - name: Read MSRV
         id: msrv
         run: echo "value=$(just get-msrv)" >> $GITHUB_OUTPUT
@@ -172,6 +180,8 @@ jobs:
     concurrency:
       group: release-plz-${{ github.ref }}
       cancel-in-progress: false
+    env:
+      MLN_PRECOMPILE: 1
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with: { persist-credentials: false }

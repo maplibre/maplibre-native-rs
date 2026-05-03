@@ -226,8 +226,8 @@ fn extract_headers(headers_from: &Path, headers_to: &Path) {
 
 /// Get local directory or download maplibre-native into the `OUT_DIR`
 ///
-/// Returns the path to the maplibre-native directory and an optional path to an include directorys.
-fn resolve_mln_core(root: &Path) -> (PathBuf, Vec<PathBuf>) {
+/// Returns the path to the maplibre-native directory and the include directories.
+fn resolve_mln_core() -> (PathBuf, Vec<PathBuf>) {
     let out_dir =
         PathBuf::from(env::var_os("OUT_DIR").expect("OUT_DIR is not set")).join("maplibre-native");
     let mln_release = determine_cargo_toml_information().mln_release;
@@ -268,21 +268,13 @@ fn resolve_mln_core(root: &Path) -> (PathBuf, Vec<PathBuf>) {
     let extracted_path = out_dir.join("headers");
     extract_headers(&headers, &extracted_path);
     // Returning the downloaded file, bypassing CMakeLists.txt check
+    let base = extracted_path.join("vendor").join("maplibre-native-base");
+    let deps = base.join("deps");
     let include_dirs = vec![
-        root.join("include"),
-        extracted_path.join("vendor").join("maplibre-native-base").join("include"),
-        extracted_path
-            .join("vendor")
-            .join("maplibre-native-base")
-            .join("deps")
-            .join("geometry.hpp")
-            .join("include"),
-        extracted_path
-            .join("vendor")
-            .join("maplibre-native-base")
-            .join("deps")
-            .join("variant")
-            .join("include"),
+        base.join("include"),
+        deps.join("geometry.hpp").join("include"),
+        deps.join("geojson.hpp").join("include"),
+        deps.join("variant").join("include"),
         extracted_path.join("include"),
     ];
     (library_file, include_dirs)
@@ -291,15 +283,22 @@ fn resolve_mln_core(root: &Path) -> (PathBuf, Vec<PathBuf>) {
 /// Gather include directories and build the C++ bridge using `cxx_build`.
 fn build_bridge(lib_name: &str, include_dirs: &[PathBuf]) {
     // println!("cargo:warning=Include_dirs: {:?}", include_dirs);
+    let root = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
+    let bridge_include_dirs: Vec<PathBuf> =
+        BRIDGE_INCLUDE_DIRS.iter().map(|p| root.join(p)).collect();
     let mut build = cxx_build::bridge("src/renderer/bridge.rs");
-    build.includes(include_dirs).flag_if_supported("-std=c++20");
-    build.flag_if_supported("-DMLN_WEBGPU_IMPL_FFI=1"); // TODO: only with WGPU!
+    build
+        .includes(&bridge_include_dirs)
+        .includes(include_dirs)
+        .flag_if_supported("-std=c++20")
+		.flag_if_supported("-DMLN_WEBGPU_IMPL_FFI=1"); // TODO: only with WGPU!
+        .warnings(true)
+        .warnings_into_errors(true);
 
     for f in BRIDGE_FILES {
         println!("cargo:rerun-if-changed={f}");
         #[allow(clippy::case_sensitive_file_extension_comparisons)]
         if f.ends_with(".cpp") {
-            println!("cargo:warning=Source file: {f}");
             build.file(f);
         }
     }
@@ -317,8 +316,7 @@ struct Info {
 }
 
 fn bundle_precompiled() -> Info {
-    let root = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
-    let (cpp_root, include_dirs) = resolve_mln_core(&root);
+    let (cpp_root, include_dirs) = resolve_mln_core();
 
     println!(
         "cargo:warning=Using precompiled maplibre-native static library from {}",
@@ -343,6 +341,7 @@ fn build_local(
     respository_dir: PathBuf,
     name: &str,
     amalgam_lib: bool,
+    target_os: &str,
 ) -> Result<Info, Box<dyn std::error::Error>> {
     const TARGET_NAME: &str = "mbgl-core";
     let maplibre_native_dir = respository_dir.join(name);
@@ -362,6 +361,7 @@ fn build_local(
 
     if !maplibre_native_dir.exists() {
         println!("cargo:warning=Cloning maplibre-native.");
+        fs::create_dir_all(&clone_dir)?;
         let clone_status = Command::new("git")
             .current_dir(respository_dir)
             .args(["clone", "--depth", "1", "--revision", MLN_COMMIT, MLN_REPOSITORY_URL, name])
@@ -387,6 +387,13 @@ fn build_local(
     let mut config = cmake::Config::new(maplibre_native_dir.clone());
     config.build_target(TARGET_NAME);
     let api = GraphicsRenderingAPI::from_selected_features();
+
+    // maplibre-native's platform/darwin/darwin.cmake calls enable_language(Swift),
+    // which the default "Unix Makefiles" generator does not support. Switch to Ninja.
+    if target_os == "macos" || target_os == "ios" {
+        config.generator("Ninja");
+    }
+
     match api {
         GraphicsRenderingAPI::Metal => {
             config.configure_arg("-DMLN_WITH_METAL=ON");
@@ -418,11 +425,8 @@ fn build_local(
     );
     // println!("cargo:warning=Building maplibre-native done.");
 
-    // General include dirs relative to this projects dir or absolute paths
-    let mut include_dirs: Vec<PathBuf> = Vec::new();
-
-    // maplibre-native include directories relative to the maplibre-native repository
-    let mut maplibre_include_dirs = vec![
+    // maplibre-native include directories
+    let include_dirs: Vec<PathBuf> = [
         "include",
         "src", // contains offscreen_texture.hpp
         "platform/default/include",
@@ -465,8 +469,10 @@ fn build_mln() {
     println!("cargo:rerun-if-env-changed=MLN_PRECOMPILE");
     println!("cargo:rerun-if-env-changed=MLN_CORE_LIBRARY_USE_AMALGAM");
     println!("cargo:rerun-if-env-changed=MLN_LOCAL_REPOSITORY");
-    let amalgam_lib = !env::var("MLN_CORE_LIBRARY_USE_AMALGAM").unwrap_or("0".to_string()).eq("0");
+
     let precompiled = !env::var("MLN_PRECOMPILE").unwrap_or("0".to_string()).eq("0");
+    let amalgam_lib =
+        precompiled || !env::var("MLN_CORE_LIBRARY_USE_AMALGAM").unwrap_or("0".to_string()).eq("0");
     let system_lib = !env::var("MLN_SYSTEM").unwrap_or("0".to_string()).eq("0");
     let local_repository = env::var("MLN_LOCAL_REPOSITORY").unwrap_or("".to_owned());
 
@@ -516,15 +522,14 @@ fn build_mln() {
             let root = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
             root.join("target")
         } else {
+			assert!(
+				local_repository.ends_with(MAPLIBRE_NATIVE_DIR_NAME),
+				"The repository must be called: {MAPLIBRE_NATIVE_DIR_NAME}"
+			);
             PathBuf::from(local_repository.clone()).parent().unwrap().to_path_buf()
-        };
+        };        
 
-        assert!(
-            local_repository.ends_with(MAPLIBRE_NATIVE_DIR_NAME),
-            "The repository must be called: {MAPLIBRE_NATIVE_DIR_NAME}"
-        );
-
-        match build_local(respository_dir.clone(), MAPLIBRE_NATIVE_DIR_NAME, amalgam_lib) {
+        match build_local(respository_dir.clone(), MAPLIBRE_NATIVE_DIR_NAME, amalgam_lib, &target_os) {
             Err(e) => {
                 if respository_dir.join(MAPLIBRE_NATIVE_DIR_NAME).exists() {
                     if local_repository.is_empty() {
@@ -538,6 +543,8 @@ fn build_mln() {
     };
 
     build_bridge(&info.lib_name, &info.include_dirs);
+    let is_apple = target_os == "macos" || target_os == "ios";
+    let backend = GraphicsRenderingAPI::from_selected_features();
     if !amalgam_lib {
         // The dependent libs are not bundled in the core lib, so we have to link manually
         // Required for mlt-cpp. Cpp root link search was already added above
@@ -553,22 +560,31 @@ fn build_mln() {
         );
         println!("cargo:rustc-link-lib=mbgl-harfbuzz");
         println!("cargo:rustc-link-lib=mbgl-freetype");
-        println!("cargo:rustc-link-lib=mbgl-vendor-nunicode");
         println!("cargo:rustc-link-lib=mbgl-vendor-parsedate");
-        println!("cargo:rustc-link-lib=mbgl-vendor-sqlite");
         println!("cargo:rustc-link-lib=mbgl-vendor-csscolorparser");
-        println!("cargo:rustc-link-lib=mlt-cpp"); // provided with matlibre-native
-                                                  // println!("cargo:rustc-link-lib=utf8proc"); // sudo dnf install utf8proc-devel
-        println!("cargo:rustc-link-lib=icuuc"); //sudo dnf install libicu-devel
-        println!("cargo:rustc-link-lib=icudata"); //sudo dnf install libicu-devel
-        println!("cargo:rustc-link-lib=icui18n"); //sudo dnf install libicu-devel
-        println!("cargo:rustc-link-lib=glslang"); //sudo dnf install libglslang-devel
-        println!("cargo:rustc-link-lib=glslang-default-resource-limits"); //sudo dnf install libglslang-devel
+        println!("cargo:rustc-link-lib=mlt-cpp"); // provided with maplibre-native
+        if is_apple {
+            // darwin builds vendored ICU and uses the system sqlite3
+            println!("cargo:rustc-link-lib=mbgl-vendor-icu");
+            println!("cargo:rustc-link-lib=sqlite3");
+        } else {
+            println!("cargo:rustc-link-lib=mbgl-vendor-nunicode");
+            println!("cargo:rustc-link-lib=mbgl-vendor-sqlite");
+            // println!("cargo:rustc-link-lib=utf8proc"); // sudo dnf install utf8proc-devel
+            println!("cargo:rustc-link-lib=icuuc"); //sudo dnf install libicu-devel
+            println!("cargo:rustc-link-lib=icudata"); //sudo dnf install libicu-devel
+            println!("cargo:rustc-link-lib=icui18n"); //sudo dnf install libicu-devel
+        }
+        // Vulkan translates GLSL to SPIR-V at runtime via glslang; OpenGL/Metal don't.
+        if backend == GraphicsRenderingAPI::Vulkan {
+            println!("cargo:rustc-link-lib=glslang"); //sudo dnf install libglslang-devel
+            println!("cargo:rustc-link-lib=glslang-default-resource-limits"); //sudo dnf install libglslang-devel
 
-        // `SPIRV-Tools-opt` depends on symbols from `SPIRV-Tools`.
-        // Keep this order for static linking (notably on Linux/aarch64).
-        println!("cargo:rustc-link-lib=SPIRV-Tools-opt"); //sudo dnf install  spirv-tools-devel // Required by glslang spirv-tools-devel
-        println!("cargo:rustc-link-lib=SPIRV-Tools"); //sudo dnf install  spirv-tools-devel // Required by glslang spirv-tools-devel
+            // `SPIRV-Tools-opt` depends on symbols from `SPIRV-Tools`.
+            // Keep this order for static linking (notably on Linux/aarch64).
+            println!("cargo:rustc-link-lib=SPIRV-Tools-opt"); //sudo dnf install  spirv-tools-devel // Required by glslang spirv-tools-devel
+            println!("cargo:rustc-link-lib=SPIRV-Tools"); //sudo dnf install  spirv-tools-devel // Required by glslang spirv-tools-devel
+        }
         println!("cargo:rustc-link-lib=png"); // sudo dnf install libpng-devel
         println!("cargo:rustc-link-lib=jpeg"); // sudo dnf install libjpeg-turbo-devel
         println!("cargo:rustc-link-lib=uv"); // sudo dnf install libuv-devel
@@ -576,12 +592,15 @@ fn build_mln() {
     }
     println!("cargo:rustc-link-lib=curl");
     println!("cargo:rustc-link-lib=z");
-    match GraphicsRenderingAPI::from_selected_features() {
-        GraphicsRenderingAPI::WGPU => {
-            // TODO: check to use vulkan!
-            println!("cargo:rustc-link-lib=X11");
-            println!("cargo:rustc-link-lib=GL");
-            println!("cargo:rustc-link-lib=EGL");
+
+    if is_apple {
+        println!("cargo:rustc-link-lib=framework=Foundation");
+        println!("cargo:rustc-link-lib=framework=CoreGraphics");
+    }
+    match backend {
+        GraphicsRenderingAPI::Vulkan if is_apple => {
+            println!("cargo:rustc-link-lib=framework=CoreText");
+            println!("cargo:rustc-link-lib=framework=ImageIO");
         }
         GraphicsRenderingAPI::Vulkan => {}
         GraphicsRenderingAPI::OpenGL => {
@@ -597,11 +616,15 @@ fn build_mln() {
             println!("cargo:rustc-link-lib=framework=Metal");
             println!("cargo:rustc-link-lib=framework=MetalKit");
             println!("cargo:rustc-link-lib=framework=QuartzCore");
-            println!("cargo:rustc-link-lib=framework=Foundation");
-            println!("cargo:rustc-link-lib=framework=CoreGraphics");
             println!("cargo:rustc-link-lib=framework=AppKit");
             println!("cargo:rustc-link-lib=framework=CoreLocation");
         }
+		GraphicsRenderingAPI::WGPU => {
+            // TODO: check to use vulkan!
+            // println!("cargo:rustc-link-lib=X11");
+            // println!("cargo:rustc-link-lib=GL");
+            // println!("cargo:rustc-link-lib=EGL");
+		}
     }
 }
 

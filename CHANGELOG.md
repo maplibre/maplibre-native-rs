@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.5](https://github.com/maplibre/maplibre-native-rs/compare/v0.4.4...v0.4.5) - 2026-04-21
+
+### Added
+
+- *(static)* move the `set_map_size` function from continuous only to also be avaliable in static mode ([#161](https://github.com/maplibre/maplibre-native-rs/pull/161))
+
+## [0.4.4](https://github.com/maplibre/maplibre-native-rs/compare/v0.4.3...v0.4.4) - 2026-04-21
+
+### Other
+
+- *(ci)* Enable macOS Vulkan in the CI test ([#158](https://github.com/maplibre/maplibre-native-rs/pull/158))
+
+## [0.4.3](https://github.com/maplibre/maplibre-native-rs/compare/v0.4.2...v0.4.3) - 2026-04-19
+
+### Other
+
+- Add the missing `publish = false` to the slint example. ([#154](https://github.com/maplibre/maplibre-native-rs/pull/154))
+
 ## [0.4.2](https://github.com/maplibre/maplibre-native-rs/compare/v0.4.1...v0.4.2) - 2026-03-16
 
 ### Fixed

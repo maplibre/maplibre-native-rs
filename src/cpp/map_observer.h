@@ -11,16 +11,16 @@ namespace bridge {
     // Forward declarations
     using MapObserverCameraChangeMode = mbgl::MapObserver::CameraChangeMode; // Required, because enum nested in class is not supported by cxx
 
-    class VoidCallback;
+    struct VoidCallback;
     void void_callback(VoidCallback const& callback) noexcept;
 
-    class FailingLoadingMapCallback;
+    struct FailingLoadingMapCallback;
     void failing_loading_map_callback(FailingLoadingMapCallback const& callback, mbgl::MapLoadError error, const rust::Str what) noexcept;
 
-    class CameraDidChangeCallback;
+    struct CameraDidChangeCallback;
     void camera_did_change_callback(CameraDidChangeCallback const& callback, MapObserverCameraChangeMode mode) noexcept;
 
-    class FinishRenderingFrameCallback;
+    struct FinishRenderingFrameCallback;
     void finish_rendering_frame_callback(FinishRenderingFrameCallback const& callback, bool needsRepaint, bool placementChanged) noexcept;
 
     class MapObserver: public mbgl::MapObserver {
