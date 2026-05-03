@@ -119,7 +119,7 @@ pub mod sources {
     #[namespace = "mbgl::style"]
     extern "C++" {
         include!("mbgl/style/sources/geojson_source.hpp");
-        
+
         // Opaque types
         /// A GeoJSON source for MapLibre rendering.
         type GeoJSONSource;
