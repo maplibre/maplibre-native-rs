@@ -257,11 +257,6 @@ impl ImageRenderer<Continuous> {
         self.instance.pin_mut().rotateBy(&first, &second);
     }
 
-    /// Set the map size. It determines also the rendered image size
-    pub fn set_map_size(&mut self, size: Size) {
-        self.instance.pin_mut().setSize(&size);
-    }
-
     /// Trigger render loop once (animations)
     pub fn render_once(&mut self) {
         self.instance.pin_mut().render_once();
