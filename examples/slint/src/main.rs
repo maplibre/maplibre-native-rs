@@ -1,5 +1,6 @@
 mod maplibre;
 
+use crate::maplibre::MapLibre;
 use image::ImageReader;
 use maplibre_native::Style;
 use maplibre_native::layers::SymbolAnchorType;
@@ -7,7 +8,6 @@ use maplibre_native::{GeoJsonSource, Latitude, Longitude, SymbolLayer};
 use std::cell::RefCell;
 use std::path::Path;
 use std::rc::Rc;
-use crate::maplibre::MapLibre;
 
 slint::include_modules!();
 
