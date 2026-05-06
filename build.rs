@@ -129,6 +129,8 @@ fn download_static(out_dir: &Path, revision: &str) -> (PathBuf, PathBuf) {
         "amalgam-linux-x64"
     } else if cfg!(all(target_os = "macos", target_arch = "aarch64")) {
         "amalgam-macos-arm64"
+    } else if cfg!(all(target_os = "android", target_arch = "aarch64")) {
+        "amalgam-android-arm64-v8a"
     } else {
         panic!(
             "unsupported target: only linux and macos are currently supported by maplibre-native"
@@ -558,6 +560,7 @@ fn build_mln() {
 
     let backend = GraphicsRenderingAPI::from_selected_features();
     build_bridge(&info.lib_name, &info.include_dirs, backend);
+    let is_android = target_os == "android";
     let is_apple = target_os == "macos" || target_os == "ios";
     if !amalgam_lib {
         // The dependent libs are not bundled in the core lib, so we have to link manually
@@ -604,9 +607,13 @@ fn build_mln() {
         println!("cargo:rustc-link-lib=uv"); // sudo dnf install libuv-devel
         println!("cargo:rustc-link-lib=webp"); // sudo dnf install libwebp-devel
     }
-    println!("cargo:rustc-link-lib=curl");
-    println!("cargo:rustc-link-lib=z");
 
+    println!("cargo:rustc-link-lib=z");
+    if !is_android  {
+        // Android doesn't need curl (uses Android's HTTP stack)
+        println!("cargo:rustc-link-lib=curl");
+    }
+    
     if is_apple {
         println!("cargo:rustc-link-lib=framework=Foundation");
         println!("cargo:rustc-link-lib=framework=CoreGraphics");
@@ -617,8 +624,16 @@ fn build_mln() {
             println!("cargo:rustc-link-lib=framework=ImageIO");
         }
         GraphicsRenderingAPI::OpenGL => {
-            println!("cargo:rustc-link-lib=GL");
-            println!("cargo:rustc-link-lib=EGL");
+            if is_android {
+                // Android system libraries for OpenGL ES
+                println!("cargo:rustc-link-lib=android");
+                println!("cargo:rustc-link-lib=log");
+                println!("cargo:rustc-link-lib=EGL");
+                println!("cargo:rustc-link-lib=GLESv3");
+            } else {
+                println!("cargo:rustc-link-lib=GL");
+                println!("cargo:rustc-link-lib=EGL");
+            }
             if cfg!(target_os = "linux") {
                 // GLX backend uses X11 symbols such as XInitThreads.
                 println!("cargo:rustc-link-lib=X11");
@@ -632,7 +647,13 @@ fn build_mln() {
             println!("cargo:rustc-link-lib=framework=AppKit");
             println!("cargo:rustc-link-lib=framework=CoreLocation");
         }
-        GraphicsRenderingAPI::Vulkan | GraphicsRenderingAPI::WGPU => {}
+        GraphicsRenderingAPI::Vulkan | GraphicsRenderingAPI::WGPU => {
+            if is_android {
+                // Android system libraries for Vulkan
+                println!("cargo:rustc-link-lib=android");
+                println!("cargo:rustc-link-lib=log");
+            }
+        }
     }
 }
 
