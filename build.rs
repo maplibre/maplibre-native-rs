@@ -22,7 +22,7 @@ use std::{env, fs};
 
 // Used when building locally
 const MLN_REPOSITORY_URL: &str = "https://github.com/Murmele/maplibre-native.git";
-const MLN_COMMIT: &str = "4ae7215b02000e57883966d742a7aa8dc8bc363e";
+const MLN_COMMIT: &str = "6d4ff7ce1c4a6b0425233e3528582f6cab167e6f";
 
 // Files of the bridge
 const BRIDGE_FILES: &[&str] = &[
@@ -363,6 +363,7 @@ fn build_local(
         fs::remove_dir_all(&maplibre_native_dir)?;
     }
 
+    // Clone Repository
     if !maplibre_native_dir.exists() {
         println!("cargo:warning=Cloning maplibre-native.");
         fs::create_dir_all(&respository_dir)?;
@@ -376,8 +377,9 @@ fn build_local(
             );
         }
     }
-    // println!("cargo:warning=Building maplibre-native.");
     println!("cargo:rerun-if-changed={}", maplibre_native_dir.as_os_str().to_str().unwrap());
+
+    // Update submodules
     let submodule_status = Command::new("git")
         .current_dir(maplibre_native_dir.clone())
         .args(["submodule", "update", "--init", "--recursive"])
@@ -389,6 +391,7 @@ fn build_local(
     }
 
     let mut config = cmake::Config::new(maplibre_native_dir.clone());
+    let webgpu_h_include_dir = fs::canonicalize(PathBuf::from("binding-generator").join("dep").join("webgpu-headers")).unwrap();
     config.build_target(TARGET_NAME);
     let api = GraphicsRenderingAPI::from_selected_features();
 
@@ -412,6 +415,7 @@ fn build_local(
             config.configure_arg("-DMLN_WITH_WEBGPU=ON");
             config.configure_arg("-DMLN_WEBGPU_IMPL_FFI=ON");
             config.configure_arg("-DMLN_WEBGPU_IMPL_WGPU=ON");
+            config.configure_arg(format!("-DMLN_WEBGPU_IMPL_WEBGPU_HEADER_DIR={}", webgpu_h_include_dir.as_path().as_os_str().to_str().unwrap()));
         }
     }
     if amalgam_lib {
