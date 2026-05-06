@@ -57,6 +57,7 @@ enum GraphicsRenderingAPI {
     /// [Vulkan API](https://www.vulkan.org/)
     Vulkan,
     /// [WGPU API](https://github.com/gfx-rs/wgpu)
+    #[expect(clippy::upper_case_acronyms)]
     WGPU,
 }
 impl GraphicsRenderingAPI {
@@ -74,7 +75,9 @@ impl GraphicsRenderingAPI {
         let target_os = env::var("CARGO_CFG_TARGET_OS").expect("CARGO_CFG_TARGET_OS not set");
         let is_macos = target_os == "ios" || target_os == "macos";
 
-        if !with_wgpu {
+        if with_wgpu {
+            Self::WGPU
+        } else {
             match (with_metal, with_vulkan, with_opengl) {
                 (true, false, false) => Self::Metal,
                 (false, true, false) => Self::Vulkan,
@@ -103,8 +106,6 @@ impl GraphicsRenderingAPI {
                     default_choice
                 }
             }
-        } else {
-            Self::WGPU
         }
     }
 }
@@ -478,7 +479,7 @@ fn build_mln() {
     let amalgam_lib =
         precompiled || !env::var("MLN_CORE_LIBRARY_USE_AMALGAM").unwrap_or("0".to_string()).eq("0");
     let system_lib = !env::var("MLN_SYSTEM").unwrap_or("0".to_string()).eq("0");
-    let local_repository = env::var("MLN_LOCAL_REPOSITORY").unwrap_or("".to_owned());
+    let local_repository = env::var("MLN_LOCAL_REPOSITORY").unwrap_or_default();
 
     if !local_repository.is_empty() {
         println!("cargo:warning=Using local repository from: {local_repository}");
