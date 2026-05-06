@@ -11,9 +11,17 @@
 //
 // Factory registration is process-global (mbgl::FileSourceManager is a
 // singleton). Call `register_rust_file_source_factory` once before any
-// `mbgl::Map` is constructed. A subsequent call replaces the previous
-// callback but leaves existing RustFileSource instances alive until their
-// owning Map is destroyed.
+// `mbgl::Map` is constructed.
+//
+// `FileSourceManager` *also* caches FileSource instances by `(type,
+// ResourceOptions)`; `registerFileSourceFactory` only swaps the factory
+// slot and never evicts the cache. A subsequent call therefore takes
+// effect only for `Map`s constructed with `ResourceOptions` that don't
+// already have a live cached FileSource — in practice, only after every
+// previously built renderer has been dropped, or by varying
+// `ResourceOptions` (e.g. a unique `platformContext`) per renderer. Two
+// concurrent renderers with different callbacks are not supported by
+// this layer.
 
 #include "rust/cxx.h"
 #include <mbgl/storage/resource.hpp>

@@ -80,10 +80,13 @@ private:
         }
 
         response.noContent = rr.no_content;
-        if (!rr.no_content && !rr.data.empty()) {
-            // The Rust `Vec<u8>` was moved across the cxx boundary (no copy);
-            // this is the one unavoidable copy — mbgl insists on
-            // `shared_ptr<const std::string>`.
+        if (!rr.no_content) {
+            // Always materialise `data` for non-NoContent successes, even
+            // when zero-length: a default-constructed `shared_ptr` reads as
+            // "no data set" downstream and is indistinguishable from a
+            // failed response. The Rust `Vec<u8>` was moved across the cxx
+            // boundary (no copy); the std::string construction is the one
+            // unavoidable copy — mbgl insists on `shared_ptr<const std::string>`.
             response.data = std::make_shared<std::string>(
                 reinterpret_cast<const char*>(rr.data.data()),
                 rr.data.size());

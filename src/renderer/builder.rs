@@ -1,9 +1,6 @@
 //! Image renderer configuration and builder
 
 use crate::renderer::bridge::ffi;
-use crate::renderer::bridge::file_source::register_rust_file_source_factory;
-use crate::renderer::bridge::file_source::ResourceKind;
-use crate::renderer::file_source::{FileSourceRequestCallback, FsResponse};
 use crate::renderer::{Continuous, ImageRenderer, MapMode, Static, Tile};
 use crate::ResourceOptions;
 use std::marker::PhantomData;
@@ -32,11 +29,6 @@ pub struct ImageRendererBuilder {
     pixel_ratio: f32,
 
     resource_options: Option<ResourceOptions>,
-
-    /// Optional Rust-supplied `FileSource` callback. When set, installs a
-    /// process-global factory at build time that delegates every resource
-    /// request to this closure, bypassing the mbgl default `ResourceLoader`.
-    file_source_callback: Option<FileSourceRequestCallback>,
 }
 
 impl Default for ImageRendererBuilder {
@@ -47,7 +39,6 @@ impl Default for ImageRendererBuilder {
             height: NonZeroU32::new(512).unwrap(),
             pixel_ratio: 1.0,
             resource_options: None,
-            file_source_callback: None,
         }
     }
 }
@@ -88,34 +79,6 @@ impl ImageRendererBuilder {
         self
     }
 
-    /// Install a Rust closure as the `FileSource` callback.
-    ///
-    /// The closure is invoked for every resource mbgl needs to render the
-    /// style (tiles, glyphs, sprites, etc.). It replaces the mbgl default
-    /// `ResourceLoader` entirely, so the closure must handle every URL
-    /// scheme referenced by the style — typical schemes are `mbtiles://`,
-    /// `file://`, and any custom ones the caller needs.
-    ///
-    /// Registration is **process-global**: `mbgl::FileSourceManager` is a
-    /// singleton, so a later call to `build_*_renderer` replaces the
-    /// factory for all *future* `ImageRenderer` instances. Existing
-    /// renderers keep their original callback because mbgl captured their
-    /// `FileSource` at `Map`-construction time. In practice, running two
-    /// renderers in one process with *different* callbacks is unsupported
-    /// — use one process per callback.
-    ///
-    /// `Send + Sync` are required because mbgl may invoke the same
-    /// captured callback from multiple renderers on independent threads;
-    /// the closure must be safe for concurrent use.
-    #[must_use]
-    pub fn with_file_source_callback<F>(mut self, callback: F) -> Self
-    where
-        F: Fn(&str, ResourceKind) -> FsResponse + Send + Sync + 'static,
-    {
-        self.file_source_callback = Some(FileSourceRequestCallback::new(callback));
-        self
-    }
-
     /// Builds a static image renderer
     #[must_use]
     pub fn build_static_renderer(self) -> ImageRenderer<Static> {
@@ -141,13 +104,6 @@ impl ImageRendererBuilder {
 impl<S> ImageRenderer<S> {
     /// Creates a new renderer instance
     fn new(map_mode: MapMode, opts: ImageRendererBuilder) -> Self {
-        // Install the FileSource callback BEFORE constructing the C++
-        // renderer: mbgl::Map resolves its FileSource during construction,
-        // so the factory has to be in place by then.
-        if let Some(callback) = opts.file_source_callback {
-            register_rust_file_source_factory(Box::new(callback));
-        }
-
         let resource_options = opts.resource_options.unwrap_or_default();
         let map = ffi::MapRenderer_new(
             map_mode,

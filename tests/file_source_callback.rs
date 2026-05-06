@@ -1,9 +1,8 @@
 //! End-to-end test for the Rust `FileSource` callback bridge.
 //!
 //! Serves an inline style.json from the callback and renders it. Verifies:
-//! - the callback is actually invoked by mbgl
-//! - the URLs we receive match the documented `file://` scheme for
-//!   `load_style_from_path`
+//! - the callback is actually invoked by mbgl for the style URL we asked
+//!   to load
 //! - the rendered image has the expected dimensions and non-zero content
 //!   (the background-color pixels, not all transparent).
 
@@ -11,7 +10,10 @@ use std::num::NonZeroU32;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
-use maplibre_native::{FsResponse, Height, ImageRendererBuilder, ResourceKind, Size, Width};
+use maplibre_native::{
+    register_file_source_callback, FsResponse, Height, ImageRendererBuilder, ResourceKind, Size,
+    Width,
+};
 
 // A minimal style that renders a solid background. No tile sources — keeps
 // the test self-contained. We use a bright, unambiguous color so we can
@@ -35,22 +37,25 @@ fn file_source_callback_serves_inline_style() {
     let seen_urls_cb = seen_urls.clone();
     let call_count_cb = call_count.clone();
 
+    // Process-global registration: must happen before the renderer is
+    // built so mbgl picks up the factory at Map construction.
+    register_file_source_callback(move |url: &str, kind: ResourceKind| {
+        call_count_cb.fetch_add(1, Ordering::SeqCst);
+        seen_urls_cb.lock().unwrap().push(format!("{kind:?}:{url}"));
+
+        if url.ends_with("/inline-style.json") {
+            FsResponse::Ok(INLINE_STYLE.as_bytes().to_vec())
+        } else {
+            // Style has no other resources, but mbgl may still probe
+            // sprites/glyphs. Return NoContent for everything else —
+            // mbgl renders the background without sprites/glyphs.
+            FsResponse::NoContent
+        }
+    });
+
     let mut renderer = ImageRendererBuilder::new()
         .with_size(NonZeroU32::new(64).unwrap(), NonZeroU32::new(64).unwrap())
         .with_pixel_ratio(1.0)
-        .with_file_source_callback(move |url: &str, kind: ResourceKind| {
-            call_count_cb.fetch_add(1, Ordering::SeqCst);
-            seen_urls_cb.lock().unwrap().push(format!("{kind:?}:{url}"));
-
-            if url.ends_with("/inline-style.json") {
-                FsResponse::Ok(INLINE_STYLE.as_bytes().to_vec())
-            } else {
-                // Style has no other resources, but mbgl may still probe
-                // sprites/glyphs. Return NoContent for everything else —
-                // mbgl renders the background without sprites/glyphs.
-                FsResponse::NoContent
-            }
-        })
         .build_static_renderer();
 
     // Use a bogus URL — our callback doesn't care about the prefix, only the
