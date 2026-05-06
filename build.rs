@@ -402,6 +402,12 @@ fn build_local(
     if target_os == "macos" || target_os == "ios" {
         config.generator("Ninja");
     }
+    if target_os == "android" {
+        println!("cargo:rerun-if-env-changed=ANDROID_NDK_ROOT");
+        let ndk_root = PathBuf::from(env::var_os("ANDROID_NDK_ROOT").expect("ANDROID_NDK_ROOT is not set"));
+        println!("Android ndk root: {:?}", ndk_root);
+        config.configure_arg(format!("-DCMAKE_TOOLCHAIN_FILE={}", ndk_root.join("build").join("cmake").join("android.toolchain.cmake").as_os_str().to_str().unwrap()));
+    }
 
     match api {
         GraphicsRenderingAPI::Metal => {
