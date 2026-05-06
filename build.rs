@@ -22,7 +22,7 @@ use std::{env, fs};
 
 // Used when building locally
 const MLN_REPOSITORY_URL: &str = "https://github.com/Murmele/maplibre-native.git";
-const MLN_COMMIT: &str = "a93548c7c67441b8244885b5e85e320ae7b451e2";
+const MLN_COMMIT: &str = "4ae7215b02000e57883966d742a7aa8dc8bc363e";
 
 // Files of the bridge
 const BRIDGE_FILES: &[&str] = &[
@@ -481,8 +481,8 @@ fn build_mln() {
     let local_repository = env::var("MLN_LOCAL_REPOSITORY").unwrap_or("".to_owned());
 
     if !local_repository.is_empty() {
-        println!("cargo:warning=Using local repository from: {:?}", local_repository);
-        println!("cargo:rerun-if-env-changed={}", local_repository);
+        println!("cargo:warning=Using local repository from: {local_repository}");
+        println!("cargo:rerun-if-env-changed={local_repository}");
     }
 
     // Add system library search paths for macOS
@@ -540,10 +540,10 @@ fn build_mln() {
             &target_os,
         ) {
             Err(e) => {
-                if respository_dir.join(MAPLIBRE_NATIVE_DIR_NAME).exists() {
-                    if local_repository.is_empty() {
-                        // let _ = fs::remove_dir_all(clone_dir.join(MAPLIBRE_NATIVE_DIR_NAME));
-                    }
+                if respository_dir.join(MAPLIBRE_NATIVE_DIR_NAME).exists()
+                    && local_repository.is_empty()
+                {
+                    // let _ = fs::remove_dir_all(clone_dir.join(MAPLIBRE_NATIVE_DIR_NAME));
                 }
                 panic!("Failed to build maplibre native: {e}")
             }
@@ -611,7 +611,6 @@ fn build_mln() {
             println!("cargo:rustc-link-lib=framework=CoreText");
             println!("cargo:rustc-link-lib=framework=ImageIO");
         }
-        GraphicsRenderingAPI::Vulkan => {}
         GraphicsRenderingAPI::OpenGL => {
             println!("cargo:rustc-link-lib=GL");
             println!("cargo:rustc-link-lib=EGL");
@@ -628,12 +627,7 @@ fn build_mln() {
             println!("cargo:rustc-link-lib=framework=AppKit");
             println!("cargo:rustc-link-lib=framework=CoreLocation");
         }
-        GraphicsRenderingAPI::WGPU => {
-            // TODO: check to use vulkan!
-            // println!("cargo:rustc-link-lib=X11");
-            // println!("cargo:rustc-link-lib=GL");
-            // println!("cargo:rustc-link-lib=EGL");
-        }
+        GraphicsRenderingAPI::Vulkan | GraphicsRenderingAPI::WGPU => {}
     }
 }
 
