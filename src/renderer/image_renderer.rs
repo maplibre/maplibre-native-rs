@@ -90,7 +90,7 @@ impl<S> ImageRenderer<S> {
     #[cfg(feature = "wgpu")]
     /// Bind the renderer to the WGPU device and queue provided by the host UI.
     pub fn set_device_queue(&mut self, device: wgpu::Device, queue: wgpu::Queue) {
-        self.instance.pin_mut().setDeviceAndQueue(device.into(), queue.into())
+        self.instance.pin_mut().setDeviceAndQueue(device.into(), queue.into());
     }
 
     /// Set the style URL for the map.

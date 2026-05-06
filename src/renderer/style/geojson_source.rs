@@ -10,13 +10,13 @@ pub struct Latitude(pub f64);
 #[derive(Debug, Clone, Copy)]
 pub struct Longitude(pub f64);
 
-/// Options for configuring a GeoJSON source.
+/// Options for configuring a `GeoJSON` source.
 ///
-/// Contains settings that control how GeoJSON data is processed and rendered,
+/// Contains settings that control how `GeoJSON` data is processed and rendered,
 /// including tiling parameters and clustering configuration.
 ///
 /// Note: Currently, only default options are supported when creating a source.
-/// Custom options support will be added in a future release when MapLibre's
+/// Custom options support will be added in a future release when `MapLibre`'s
 /// Immutable<T> FFI support is improved.
 #[derive(Debug, Clone)]
 pub struct GeoJSONOptions {
@@ -78,14 +78,14 @@ impl GeoJsonSource {
     /// Create a new `GeoJSON` source with custom options.
     ///
     /// Note: Currently maps to default options. Custom option support
-    /// is pending resolution of MapLibre's Immutable<T> FFI constraints.
+    /// is pending resolution of `MapLibre`'s Immutable<T> FFI constraints.
     #[must_use]
     pub fn with_options(id: &str, _options: &GeoJSONOptions) -> Self {
         // TODO: Pass options to C++ when Immutable<T> FFI support improves
         Self { source_id: id.to_owned(), source: sources::createWithDefaultOptions(id) }
     }
 
-    /// Sets the URL for loading GeoJSON data.
+    /// Sets the URL for loading `GeoJSON` data.
     pub fn set_url(&mut self, url: &str) {
         sources::setURL(&self.source, url);
     }

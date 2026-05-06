@@ -34,10 +34,12 @@ impl MapLibre {
         Self { renderer, flags: Rc::default(), last_pos: ScreenCoordinate::default(), map_size }
     }
 
+    #[allow(dead_code)]
     pub fn style_loaded(&self) -> bool {
         self.flags.borrow().style_loaded
     }
 
+    #[allow(dead_code)]
     pub fn style_loading_error(&self) -> Option<MapLoadError> {
         self.flags.borrow().loading_style_error
     }

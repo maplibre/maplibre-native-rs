@@ -15,8 +15,8 @@ pub fn init(ui: &MainWindow, map: &Rc<RefCell<MapLibre>>) {
     ui.window()
         .set_rendering_notifier({
             let map = Rc::downgrade(map);
-            move |state, graphics_api| match state {
-                slint::RenderingState::RenderingSetup => {
+            move |state, graphics_api| {
+                if matches!(state, slint::RenderingState::RenderingSetup) {
                     let slint::GraphicsAPI::WGPU { instance: _instance, device, queue, .. } =
                         graphics_api
                     else {
@@ -28,7 +28,6 @@ pub fn init(ui: &MainWindow, map: &Rc<RefCell<MapLibre>>) {
                         .renderer()
                         .set_device_queue(device.clone(), queue.clone());
                 }
-                _ => (),
             }
         })
         .unwrap();
@@ -53,12 +52,11 @@ pub fn init(ui: &MainWindow, map: &Rc<RefCell<MapLibre>>) {
             let map = map.upgrade().unwrap();
             let mut map = map.borrow_mut();
             map.renderer().render_once();
-            if map.updated() {
-                if let Some(image) = map.renderer().take_texture() {
-                    if let Ok(image) = image.try_into() {
-                        ui_handle.upgrade().unwrap().global::<MapAdapter>().set_map_texture(image);
-                    }
-                }
+            if map.updated()
+                && let Some(image) = map.renderer().take_texture()
+                && let Ok(image) = image.try_into()
+            {
+                ui_handle.upgrade().unwrap().global::<MapAdapter>().set_map_texture(image);
             }
         }
     });
