@@ -29,7 +29,7 @@ check:
 ci-lint: env-info test-fmt clippy
 
 # Run all tests as expected by CI
-ci-test backend: env-info (build backend) (test backend) (test-doc backend) && assert-git-is-clean
+ci-test backend: (env-info) (build backend) (test backend) (test-doc backend) (test-example_slint backend) && assert-git-is-clean
 
 # Run minimal subset of tests to ensure compatibility with MSRV
 ci-test-msrv backend: (ci-test backend)  # for now, same as ci-test
@@ -58,6 +58,8 @@ env-info:
     @echo "RUSTFLAGS='$RUSTFLAGS'"
     @echo "RUSTDOCFLAGS='$RUSTDOCFLAGS'"
     @echo "RUST_BACKTRACE='$RUST_BACKTRACE'"
+    @echo "MLN_PRECOMPILE='$MLN_PRECOMPILE'"
+    @echo "MLN_CORE_LIBRARY_USE_AMALGAM='$MLN_CORE_LIBRARY_USE_AMALGAM'"
 
 # Reformat all code `cargo fmt`. If nightly is available, use it for better results
 fmt:
@@ -83,25 +85,43 @@ get-crate-field field package=main_crate:  (assert-cmd 'jq')
 get-msrv package=main_crate:  (get-crate-field 'rust_version' package)
 
 # Install Linux dependencies (Ubuntu/Debian). Supports 'vulkan' and 'opengl' backends.
+# fontconfig is required for the slint example
 [linux]
 install-dependencies backend='vulkan':
     sudo apt-get update
     sudo apt-get install -y \
-      {{if backend == 'opengl' {'libgl1-mesa-dev libglu1-mesa-dev'} else if backend == 'vulkan' {'mesa-vulkan-drivers glslang-dev'} else {''} }} \
+      {{if backend == 'opengl' {'libgl1-mesa-dev libglu1-mesa-dev libx11-dev'} else if backend == 'vulkan' {'mesa-vulkan-drivers glslang-dev'} else {''} }} \
       build-essential \
       libcurl4-openssl-dev \
       libglfw3-dev \
       libuv1-dev \
-      libz-dev
+      libz-dev \
+      libfontconfig-dev \
+      glslang-dev \
+      glslang-tools \
+      libicu-dev \
+      libpng-dev \
+      libjpeg-turbo8-dev \
+      libwebp-dev \
+      ccache \
+      cmake \
+      xvfb \
+      pkg-config # required for fontconfig detection
 
-# Install macOS dependencies via Homebrew
+# Install macOS dependencies via Homebrew.
+# Only Vulkan translates GLSL->SPIR-V at runtime (via glslang); Metal and OpenGL don't.
 [macos]
 install-dependencies backend='vulkan':
     brew install \
-        {{if backend == 'vulkan' {'molten-vk vulkan-headers'} else {''} }} \
+        {{if backend == 'vulkan' {'molten-vk vulkan-loader vulkan-headers glslang spirv-tools'} else {''} }} \
+        cmake \
+        ninja \
         curl \
         glfw \
         libuv \
+        libpng \
+        jpeg-turbo \
+        webp \
         zlib
 
 # Show current maplibre-native dependency information
@@ -143,6 +163,10 @@ semver *args:  (cargo-install 'cargo-semver-checks')
 # Run testcases against a specific backend
 test backend='vulkan':
     cargo test --all-targets --features {{backend}} --workspace
+
+# Test slint example
+test-example_slint backend='vulkan':
+    cd examples/slint && cargo build --features {{backend}}
 
 # Run all tests and accept the changes. Requires cargo-insta to be installed.
 test-accept:

@@ -3,7 +3,7 @@
 //! This example demonstrates how to use the different rendering options
 //! including different map styles, zoom levels, and output formats.
 //!
-//! For exapmle create a image of a specific tile with `cargo run -- -m tile -z 3 -x 4 -y 2`
+//! For example create a image of a specific tile with `cargo run -- -m tile -z 3 -x 4 -y 2`
 //! or of a specific area (uses lat,lon and zoom) `cargo run -- --zoom 3.9 --lat 17.209 --lon -87.41`
 
 use std::num::NonZeroU32;
@@ -12,7 +12,9 @@ use std::time::Instant;
 
 use clap::Parser;
 use env_logger::Env;
-use maplibre_native::{Image, ImageRenderer, ImageRendererBuilder, MapDebugOptions, Static, Tile};
+use maplibre_native::{
+    Image, ImageRenderer, ImageRendererBuilder, MapDebugOptions, ResourceOptions, Static, Tile,
+};
 
 /// Command-line tool to render a map via [`mapLibre-native`](https://github.com/maplibre/maplibre-native)
 #[derive(Parser, Debug)]
@@ -148,23 +150,20 @@ impl From<DebugMode> for MapDebugOptions {
 
 impl Args {
     fn load(self) -> Renderer {
-        let map = ImageRendererBuilder::new()
-            .with_api_key(self.apikey.unwrap_or_default())
+        let resource_options = ResourceOptions::default()
+            .with_api_key(&self.apikey.unwrap_or_default())
             .with_cache_path(self.cache)
-            .with_asset_root(self.asset_root)
+            .with_asset_path(self.asset_root);
+
+        let map = ImageRendererBuilder::new()
+            .with_resource_options(resource_options)
             .with_pixel_ratio(self.ratio)
             .with_size(self.width, self.height);
 
         match self.mode {
             Mode::Static => {
-                assert!(
-                    (-90.0..=90.0).contains(&self.lat),
-                    "lat must be between -90 and 90"
-                );
-                assert!(
-                    (-180.0..=180.0).contains(&self.lon),
-                    "lon must be between -180 and 180"
-                );
+                assert!((-90.0..=90.0).contains(&self.lat), "lat must be between -90 and 90");
+                assert!((-180.0..=180.0).contains(&self.lon), "lon must be between -180 and 180");
 
                 let mut map = map.build_static_renderer();
                 if let Some(debug) = self.debug {
@@ -173,8 +172,7 @@ impl Args {
                 if let Ok(url) = url::Url::parse(&self.style) {
                     map.load_style_from_url(&url);
                 } else {
-                    map.load_style_from_path(self.style)
-                        .expect("the path to be valid");
+                    map.load_style_from_path(self.style).expect("the path to be valid");
                 }
                 Renderer::Static {
                     map,
@@ -196,18 +194,12 @@ impl Args {
                 if let Ok(url) = url::Url::parse(&self.style) {
                     map.load_style_from_url(&url);
                 } else {
-                    map.load_style_from_path(self.style)
-                        .expect("the path to be valid");
+                    map.load_style_from_path(self.style).expect("the path to be valid");
                 }
                 if let Some(debug) = self.debug {
                     map.set_debug_flags(debug.into());
                 }
-                Renderer::Tiled {
-                    map,
-                    x: self.x,
-                    y: self.y,
-                    z: self.z,
-                }
+                Renderer::Tiled { map, x: self.x, y: self.y, z: self.z }
             }
             Mode::Continuous => {
                 todo!("not yet implemented in the wrapper")
@@ -217,32 +209,13 @@ impl Args {
 }
 
 enum Renderer {
-    Static {
-        map: ImageRenderer<Static>,
-        lat: f64,
-        lon: f64,
-        zoom: f64,
-        bearing: f64,
-        pitch: f64,
-    },
-    Tiled {
-        map: ImageRenderer<Tile>,
-        x: u32,
-        y: u32,
-        z: u8,
-    },
+    Static { map: ImageRenderer<Static>, lat: f64, lon: f64, zoom: f64, bearing: f64, pitch: f64 },
+    Tiled { map: ImageRenderer<Tile>, x: u32, y: u32, z: u8 },
 }
 impl Renderer {
     fn render(&mut self) -> Image {
         match self {
-            Renderer::Static {
-                map,
-                lat,
-                lon,
-                zoom,
-                bearing,
-                pitch,
-            } => map
+            Renderer::Static { map, lat, lon, zoom, bearing, pitch } => map
                 .render_static(*lat, *lon, *zoom, *bearing, *pitch)
                 .expect("could not render image"),
             Renderer::Tiled { map, x, y, z } => {
@@ -259,22 +232,19 @@ fn main() {
     println!("Rendering arguments: {args:#?}");
     let output = args.output.clone();
 
-    let before_initalisation = Instant::now();
+    let before_initialisation = Instant::now();
     let mut renderer = args.load();
-    println!("intialisation took {:?}", before_initalisation.elapsed());
+    println!("initialisation took {:?}", before_initialisation.elapsed());
     let before_render1 = Instant::now();
     let data = renderer.render();
     println!(
-        "Rendering successfull in {:?}, writing result to {}",
+        "Rendering successful in {:?}, writing result to {}",
         before_render1.elapsed(),
         output.display()
     );
     println!("Tip: Future renders using the same instance would be faster due to amortized initialization");
     data.as_image().save(&output).unwrap_or_else(|e| {
-        panic!(
-            "Failed to write rendered map to {} because of {e:?}",
-            output.display()
-        )
+        panic!("Failed to write rendered map to {} because of {e:?}", output.display())
     });
     let before_second_render = Instant::now();
     let data = renderer.render();
@@ -290,37 +260,41 @@ mod tests {
 
     #[test]
     fn test_rendering() {
-        let args = Args {
-            width: NonZero::new(32).unwrap(),
-            height: NonZero::new(32).unwrap(),
-            mode: Mode::Static,
-            ..Args::parse()
-        };
-        let mut renderer = args.load();
-        let image = renderer.render();
+        {
+            let args = Args {
+                width: NonZero::new(32).unwrap(),
+                height: NonZero::new(32).unwrap(),
+                mode: Mode::Static,
+                ..Args::parse()
+            };
+            let mut renderer = args.load();
+            let image = renderer.render();
 
-        // Test image properties
-        let img_buffer = image.as_image();
-        assert_eq!(img_buffer.width(), 32);
-        assert_eq!(img_buffer.height(), 32);
-        assert_eq!(img_buffer.dimensions(), (32, 32));
-        assert!(!img_buffer.as_raw().is_empty());
-        assert_eq!(img_buffer.as_raw().len(), 32 * 32 * 4); // RGBA
+            // Test image properties
+            let img_buffer = image.as_image();
+            assert_eq!(img_buffer.width(), 32);
+            assert_eq!(img_buffer.height(), 32);
+            assert_eq!(img_buffer.dimensions(), (32, 32));
+            assert!(!img_buffer.as_raw().is_empty());
+            assert_eq!(img_buffer.as_raw().len(), 32 * 32 * 4); // RGBA
+        }
 
-        let args = Args {
-            width: NonZero::new(64).unwrap(),
-            height: NonZero::new(64).unwrap(),
-            mode: Mode::Tile,
-            ..Args::parse()
-        };
-        let mut renderer = args.load();
-        let image = renderer.render();
+        {
+            let args = Args {
+                width: NonZero::new(64).unwrap(),
+                height: NonZero::new(64).unwrap(),
+                mode: Mode::Tile,
+                ..Args::parse()
+            };
+            let mut renderer = args.load();
+            let image = renderer.render();
 
-        // Test tile rendering
-        let img_buffer = image.as_image();
-        assert_eq!(img_buffer.width(), 64);
-        assert_eq!(img_buffer.height(), 64);
-        assert!(!img_buffer.as_raw().is_empty());
-        assert_eq!(img_buffer.as_raw().len(), 64 * 64 * 4); // RGBA
+            // Test tile rendering
+            let img_buffer = image.as_image();
+            assert_eq!(img_buffer.width(), 64);
+            assert_eq!(img_buffer.height(), 64);
+            assert!(!img_buffer.as_raw().is_empty());
+            assert_eq!(img_buffer.as_raw().len(), 64 * 64 * 4); // RGBA
+        }
     }
 }

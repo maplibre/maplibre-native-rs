@@ -1,13 +1,14 @@
+use super::MapObserver;
+use crate::renderer::bridge::ffi;
+use crate::renderer::bridge::ffi::BridgeImage;
+use crate::renderer::MapDebugOptions;
+use crate::{Latitude, Longitude, ScreenCoordinate, Size};
+use cxx::UniquePtr;
+use image::{ImageBuffer, Rgba};
 use std::f64::consts::PI;
 use std::fmt::Debug;
 use std::marker::PhantomData;
 use std::path::Path;
-
-use cxx::UniquePtr;
-use image::{ImageBuffer, Rgba};
-
-use crate::renderer::bridge::ffi;
-use crate::renderer::MapDebugOptions;
 
 /// A rendered map image.
 ///
@@ -19,9 +20,10 @@ use crate::renderer::MapDebugOptions;
 /// ```no_run
 /// # fn foo() {
 /// use maplibre_native::{ImageRendererBuilder, Image};
+/// use std::num::NonZeroU32;
 ///
-/// let renderer = ImageRendererBuilder::new()
-///     .with_size(512, 512)
+/// let mut renderer = ImageRendererBuilder::new()
+///     .with_size(NonZeroU32::new(512).unwrap(), NonZeroU32::new(512).unwrap())
 ///     .build_static_renderer();
 ///
 /// renderer.load_style_from_url(&"https://demotiles.maplibre.org/style.json".parse().unwrap());
@@ -65,6 +67,10 @@ pub struct Static;
 #[derive(Debug)]
 pub struct Tile;
 
+/// Internal state type to render continuously
+#[derive(Debug)]
+pub struct Continuous;
+
 /// Configuration options for a tile server.
 pub struct ImageRenderer<S> {
     pub(crate) instance: UniquePtr<ffi::MapRenderer>,
@@ -81,10 +87,16 @@ impl<S> Debug for ImageRenderer<S> {
 }
 
 impl<S> ImageRenderer<S> {
+    #[cfg(feature = "wgpu")]
+    /// Bind the renderer to the WGPU device and queue provided by the host UI.
+    pub fn set_device_queue(&mut self, device: wgpu::Device, queue: wgpu::Queue) {
+        self.instance.pin_mut().setDeviceAndQueue(device.into(), queue.into());
+    }
+
     /// Set the style URL for the map.
     pub fn load_style_from_url(&mut self, url: &url::Url) -> &mut Self {
         self.style_specified = true;
-        ffi::MapRenderer_getStyle_loadURL(self.instance.pin_mut(), url.as_ref());
+        self.instance.pin_mut().style_load_from_url(url.as_str());
         self
     }
 
@@ -112,14 +124,19 @@ impl<S> ImageRenderer<S> {
             ));
         };
         self.style_specified = true;
-        ffi::MapRenderer_getStyle_loadURL(self.instance.pin_mut(), &format!("file://{path}"));
+        self.instance.pin_mut().style_load_from_url(&format!("file://{path}"));
         Ok(self)
     }
 
     /// Set debug visualization flags for the map renderer.
     pub fn set_debug_flags(&mut self, flags: MapDebugOptions) -> &mut Self {
-        ffi::MapRenderer_setDebugFlags(self.instance.pin_mut(), flags);
+        self.instance.pin_mut().setDebugFlags(flags);
         self
+    }
+
+    /// Set the renderer output size.
+    pub fn set_map_size(&mut self, size: Size) {
+        self.instance.pin_mut().setSize(&size);
     }
 }
 
@@ -141,8 +158,8 @@ impl ImageRenderer<Static> {
             return Err(RenderingError::StyleNotSpecified);
         }
 
-        ffi::MapRenderer_setCamera(self.instance.pin_mut(), lat, lon, zoom, bearing, pitch);
-        let data = ffi::MapRenderer_render(self.instance.pin_mut());
+        self.instance.pin_mut().setCamera(lat, lon, zoom, bearing, pitch);
+        let data = self.instance.pin_mut().render();
         let bytes = data.as_bytes();
 
         let image = Image::from_raw(bytes).ok_or(RenderingError::InvalidImageData)?;
@@ -162,24 +179,123 @@ impl ImageRenderer<Tile> {
         }
 
         let (lat, lon) = coords_to_lat_lon(f64::from(zoom), x, y);
-        ffi::MapRenderer_setCamera(self.instance.pin_mut(), lat, lon, f64::from(zoom), 0.0, 0.0);
+        self.instance.pin_mut().setCamera(lat.0, lon.0, f64::from(zoom), 0.0, 0.0);
 
-        let data = ffi::MapRenderer_render(self.instance.pin_mut());
+        let data = self.instance.pin_mut().render();
         let bytes = data.as_bytes();
         let image = Image::from_raw(bytes).ok_or(RenderingError::InvalidImageData)?;
         Ok(image)
     }
 }
 
+/// Keeps information about an image including a buffer
+/// This is used, so no unneccesary copy of the data must be made
+pub struct ImagePtr {
+    instance: UniquePtr<BridgeImage>,
+}
+
+impl Debug for ImagePtr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "ImagePtr")
+    }
+}
+
+impl ImagePtr {
+    fn new(image: UniquePtr<BridgeImage>) -> Self {
+        Self { instance: image }
+    }
+
+    pub fn size(&self) -> Size {
+        self.instance.size()
+    }
+
+    pub fn buffer(&self) -> &[u8] {
+        unsafe { std::slice::from_raw_parts(self.instance.get(), self.instance.bufferLength()) }
+    }
+}
+
+impl ImageRenderer<Continuous> {
+    /// Set the camera position using geographic coordinates.
+    ///
+    /// See [this grapic](https://en.wikipedia.org/wiki/Degrees_of_freedom_(mechanics)#/media/File:Flight_dynamics_with_text.svg)
+    /// as a reminder what bearing, pitch (and yaw) is.
+    ///
+    /// Important: Without setting the camera initially no image will be generated!
+    pub fn set_camera(
+        &mut self,
+        latitude: Latitude,
+        longitude: Longitude,
+        zoom: f64,
+        bearing: f64,
+        pitch: f64,
+    ) {
+        self.instance.pin_mut().setCamera(latitude.0, longitude.0, zoom, bearing, pitch);
+    }
+
+    /// Get access to the map observer to setup callbacks
+    pub fn map_observer(&mut self) -> MapObserver {
+        MapObserver::new(self.instance.pin_mut().observer())
+    }
+
+    /// Move map by
+    pub fn move_by(&mut self, delta: ScreenCoordinate) {
+        self.instance.pin_mut().moveBy(&delta);
+    }
+
+    /// Scale map (zooming)
+    pub fn scale_by(&mut self, scale: f64, pos: ScreenCoordinate) {
+        self.instance.pin_mut().scaleBy(scale, &pos);
+    }
+
+    /// Adjust the map pitch by the given delta in degrees.
+    pub fn pitch_by(&mut self, pitch: f64) {
+        self.instance.pin_mut().pitchBy(pitch);
+    }
+
+    /// Rotate the map using two screen coordinates that represent the gesture delta.
+    pub fn rotate_by(&mut self, first: ScreenCoordinate, second: ScreenCoordinate) {
+        self.instance.pin_mut().rotateBy(&first, &second);
+    }
+
+    /// Trigger render loop once (animations)
+    pub fn render_once(&mut self) {
+        self.instance.pin_mut().render_once();
+    }
+
+    /// Reading rendered image
+    pub fn read_still_image(&mut self) -> ImagePtr {
+        ImagePtr::new(self.instance.pin_mut().readStillImage())
+    }
+
+    #[cfg(feature = "wgpu")]
+    /// Take the latest rendered map texture, if one is available.
+    pub fn take_texture(&mut self) -> Option<wgpu::Texture> {
+        let texture_2d = self.instance.pin_mut().takeTexture();
+        if texture_2d.is_null() {
+            return None;
+        }
+
+        let raw_texture = ffi::getRawTextureHandle(&texture_2d);
+        if raw_texture == 0 {
+            return None;
+        }
+
+        let texture_handle = raw_texture as binding_generator::WGPUTexture;
+        let texture = unsafe { binding_generator::clone_texture_from_handle(texture_handle) };
+        unsafe {
+            binding_generator::wgpuTextureRelease(texture_handle);
+        }
+        texture
+    }
+}
+
 #[allow(clippy::cast_precision_loss)]
-fn coords_to_lat_lon(zoom: f64, x: u32, y: u32) -> (f64, f64) {
+fn coords_to_lat_lon(zoom: f64, x: u32, y: u32) -> (Latitude, Longitude) {
     // https://github.com/oldmammuth/slippy_map_tilenames/blob/058678480f4b50b622cda7a48b98647292272346/src/lib.rs#L114
     let zz = 2_f64.powf(zoom);
     let lng = (f64::from(x) + 0.5) / zz * 360_f64 - 180_f64;
-    let lat = ((PI * (1_f64 - 2_f64 * (f64::from(y) + 0.5) / zz)).sinh())
-        .atan()
-        .to_degrees();
-    (lat, lng)
+    let lat = ((PI * (1_f64 - 2_f64 * (f64::from(y) + 0.5) / zz)).sinh()).atan().to_degrees();
+    (Latitude(lat), Longitude(lng))
 }
 
 /// Errors that can occur during map rendering operations.
@@ -191,4 +307,25 @@ pub enum RenderingError {
     /// The renderer returned invalid or corrupted image data.
     #[error("Invalid image data received from renderer")]
     InvalidImageData,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{coords_to_lat_lon, Latitude, Longitude};
+
+    #[test]
+    fn converts_tile_zero_to_geographic_center() {
+        let (lat, lon) = coords_to_lat_lon(0.0, 0, 0);
+        assert!(matches!(lat, Latitude(v) if v.abs() < f64::EPSILON));
+        assert!(matches!(lon, Longitude(v) if v.abs() < f64::EPSILON));
+    }
+
+    #[test]
+    fn tile_coordinate_conversion_returns_typed_coordinates() {
+        let (lat, lon) = coords_to_lat_lon(1.0, 1, 1);
+        let Latitude(lat) = lat;
+        let Longitude(lon) = lon;
+        assert!((-90.0..=90.0).contains(&lat));
+        assert!((-180.0..=180.0).contains(&lon));
+    }
 }

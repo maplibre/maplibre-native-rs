@@ -1,6 +1,6 @@
 [package]
 name = "maplibre_native"
-version = "0.4.1"
+version = "0.4.5"
 description = "Rust bindings to the MapLibre Native map rendering engine"
 authors = ["Yuri Astrakhan <YuriAstrakhan@gmail.com>", "MapLibre contributors"]
 repository = "https://github.com/maplibre/maplibre-native-rs"
@@ -8,35 +8,43 @@ edition.workspace = true
 license.workspace = true
 keywords = ["maplibre", "rendering", "gis", "tiles"]
 categories = ["external-ffi-bindings", "science::geo", "rendering"]
-rust-version = "1.87" # due to cxx
+rust-version = "1.90" # due to image crate
 exclude = []
 
 [package.metadata.mln]
 repo = "maplibre/maplibre-native"
-release = "core-aeaadc06b4e0614f4f243db4dce210c22dde9f9c"
+# This version is used only if maplibre-native-rs is build with prebuilt
+# maplibre-native binaries. It is not used when building maplibre-native from source.
+# When building from source, the version of maplibre-native is specified in the `build.rs` file
+release = "core-9b6325a14e2cf1cc29ab28c1855ad376f1ba4903"
 
 [features]
-default = ["log", "pool"] # automatically picks the platform-specific features
-metal = [] # default on Apple platforms, do not add to default features
+default = ["log", "pool"]
+metal = []
 opengl = []
-vulkan = []  # default on other platforms
+vulkan = []
+wgpu = ["dep:wgpu", "dep:binding-generator"]
 log = ["dep:log"]
 pool = ["dep:tokio"]
 
 [dependencies]
+binding-generator = { path = "binding-generator", optional = true }
 cxx.workspace = true
 image.workspace = true
 log = { workspace = true, optional = true }
 thiserror.workspace = true
 tokio = { workspace = true, features = ["sync"], optional = true }
 url.workspace = true
+wgpu = { workspace = true, optional = true }
 
 [build-dependencies]
 cmake.workspace = true
+const_format = "0.2.35"
 cxx-build.workspace = true
 downloader.workspace = true
 flate2.workspace = true
 tar.workspace = true
+toml = "0.8"
 walkdir.workspace = true
 
 [dev-dependencies]
@@ -45,9 +53,6 @@ futures.workspace = true
 insta = { workspace = true, features = ["json", "redactions"] }
 tokio = { workspace = true, features = ["macros", "sync", "rt-multi-thread"] }
 
-[lints]
-workspace = true
-
 ##########################################################
 ##########################################################
 ####  Workspace configuration for the entire project  ####
@@ -55,7 +60,7 @@ workspace = true
 ##########################################################
 
 [workspace]
-members = [".", "examples/*"]
+members = [".", "binding-generator", "examples/*"]
 
 [workspace.package]
 edition = "2021"
@@ -65,21 +70,22 @@ license = "MIT OR Apache-2.0"
 axum = "0.8"
 clap = { version = "4.5.27", features = ["derive", "env", "unstable-markdown"] }
 cmake = "0.1"
-cxx = "1.0.138"
-cxx-build = "1.0.138"
-downloader = "0.2.8"
+cxx = "1.0"
+cxx-build = "1.0" # TODO: required to be a dependency and not only a build dependency?
+downloader = "0.2"
 env_logger = "0.11"
-flate2 = "1.1.1"
+flate2 = "1.1"
 futures = "0.3"
 image = "0.25"
-insta = "1.43.2"
+insta = "1.43"
 log = "0.4"
-maplibre_native = { path = ".", version = "0.4.1" }
+maplibre_native = { path = ".", version = "0.4.5" }
 tar = "0.4.44"
 thiserror = "2.0.16"
 tokio = { version = "1", features = [], default-features = false }
 url = "2.5.7"
 walkdir = "2.5.0"
+wgpu = { version = "29.0.0" }
 
 [workspace.lints.rust]
 missing_debug_implementations = "warn"
@@ -89,7 +95,16 @@ unused_qualifications = "warn"
 [workspace.lints.clippy]
 pedantic = { level = "warn", priority = -1 }
 
+[lints]
+workspace = true
+
 # https://insta.rs/docs/quickstart/
 [profile.dev.package]
 insta.opt-level = 3
 similar.opt-level = 3
+
+# To debug the build script
+# Use `cargo build -v 2>&1 | grep build-script-build`
+# to find the location of the build script
+[profile.dev.build-override]
+debug = true

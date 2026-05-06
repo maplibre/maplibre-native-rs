@@ -67,9 +67,8 @@ impl SingleThreadedRenderPool {
                 // Load style if it is different from current
                 if current_style.as_ref() != Some(&request.style_path) {
                     if let Err(e) = renderer.load_style_from_path(&request.style_path) {
-                        let _ = request
-                            .response
-                            .send(Err(SingleThreadedRenderPoolError::IOError(e)));
+                        let _ =
+                            request.response.send(Err(SingleThreadedRenderPoolError::IOError(e)));
                         continue;
                     }
                     current_style = Some(request.style_path.clone());
@@ -84,9 +83,7 @@ impl SingleThreadedRenderPool {
             }
         });
 
-        Self {
-            rendering_requests: tx,
-        }
+        Self { rendering_requests: tx }
     }
 
     /// Render an encoded tile [`Image`] asynchronously in a centralised pool
@@ -104,18 +101,10 @@ impl SingleThreadedRenderPool {
         let (response_tx, response_rx) = oneshot::channel();
 
         self.rendering_requests
-            .send(RenderRequest {
-                style_path,
-                z,
-                x,
-                y,
-                response: response_tx,
-            })
+            .send(RenderRequest { style_path, z, x, y, response: response_tx })
             .map_err(|_| SingleThreadedRenderPoolError::FailedToSendRequest)?;
 
-        response_rx
-            .await
-            .map_err(|_| SingleThreadedRenderPoolError::FailedToReceiveResponse)?
+        response_rx.await.map_err(|_| SingleThreadedRenderPoolError::FailedToReceiveResponse)?
     }
 
     /// Get the global rendering pool instance.
