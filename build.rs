@@ -406,6 +406,18 @@ fn build_local(
         println!("cargo:rerun-if-env-changed=ANDROID_NDK_ROOT");
         let ndk_root = PathBuf::from(env::var_os("ANDROID_NDK_ROOT").expect("ANDROID_NDK_ROOT is not set"));
         println!("Android ndk root: {:?}", ndk_root);
+        let ndk_bin = ndk_root.join("toolchains").join("llvm").join("prebuilt").join("linux-x86_64").join("bin");
+        let ndk_clang = ndk_bin.join("clang");
+        let ndk_clangxx = ndk_bin.join("clang++");
+
+        // Pin toolchain compilers to avoid CMake cache churn when host wrappers (for example ccache)
+        // change between invocations. Cache churn can trigger an internal reconfigure that drops backend flags.
+        config.configure_arg(format!("-DCMAKE_C_COMPILER={}", ndk_clang.display()));
+        config.configure_arg(format!("-DCMAKE_CXX_COMPILER={}", ndk_clangxx.display()));
+        config.configure_arg(format!("-DCMAKE_ASM_COMPILER={}", ndk_clang.display()));
+
+        config.configure_arg("-DANDROID_ABI=arm64-v8a");
+        config.configure_arg("-DANDROID_PLATFORM=android-33");
         config.configure_arg(format!("-DCMAKE_TOOLCHAIN_FILE={}", ndk_root.join("build").join("cmake").join("android.toolchain.cmake").as_os_str().to_str().unwrap()));
     }
 
