@@ -409,6 +409,10 @@ fn build_local(
         let ndk_bin = ndk_root.join("toolchains").join("llvm").join("prebuilt").join("linux-x86_64").join("bin");
         let ndk_clang = ndk_bin.join("clang");
         let ndk_clangxx = ndk_bin.join("clang++");
+        let toolchain_file = ndk_root.join("build").join("cmake").join("android.toolchain.cmake");
+        if !toolchain_file.exists() {
+            panic!("The toolchain file does not exist: {}", toolchain_file.as_os_str().to_str().unwrap())
+        }
 
         // Pin toolchain compilers to avoid CMake cache churn when host wrappers (for example ccache)
         // change between invocations. Cache churn can trigger an internal reconfigure that drops backend flags.
@@ -602,6 +606,13 @@ fn build_mln() {
             // darwin builds vendored ICU and uses the system sqlite3
             println!("cargo:rustc-link-lib=mbgl-vendor-icu");
             println!("cargo:rustc-link-lib=sqlite3");
+        } else if is_android {
+            println!("cargo:rustc-link-lib=mbgl-vendor-icu");
+            println!("cargo:rustc-link-lib=mbgl-harfbuzz");
+            println!("cargo:rustc-link-lib=mbgl-freetype");
+            println!("cargo:rustc-link-lib=mbgl-vendor-csscolorparser");
+            println!("cargo:rustc-link-lib=mbgl-vendor-parsedate");
+            println!("cargo:rustc-link-lib=mbgl-vendor-sqlite");
         } else {
             println!("cargo:rustc-link-lib=mbgl-vendor-nunicode");
             println!("cargo:rustc-link-lib=mbgl-vendor-sqlite");
