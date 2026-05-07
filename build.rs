@@ -19,6 +19,7 @@ use downloader::{Download, Downloader};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::{env, fs};
+use std::error::Error;
 
 // Used when building locally
 const MLN_REPOSITORY_URL: &str = "https://github.com/Murmele/maplibre-native.git";
@@ -46,6 +47,38 @@ const BRIDGE_FILES: &[&str] = &[
 ];
 
 const BRIDGE_INCLUDE_DIRS: &[&str] = &[/*"include", */ "src/cpp"];
+
+struct AndroidConfig {
+    ndk_root: PathBuf,
+    platform: String,
+    toolchain_file: PathBuf,
+    abi: String,
+    sysroot: PathBuf
+}
+
+impl AndroidConfig {
+    fn new() -> Self {
+        println!("cargo:rerun-if-env-changed=ANDROID_NDK_ROOT");
+        println!("cargo:rerun-if-env-changed=ANDROID_PLATFORM");
+        println!("cargo:rerun-if-env-changed=ANDROID_NDK_SYSROOT");
+        let ndk_root = PathBuf::from(env::var_os("ANDROID_NDK_ROOT").expect("ANDROID_NDK_ROOT is not set"));
+        let sysroot = PathBuf::from(env::var_os("ANDROID_NDK_SYSROOT").expect("ANDROID_NDK_SYSROOT is not set"));
+        let platform = env::var("ANDROID_PLATFORM").expect("ANDROID_PLATFORM is not set. Example: 'android-33'");
+        println!("Android ndk root: {:?}", ndk_root);
+        let toolchain_file = ndk_root.join("build").join("cmake").join("android.toolchain.cmake");
+        if !toolchain_file.exists() {
+            panic!("The toolchain file does not exist: {}", toolchain_file.as_os_str().to_str().unwrap())
+        }
+
+        Self {
+            ndk_root,
+            platform,
+            toolchain_file,
+            abi: String::from("arm64-v8a"),
+            sysroot
+        }
+    }
+}
 
 /// Supported graphics rendering APIs.
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
@@ -344,13 +377,14 @@ fn bundle_precompiled() -> Info {
 }
 
 fn build_local(
-    respository_dir: PathBuf,
+    repository_dir: PathBuf,
     name: &str,
     amalgam_lib: bool,
     target_os: &str,
+    android_config: &Option<AndroidConfig>
 ) -> Result<Info, Box<dyn std::error::Error>> {
     const TARGET_NAME: &str = "mbgl-core";
-    let maplibre_native_dir = respository_dir.join(name);
+    let maplibre_native_dir = repository_dir.join(name);
 
     // Some CI cache restores may leave an incomplete directory tree.
     // Require files that prove this is a usable maplibre-native checkout.
@@ -368,9 +402,9 @@ fn build_local(
     // Clone Repository
     if !maplibre_native_dir.exists() {
         println!("cargo:warning=Cloning maplibre-native.");
-        fs::create_dir_all(&respository_dir)?;
+        fs::create_dir_all(&repository_dir)?;
         let clone_status = Command::new("git")
-            .current_dir(respository_dir)
+            .current_dir(repository_dir)
             .args(["clone", "--depth", "1", "--revision", MLN_COMMIT, MLN_REPOSITORY_URL, name])
             .status()?;
         if !clone_status.success() {
@@ -402,17 +436,11 @@ fn build_local(
     if target_os == "macos" || target_os == "ios" {
         config.generator("Ninja");
     }
-    if target_os == "android" {
-        println!("cargo:rerun-if-env-changed=ANDROID_NDK_ROOT");
-        let ndk_root = PathBuf::from(env::var_os("ANDROID_NDK_ROOT").expect("ANDROID_NDK_ROOT is not set"));
-        println!("Android ndk root: {:?}", ndk_root);
-        let ndk_bin = ndk_root.join("toolchains").join("llvm").join("prebuilt").join("linux-x86_64").join("bin");
+    if let Some(android_config) = android_config {
+        
+        let ndk_bin = android_config.ndk_root.join("toolchains").join("llvm").join("prebuilt").join("linux-x86_64").join("bin");
         let ndk_clang = ndk_bin.join("clang");
         let ndk_clangxx = ndk_bin.join("clang++");
-        let toolchain_file = ndk_root.join("build").join("cmake").join("android.toolchain.cmake");
-        if !toolchain_file.exists() {
-            panic!("The toolchain file does not exist: {}", toolchain_file.as_os_str().to_str().unwrap())
-        }
 
         // Pin toolchain compilers to avoid CMake cache churn when host wrappers (for example ccache)
         // change between invocations. Cache churn can trigger an internal reconfigure that drops backend flags.
@@ -420,9 +448,12 @@ fn build_local(
         config.configure_arg(format!("-DCMAKE_CXX_COMPILER={}", ndk_clangxx.display()));
         config.configure_arg(format!("-DCMAKE_ASM_COMPILER={}", ndk_clang.display()));
 
-        config.configure_arg("-DANDROID_ABI=arm64-v8a");
-        config.configure_arg("-DANDROID_PLATFORM=android-33");
-        config.configure_arg(format!("-DCMAKE_TOOLCHAIN_FILE={}", ndk_root.join("build").join("cmake").join("android.toolchain.cmake").as_os_str().to_str().unwrap()));
+        config.configure_arg(format!("-DANDROID_ABI={}", android_config.abi));
+        config.configure_arg(format!("-DANDROID_PLATFORM={}", android_config.platform));
+        config.configure_arg(format!("-DCMAKE_TOOLCHAIN_FILE={}", android_config.toolchain_file.as_os_str().to_str().unwrap()));
+
+        build_png(android_config).unwrap();
+        build_uv(android_config).unwrap();
     }
 
     match api {
@@ -543,6 +574,12 @@ fn build_mln() {
         }
     }
 
+    let android_config = if target_os == "android" {
+        Some(AndroidConfig::new())
+    } else {
+        None
+    };
+
     let info = if precompiled {
         bundle_precompiled()
     } else if system_lib {
@@ -551,7 +588,7 @@ fn build_mln() {
         panic!("Not implemented")
     } else {
         const MAPLIBRE_NATIVE_DIR_NAME: &str = "maplibre-native";
-        let respository_dir = if local_repository.is_empty() {
+        let repository_dir = if local_repository.is_empty() {
             let root = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
             root.join("target")
         } else {
@@ -563,13 +600,14 @@ fn build_mln() {
         };
 
         match build_local(
-            respository_dir.clone(),
+            repository_dir.clone(),
             MAPLIBRE_NATIVE_DIR_NAME,
             amalgam_lib,
             &target_os,
+            &android_config,
         ) {
             Err(e) => {
-                if respository_dir.join(MAPLIBRE_NATIVE_DIR_NAME).exists()
+                if repository_dir.join(MAPLIBRE_NATIVE_DIR_NAME).exists()
                     && local_repository.is_empty()
                 {
                     // let _ = fs::remove_dir_all(clone_dir.join(MAPLIBRE_NATIVE_DIR_NAME));
@@ -684,6 +722,87 @@ fn build_mln() {
             }
         }
     }
+}
+
+fn build_uv(android_config: &AndroidConfig) -> Result<(), Box<dyn Error>> {
+    let name = "libuv";
+    let root = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
+    let clone_dir = root.join("target");
+    let libuv_dir = clone_dir.join(name);
+
+
+    const URL: &str = "https://github.com/libuv/libuv.git";
+    const REVISION: &str = "v1.52.1";
+
+    // Clone Repository
+    if !libuv_dir.exists() {
+        println!("cargo:warning=Cloning {name}.");
+        fs::create_dir_all(&clone_dir)?;
+        let clone_status = Command::new("git")
+            .current_dir(clone_dir)
+            .args(["clone", "--depth", "1", "--revision", REVISION, URL, name])
+            .status()?;
+        if !clone_status.success() {
+            return Err(
+                format!("Failed to clone {name} repository: {clone_status}").into()
+            );
+        }
+    }
+
+    let mut config = cmake::Config::new(libuv_dir.clone());
+    config.generator("Ninja");
+    config.configure_arg(format!("-DANDROID_ABI={}", android_config.abi));
+    config.configure_arg(format!("-DANDROID_PLATFORM={}", android_config.platform));
+    config.configure_arg(format!("-DCMAKE_TOOLCHAIN_FILE={}", android_config.toolchain_file.as_os_str().to_str().unwrap()));
+    config.configure_arg("-DCMAKE_BUILD_TYPE=Release");
+    config.out_dir(PathBuf::from(env::var_os("OUT_DIR").expect("OUT_DIR is not set")).join(name));
+    config.build_target("uv_a");
+    let dest = config.build();
+    println!("cargo:rustc-link-search=native={}", dest.join("build").display());
+
+    Ok(())
+}
+
+fn build_png(android_config: &AndroidConfig) -> Result<(), Box<dyn Error>> {
+    let name = "libpng";
+    let root = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
+    let clone_dir = root.join("target");
+    let libpng_dir = clone_dir.join(name);
+
+
+    const URL: &str = "https://github.com/pnggroup/libpng.git";
+    const REVISION: &str = "v1.6.58";
+
+    // Clone Repository
+    if !libpng_dir.exists() {
+        println!("cargo:warning=Cloning {name}.");
+        fs::create_dir_all(&clone_dir)?;
+        let clone_status = Command::new("git")
+            .current_dir(clone_dir)
+            .args(["clone", "--depth", "1", "--revision", REVISION, URL, name])
+            .status()?;
+        if !clone_status.success() {
+            return Err(
+                format!("Failed to clone {name} repository: {clone_status}").into()
+            );
+        }
+    }
+
+    let mut config = cmake::Config::new(libpng_dir.clone());
+    config.generator("Ninja");
+    config.configure_arg(format!("-DANDROID_ABI={}", android_config.abi));
+    config.configure_arg(format!("-DANDROID_PLATFORM={}", android_config.platform));
+    config.configure_arg(format!("-DCMAKE_TOOLCHAIN_FILE={}", android_config.toolchain_file.as_os_str().to_str().unwrap()));
+    config.configure_arg("-DSKIP_INSTALL_ALL=1");
+    config.configure_arg("-DPNG_INTEL_SSE_OPT=OFF");
+    config.configure_arg(format!("-DCMAKE_SYSROOT={}", android_config.sysroot.as_os_str().to_str().unwrap()));
+    config.configure_arg("-DCMAKE_BUILD_TYPE=Release");
+    config.out_dir(PathBuf::from(env::var_os("OUT_DIR").expect("OUT_DIR is not set")).join(name));
+    config.build_target("png_static");
+    let dest = config.build();
+    println!("cargo:rustc-link-search=native={}", dest.join("build").display());
+
+    Ok(())
 }
 
 fn main() {
