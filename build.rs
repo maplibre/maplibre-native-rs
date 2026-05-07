@@ -452,6 +452,8 @@ fn build_local(
         config.configure_arg(format!("-DANDROID_PLATFORM={}", android_config.platform));
         config.configure_arg(format!("-DCMAKE_TOOLCHAIN_FILE={}", android_config.toolchain_file.as_os_str().to_str().unwrap()));
 
+        build_jpeg(android_config).unwrap();
+        build_webp(android_config).unwrap();
         build_png(android_config).unwrap();
         build_uv(android_config).unwrap();
     }
@@ -801,6 +803,106 @@ fn build_png(android_config: &AndroidConfig) -> Result<(), Box<dyn Error>> {
     config.build_target("png_static");
     let dest = config.build();
     println!("cargo:rustc-link-search=native={}", dest.join("build").display());
+
+    Ok(())
+}
+
+fn build_jpeg(android_config: &AndroidConfig) -> Result<(), Box<dyn Error>> {
+    let name = "libjpeg-turbo";
+    let root = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
+    let clone_dir = root.join("target");
+    let libjpeg_dir = clone_dir.join(name);
+
+    const URL: &str = "https://github.com/libjpeg-turbo/libjpeg-turbo.git";
+    const REVISION: &str = "3.1.2";
+
+    // Clone Repository
+    if !libjpeg_dir.exists() {
+        println!("cargo:warning=Cloning {name}.");
+        fs::create_dir_all(&clone_dir)?;
+        let clone_status = Command::new("git")
+            .current_dir(clone_dir)
+            .args(["clone", "--depth", "1", "--branch", REVISION, URL, name])
+            .status()?;
+        if !clone_status.success() {
+            return Err(format!("Failed to clone {name} repository: {clone_status}").into());
+        }
+    }
+
+    let mut config = cmake::Config::new(libjpeg_dir.clone());
+    config.generator("Ninja");
+    config.configure_arg(format!("-DANDROID_ABI={}", android_config.abi));
+    config.configure_arg(format!("-DANDROID_PLATFORM={}", android_config.platform));
+    config.configure_arg(format!(
+        "-DCMAKE_TOOLCHAIN_FILE={}",
+        android_config.toolchain_file.as_os_str().to_str().unwrap()
+    ));
+    config.configure_arg(format!(
+        "-DCMAKE_SYSROOT={}",
+        android_config.sysroot.as_os_str().to_str().unwrap()
+    ));
+    config.configure_arg("-DENABLE_SHARED=OFF");
+    config.configure_arg("-DENABLE_STATIC=ON");
+    config.configure_arg("-DCMAKE_BUILD_TYPE=Release");
+    config.out_dir(PathBuf::from(env::var_os("OUT_DIR").expect("OUT_DIR is not set")).join(name));
+    config.build_target("jpeg-static");
+    let dest = config.build();
+
+    println!("cargo:rustc-link-search=native={}", dest.join("build").display());
+    println!("cargo:rustc-link-search=native={}", dest.join("lib").display());
+
+    Ok(())
+}
+
+fn build_webp(android_config: &AndroidConfig) -> Result<(), Box<dyn Error>> {
+    let name = "libwebp";
+    let root = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
+    let clone_dir = root.join("target");
+    let libwebp_dir = clone_dir.join(name);
+
+    const URL: &str = "https://chromium.googlesource.com/webm/libwebp";
+    const REVISION: &str = "v1.6.0";
+
+    // Clone Repository
+    if !libwebp_dir.exists() {
+        println!("cargo:warning=Cloning {name}.");
+        fs::create_dir_all(&clone_dir)?;
+        let clone_status = Command::new("git")
+            .current_dir(clone_dir)
+            .args(["clone", "--depth", "1", "--branch", REVISION, URL, name])
+            .status()?;
+        if !clone_status.success() {
+            return Err(format!("Failed to clone {name} repository: {clone_status}").into());
+        }
+    }
+
+    let mut config = cmake::Config::new(libwebp_dir.clone());
+    config.generator("Ninja");
+    config.configure_arg(format!("-DANDROID_ABI={}", android_config.abi));
+    config.configure_arg(format!("-DANDROID_PLATFORM={}", android_config.platform));
+    config.configure_arg(format!(
+        "-DCMAKE_TOOLCHAIN_FILE={}",
+        android_config.toolchain_file.as_os_str().to_str().unwrap()
+    ));
+    config.configure_arg(format!(
+        "-DCMAKE_SYSROOT={}",
+        android_config.sysroot.as_os_str().to_str().unwrap()
+    ));
+    config.configure_arg("-DBUILD_SHARED_LIBS=OFF");
+    config.configure_arg("-DWEBP_BUILD_CWEBP=OFF");
+    config.configure_arg("-DWEBP_BUILD_DWEBP=OFF");
+    config.configure_arg("-DWEBP_BUILD_GIF2WEBP=OFF");
+    config.configure_arg("-DWEBP_BUILD_IMG2WEBP=OFF");
+    config.configure_arg("-DWEBP_BUILD_VWEBP=OFF");
+    config.configure_arg("-DWEBP_BUILD_WEBPINFO=OFF");
+    config.configure_arg("-DWEBP_BUILD_EXTRAS=OFF");
+    config.configure_arg("-DCMAKE_BUILD_TYPE=Release");
+    config.out_dir(PathBuf::from(env::var_os("OUT_DIR").expect("OUT_DIR is not set")).join(name));
+    config.build_target("webp");
+    let dest = config.build();
+
+    println!("cargo:rustc-link-search=native={}", dest.join("build").display());
+    println!("cargo:rustc-link-search=native={}", dest.join("lib").display());
 
     Ok(())
 }
