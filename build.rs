@@ -671,7 +671,11 @@ fn build_mln() {
             println!("cargo:rustc-link-lib=SPIRV-Tools-opt"); //sudo dnf install  spirv-tools-devel // Required by glslang spirv-tools-devel
             println!("cargo:rustc-link-lib=SPIRV-Tools"); //sudo dnf install  spirv-tools-devel // Required by glslang spirv-tools-devel
         }
-        println!("cargo:rustc-link-lib=png"); // sudo dnf install libpng-devel
+        if is_android {
+            println!("cargo:rustc-link-lib=png16");
+        } else {
+            println!("cargo:rustc-link-lib=png"); // sudo dnf install libpng-devel
+        }
         println!("cargo:rustc-link-lib=jpeg"); // sudo dnf install libjpeg-turbo-devel
         println!("cargo:rustc-link-lib=uv"); // sudo dnf install libuv-devel
         println!("cargo:rustc-link-lib=webp"); // sudo dnf install libwebp-devel
@@ -790,6 +794,20 @@ fn build_png(android_config: &AndroidConfig) -> Result<(), Box<dyn Error>> {
         }
     }
 
+    let android_api = android_config
+        .platform
+        .strip_prefix("android-")
+        .expect("ANDROID_PLATFORM must look like android-<api>");
+    let target_triple = env::var("TARGET").expect("TARGET is not set");
+    let zlib_include_dir = android_config.sysroot.join("usr").join("include");
+    let zlib_library = android_config
+        .sysroot
+        .join("usr")
+        .join("lib")
+        .join(target_triple)
+        .join(android_api)
+        .join("libz.so");
+
     let mut config = cmake::Config::new(libpng_dir.clone());
     config.generator("Ninja");
     config.configure_arg(format!("-DANDROID_ABI={}", android_config.abi));
@@ -797,6 +815,8 @@ fn build_png(android_config: &AndroidConfig) -> Result<(), Box<dyn Error>> {
     config.configure_arg(format!("-DCMAKE_TOOLCHAIN_FILE={}", android_config.toolchain_file.as_os_str().to_str().unwrap()));
     config.configure_arg("-DSKIP_INSTALL_ALL=1");
     config.configure_arg("-DPNG_INTEL_SSE_OPT=OFF");
+    config.configure_arg(format!("-DZLIB_INCLUDE_DIR={}", zlib_include_dir.display()));
+    config.configure_arg(format!("-DZLIB_LIBRARY={}", zlib_library.display()));
     config.configure_arg(format!("-DCMAKE_SYSROOT={}", android_config.sysroot.as_os_str().to_str().unwrap()));
     config.configure_arg("-DCMAKE_BUILD_TYPE=Release");
     config.out_dir(PathBuf::from(env::var_os("OUT_DIR").expect("OUT_DIR is not set")).join(name));
