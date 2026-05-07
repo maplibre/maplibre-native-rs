@@ -3,6 +3,7 @@ use crate::renderer::callbacks::{
     void_callback, CameraDidChangeCallback, FailingLoadingMapCallback,
     FinishRenderingFrameCallback, VoidCallback,
 };
+use crate::renderer::file_source::{fs_request_callback, FileSourceRequestCallback};
 use std::fmt::Display;
 use std::ops::Sub;
 
@@ -402,6 +403,87 @@ pub mod map_observer {
             self: &CxxMapObserver,
             callback: Box<CameraDidChangeCallback>,
         );
+    }
+}
+
+#[allow(clippy::borrow_as_ptr, unused_qualifications)]
+#[cxx::bridge(namespace = "mln::bridge")]
+/// Rust-backed FileSource bridge. See `src/cpp/rust_file_source.{h,cpp}`
+/// for the C++ side.
+pub mod file_source {
+    #[namespace = "mln::bridge"]
+    #[repr(u8)]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    /// Resource kinds — mirror of `mbgl::Resource::Kind`.
+    pub enum ResourceKind {
+        /// Unknown / unspecified resource kind.
+        Unknown = 0,
+        /// A style.json.
+        Style = 1,
+        /// A TileJSON / source descriptor.
+        Source = 2,
+        /// A single tile (vector or raster).
+        Tile = 3,
+        /// A glyph PBF range.
+        Glyphs = 4,
+        /// A sprite sheet PNG.
+        SpriteImage = 5,
+        /// A sprite sheet JSON.
+        SpriteJSON = 6,
+        /// A generic image resource.
+        Image = 7,
+    }
+
+    #[namespace = "mln::bridge"]
+    #[repr(u8)]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    /// Error reason categories — mirror of `mbgl::Response::Error::Reason`.
+    pub enum FsErrorReason {
+        /// mbgl's "no error" sentinel; not a meaningful error category.
+        Success = 1,
+        /// Resource not found at the requested URL.
+        NotFound = 2,
+        /// Server-side error (5xx and similar).
+        Server = 3,
+        /// Transport-level connection failure.
+        Connection = 4,
+        /// Rate-limit response.
+        RateLimit = 5,
+        /// Any other error.
+        Other = 6,
+    }
+
+    /// FFI shape for a resource-request response. `error_reason ==
+    /// FsErrorReason::Success` means no error; any other value is the
+    /// mbgl reason that gets attached to the `mbgl::Response::Error`.
+    /// `no_content == true` with `error_reason == Success` is a
+    /// well-formed miss (e.g. tile not present).
+    #[derive(Debug)]
+    pub struct RustFsResponse {
+        pub data: Vec<u8>,
+        pub error_reason: FsErrorReason,
+        pub error_message: String,
+        pub no_content: bool,
+    }
+
+    extern "Rust" {
+        type FileSourceRequestCallback;
+
+        fn fs_request_callback(
+            callback: &FileSourceRequestCallback,
+            url: &str,
+            kind: ResourceKind,
+        ) -> RustFsResponse;
+    }
+
+    unsafe extern "C++" {
+        include!("rust_file_source.h");
+        type ResourceKind;
+        type FsErrorReason;
+
+        /// Install the Rust closure as the `ResourceLoader` file source
+        /// factory. Process-global; replaces any previous callback.
+        fn register_rust_file_source_factory(callback: Box<FileSourceRequestCallback>);
     }
 }
 
