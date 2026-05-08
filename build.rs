@@ -23,7 +23,7 @@ use std::error::Error;
 
 // Used when building locally
 const MLN_REPOSITORY_URL: &str = "https://github.com/Murmele/maplibre-native.git";
-const MLN_COMMIT: &str = "6d4ff7ce1c4a6b0425233e3528582f6cab167e6f";
+const MLN_COMMIT: &str = "608f9b8e8e94fff1c72aed061004a21d71f603c6";
 
 // Files of the bridge
 const BRIDGE_FILES: &[&str] = &[
@@ -53,7 +53,9 @@ struct AndroidConfig {
     platform: String,
     toolchain_file: PathBuf,
     abi: String,
-    sysroot: PathBuf
+    sysroot: PathBuf,
+    ndk_clang: PathBuf,
+    ndk_clangxx: PathBuf,
 }
 
 impl AndroidConfig {
@@ -70,12 +72,18 @@ impl AndroidConfig {
             panic!("The toolchain file does not exist: {}", toolchain_file.as_os_str().to_str().unwrap())
         }
 
+        let ndk_bin = ndk_root.join("toolchains").join("llvm").join("prebuilt").join("linux-x86_64").join("bin");
+        let ndk_clang = ndk_bin.join("clang");
+        let ndk_clangxx = ndk_bin.join("clang++");
+
         Self {
             ndk_root,
             platform,
             toolchain_file,
             abi: String::from("arm64-v8a"),
-            sysroot
+            sysroot,
+            ndk_clang,
+            ndk_clangxx,
         }
     }
 }
@@ -437,25 +445,47 @@ fn build_local(
         config.generator("Ninja");
     }
     if let Some(android_config) = android_config {
-        
-        let ndk_bin = android_config.ndk_root.join("toolchains").join("llvm").join("prebuilt").join("linux-x86_64").join("bin");
-        let ndk_clang = ndk_bin.join("clang");
-        let ndk_clangxx = ndk_bin.join("clang++");
-
         // Pin toolchain compilers to avoid CMake cache churn when host wrappers (for example ccache)
         // change between invocations. Cache churn can trigger an internal reconfigure that drops backend flags.
-        config.configure_arg(format!("-DCMAKE_C_COMPILER={}", ndk_clang.display()));
-        config.configure_arg(format!("-DCMAKE_CXX_COMPILER={}", ndk_clangxx.display()));
-        config.configure_arg(format!("-DCMAKE_ASM_COMPILER={}", ndk_clang.display()));
+        config.configure_arg(format!("-DCMAKE_C_COMPILER={}", android_config.ndk_clang.display()));
+        config.configure_arg(format!("-DCMAKE_CXX_COMPILER={}", android_config.ndk_clangxx.display()));
+        config.configure_arg(format!("-DCMAKE_ASM_COMPILER={}", android_config.ndk_clang.display()));
 
         config.configure_arg(format!("-DANDROID_ABI={}", android_config.abi));
         config.configure_arg(format!("-DANDROID_PLATFORM={}", android_config.platform));
         config.configure_arg(format!("-DCMAKE_TOOLCHAIN_FILE={}", android_config.toolchain_file.as_os_str().to_str().unwrap()));
 
-        build_jpeg(android_config).unwrap();
-        build_webp(android_config).unwrap();
-        build_png(android_config).unwrap();
-        build_uv(android_config).unwrap();
+        build_external(&ExternalDependencies::libjpeg_turbo(), android_config).unwrap();
+        build_external(&ExternalDependencies::libwebp(), android_config).unwrap();
+
+        let android_api = android_config
+            .platform
+            .strip_prefix("android-")
+            .expect("ANDROID_PLATFORM must look like android-<api>");
+        let target_triple = env::var("TARGET").expect("TARGET is not set");
+        let zlib_include_dir = android_config.sysroot.join("usr").join("include");
+        let zlib_library = android_config
+            .sysroot
+            .join("usr")
+            .join("lib")
+            .join(target_triple)
+            .join(android_api)
+            .join("libz.so");
+        build_external(
+            &ExternalDependencies::libpng(zlib_include_dir, zlib_library),
+            android_config,
+        )
+        .unwrap();
+
+        build_external(&ExternalDependencies {
+            name: "libuv".to_owned(),
+            git_url: "https://github.com/libuv/libuv.git".to_owned(),
+            revision: "v1.52.1".to_owned(),
+            use_branch: true,
+            additional_cmake_args: Vec::new(),
+            build_target: Some("uv_a".to_owned()),
+            additional_link_dirs: Vec::new(),
+        }, android_config).unwrap();
     }
 
     match api {
@@ -637,7 +667,6 @@ fn build_mln() {
                 .join("cpp")
                 .display()
         );
-        println!("cargo:rustc-link-lib=mbgl-harfbuzz");
         println!("cargo:rustc-link-lib=mbgl-freetype");
         println!("cargo:rustc-link-lib=mbgl-vendor-parsedate");
         println!("cargo:rustc-link-lib=mbgl-vendor-csscolorparser");
@@ -646,16 +675,15 @@ fn build_mln() {
             // darwin builds vendored ICU and uses the system sqlite3
             println!("cargo:rustc-link-lib=mbgl-vendor-icu");
             println!("cargo:rustc-link-lib=sqlite3");
+            println!("cargo:rustc-link-lib=mbgl-harfbuzz");
         } else if is_android {
             println!("cargo:rustc-link-lib=mbgl-vendor-icu");
-            println!("cargo:rustc-link-lib=mbgl-harfbuzz");
-            println!("cargo:rustc-link-lib=mbgl-freetype");
-            println!("cargo:rustc-link-lib=mbgl-vendor-csscolorparser");
-            println!("cargo:rustc-link-lib=mbgl-vendor-parsedate");
             println!("cargo:rustc-link-lib=mbgl-vendor-sqlite");
+            println!("cargo:rustc-link-lib=mbgl-harfbuzz"); // Already bound with skia in android
         } else {
             println!("cargo:rustc-link-lib=mbgl-vendor-nunicode");
             println!("cargo:rustc-link-lib=mbgl-vendor-sqlite");
+            println!("cargo:rustc-link-lib=mbgl-harfbuzz");
             // println!("cargo:rustc-link-lib=utf8proc"); // sudo dnf install utf8proc-devel
             println!("cargo:rustc-link-lib=icuuc"); //sudo dnf install libicu-devel
             println!("cargo:rustc-link-lib=icudata"); //sudo dnf install libicu-devel
@@ -728,201 +756,143 @@ fn build_mln() {
             }
         }
     }
+
+    if is_android {
+        // Required by Android bitmap helpers used by mbgl platform code.
+        println!("cargo:rustc-link-lib=jnigraphics");
+    }
 }
 
-fn build_uv(android_config: &AndroidConfig) -> Result<(), Box<dyn Error>> {
-    let name = "libuv";
+struct ExternalDependencies {
+    name: String,
+    git_url: String,
+    revision: String,
+    use_branch: bool,
+    additional_cmake_args: Vec<String>,
+    build_target: Option<String>,
+    additional_link_dirs: Vec<String>,
+}
+
+impl ExternalDependencies {
+    fn libpng(zlib_include_dir: PathBuf, zlib_library: PathBuf) -> Self {
+        Self {
+            name: "libpng".to_owned(),
+            git_url: "https://github.com/pnggroup/libpng.git".to_owned(),
+            revision: "v1.6.58".to_owned(),
+            use_branch: true,
+            additional_cmake_args: vec![
+                "-DSKIP_INSTALL_ALL=1".to_owned(),
+                "-DPNG_INTEL_SSE_OPT=OFF".to_owned(),
+                format!("-DZLIB_INCLUDE_DIR={}", zlib_include_dir.display()),
+                format!("-DZLIB_LIBRARY={}", zlib_library.display()),
+            ],
+            build_target: Some("png_static".to_owned()),
+            additional_link_dirs: Vec::new(),
+        }
+    }
+
+    fn libjpeg_turbo() -> Self {
+        Self {
+            name: "libjpeg-turbo".to_owned(),
+            git_url: "https://github.com/libjpeg-turbo/libjpeg-turbo.git".to_owned(),
+            revision: "3.1.2".to_owned(),
+            use_branch: true,
+            additional_cmake_args: vec![
+                "-DENABLE_SHARED=OFF".to_owned(),
+                "-DENABLE_STATIC=ON".to_owned(),
+            ],
+            build_target: Some("jpeg-static".to_owned()),
+            additional_link_dirs: vec!["lib".to_owned()],
+        }
+    }
+
+    fn libwebp() -> Self {
+        Self {
+            name: "libwebp".to_owned(),
+            git_url: "https://chromium.googlesource.com/webm/libwebp".to_owned(),
+            revision: "v1.6.0".to_owned(),
+            use_branch: true,
+            additional_cmake_args: vec![
+                "-DBUILD_SHARED_LIBS=OFF".to_owned(),
+                "-DWEBP_BUILD_CWEBP=OFF".to_owned(),
+                "-DWEBP_BUILD_DWEBP=OFF".to_owned(),
+                "-DWEBP_BUILD_GIF2WEBP=OFF".to_owned(),
+                "-DWEBP_BUILD_IMG2WEBP=OFF".to_owned(),
+                "-DWEBP_BUILD_VWEBP=OFF".to_owned(),
+                "-DWEBP_BUILD_WEBPINFO=OFF".to_owned(),
+                "-DWEBP_BUILD_EXTRAS=OFF".to_owned(),
+            ],
+            build_target: Some("webp".to_owned()),
+            additional_link_dirs: vec!["lib".to_owned()],
+        }
+    }
+}
+
+fn build_external(dep: &ExternalDependencies, android_config: &AndroidConfig) -> Result<(), Box<dyn Error>> {
+    let name = dep.name.as_str();
     let root = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
     let clone_dir = root.join("target");
-    let libuv_dir = clone_dir.join(name);
-
-
-    const URL: &str = "https://github.com/libuv/libuv.git";
-    const REVISION: &str = "v1.52.1";
+    let repository_dir = clone_dir.join(name);
 
     // Clone Repository
-    if !libuv_dir.exists() {
+    if !repository_dir.exists() {
         println!("cargo:warning=Cloning {name}.");
         fs::create_dir_all(&clone_dir)?;
+        let mut args = vec!["clone", "--depth", "1"];
+        if dep.use_branch {
+            args.push("--branch");
+            args.push(dep.revision.as_str());
+        }
+        args.push(dep.git_url.as_str());
+        args.push(name);
+
         let clone_status = Command::new("git")
             .current_dir(clone_dir)
-            .args(["clone", "--depth", "1", "--revision", REVISION, URL, name])
+            .args(args)
             .status()?;
         if !clone_status.success() {
             return Err(
                 format!("Failed to clone {name} repository: {clone_status}").into()
             );
         }
+
+        if !dep.use_branch {
+            let checkout_status = Command::new("git")
+                .current_dir(repository_dir.clone())
+                .args(["checkout", dep.revision.as_str()])
+                .status()?;
+            if !checkout_status.success() {
+                return Err(
+                    format!("Failed to checkout {} for {name}: {checkout_status}", dep.revision).into()
+                );
+            }
+        }
     }
 
-    let mut config = cmake::Config::new(libuv_dir.clone());
+    let mut config = cmake::Config::new(repository_dir.clone());
     config.generator("Ninja");
+    config.configure_arg(format!("-DCMAKE_C_COMPILER={}", android_config.ndk_clang.display()));
+    config.configure_arg(format!("-DCMAKE_CXX_COMPILER={}", android_config.ndk_clangxx.display()));
+    config.configure_arg(format!("-DCMAKE_ASM_COMPILER={}", android_config.ndk_clang.display()));
     config.configure_arg(format!("-DANDROID_ABI={}", android_config.abi));
     config.configure_arg(format!("-DANDROID_PLATFORM={}", android_config.platform));
     config.configure_arg(format!("-DCMAKE_TOOLCHAIN_FILE={}", android_config.toolchain_file.as_os_str().to_str().unwrap()));
-    config.configure_arg("-DCMAKE_BUILD_TYPE=Release");
-    config.out_dir(PathBuf::from(env::var_os("OUT_DIR").expect("OUT_DIR is not set")).join(name));
-    config.build_target("uv_a");
-    let dest = config.build();
-    println!("cargo:rustc-link-search=native={}", dest.join("build").display());
+    config.configure_arg(format!("-DCMAKE_SYSROOT={}", android_config.sysroot.display()));
 
-    Ok(())
-}
-
-fn build_png(android_config: &AndroidConfig) -> Result<(), Box<dyn Error>> {
-    let name = "libpng";
-    let root = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
-    let clone_dir = root.join("target");
-    let libpng_dir = clone_dir.join(name);
-
-
-    const URL: &str = "https://github.com/pnggroup/libpng.git";
-    const REVISION: &str = "v1.6.58";
-
-    // Clone Repository
-    if !libpng_dir.exists() {
-        println!("cargo:warning=Cloning {name}.");
-        fs::create_dir_all(&clone_dir)?;
-        let clone_status = Command::new("git")
-            .current_dir(clone_dir)
-            .args(["clone", "--depth", "1", "--revision", REVISION, URL, name])
-            .status()?;
-        if !clone_status.success() {
-            return Err(
-                format!("Failed to clone {name} repository: {clone_status}").into()
-            );
-        }
+    for arg in &dep.additional_cmake_args {
+        config.configure_arg(arg);
     }
 
-    let android_api = android_config
-        .platform
-        .strip_prefix("android-")
-        .expect("ANDROID_PLATFORM must look like android-<api>");
-    let target_triple = env::var("TARGET").expect("TARGET is not set");
-    let zlib_include_dir = android_config.sysroot.join("usr").join("include");
-    let zlib_library = android_config
-        .sysroot
-        .join("usr")
-        .join("lib")
-        .join(target_triple)
-        .join(android_api)
-        .join("libz.so");
-
-    let mut config = cmake::Config::new(libpng_dir.clone());
-    config.generator("Ninja");
-    config.configure_arg(format!("-DANDROID_ABI={}", android_config.abi));
-    config.configure_arg(format!("-DANDROID_PLATFORM={}", android_config.platform));
-    config.configure_arg(format!("-DCMAKE_TOOLCHAIN_FILE={}", android_config.toolchain_file.as_os_str().to_str().unwrap()));
-    config.configure_arg("-DSKIP_INSTALL_ALL=1");
-    config.configure_arg("-DPNG_INTEL_SSE_OPT=OFF");
-    config.configure_arg(format!("-DZLIB_INCLUDE_DIR={}", zlib_include_dir.display()));
-    config.configure_arg(format!("-DZLIB_LIBRARY={}", zlib_library.display()));
-    config.configure_arg(format!("-DCMAKE_SYSROOT={}", android_config.sysroot.as_os_str().to_str().unwrap()));
     config.configure_arg("-DCMAKE_BUILD_TYPE=Release");
     config.out_dir(PathBuf::from(env::var_os("OUT_DIR").expect("OUT_DIR is not set")).join(name));
-    config.build_target("png_static");
-    let dest = config.build();
-    println!("cargo:rustc-link-search=native={}", dest.join("build").display());
-
-    Ok(())
-}
-
-fn build_jpeg(android_config: &AndroidConfig) -> Result<(), Box<dyn Error>> {
-    let name = "libjpeg-turbo";
-    let root = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
-    let clone_dir = root.join("target");
-    let libjpeg_dir = clone_dir.join(name);
-
-    const URL: &str = "https://github.com/libjpeg-turbo/libjpeg-turbo.git";
-    const REVISION: &str = "3.1.2";
-
-    // Clone Repository
-    if !libjpeg_dir.exists() {
-        println!("cargo:warning=Cloning {name}.");
-        fs::create_dir_all(&clone_dir)?;
-        let clone_status = Command::new("git")
-            .current_dir(clone_dir)
-            .args(["clone", "--depth", "1", "--branch", REVISION, URL, name])
-            .status()?;
-        if !clone_status.success() {
-            return Err(format!("Failed to clone {name} repository: {clone_status}").into());
-        }
+    if let Some(target) = &dep.build_target {
+        config.build_target(target);
     }
-
-    let mut config = cmake::Config::new(libjpeg_dir.clone());
-    config.generator("Ninja");
-    config.configure_arg(format!("-DANDROID_ABI={}", android_config.abi));
-    config.configure_arg(format!("-DANDROID_PLATFORM={}", android_config.platform));
-    config.configure_arg(format!(
-        "-DCMAKE_TOOLCHAIN_FILE={}",
-        android_config.toolchain_file.as_os_str().to_str().unwrap()
-    ));
-    config.configure_arg(format!(
-        "-DCMAKE_SYSROOT={}",
-        android_config.sysroot.as_os_str().to_str().unwrap()
-    ));
-    config.configure_arg("-DENABLE_SHARED=OFF");
-    config.configure_arg("-DENABLE_STATIC=ON");
-    config.configure_arg("-DCMAKE_BUILD_TYPE=Release");
-    config.out_dir(PathBuf::from(env::var_os("OUT_DIR").expect("OUT_DIR is not set")).join(name));
-    config.build_target("jpeg-static");
     let dest = config.build();
-
     println!("cargo:rustc-link-search=native={}", dest.join("build").display());
-    println!("cargo:rustc-link-search=native={}", dest.join("lib").display());
-
-    Ok(())
-}
-
-fn build_webp(android_config: &AndroidConfig) -> Result<(), Box<dyn Error>> {
-    let name = "libwebp";
-    let root = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
-    let clone_dir = root.join("target");
-    let libwebp_dir = clone_dir.join(name);
-
-    const URL: &str = "https://chromium.googlesource.com/webm/libwebp";
-    const REVISION: &str = "v1.6.0";
-
-    // Clone Repository
-    if !libwebp_dir.exists() {
-        println!("cargo:warning=Cloning {name}.");
-        fs::create_dir_all(&clone_dir)?;
-        let clone_status = Command::new("git")
-            .current_dir(clone_dir)
-            .args(["clone", "--depth", "1", "--branch", REVISION, URL, name])
-            .status()?;
-        if !clone_status.success() {
-            return Err(format!("Failed to clone {name} repository: {clone_status}").into());
-        }
+    for link_dir in &dep.additional_link_dirs {
+        println!("cargo:rustc-link-search=native={}", dest.join(link_dir).display());
     }
-
-    let mut config = cmake::Config::new(libwebp_dir.clone());
-    config.generator("Ninja");
-    config.configure_arg(format!("-DANDROID_ABI={}", android_config.abi));
-    config.configure_arg(format!("-DANDROID_PLATFORM={}", android_config.platform));
-    config.configure_arg(format!(
-        "-DCMAKE_TOOLCHAIN_FILE={}",
-        android_config.toolchain_file.as_os_str().to_str().unwrap()
-    ));
-    config.configure_arg(format!(
-        "-DCMAKE_SYSROOT={}",
-        android_config.sysroot.as_os_str().to_str().unwrap()
-    ));
-    config.configure_arg("-DBUILD_SHARED_LIBS=OFF");
-    config.configure_arg("-DWEBP_BUILD_CWEBP=OFF");
-    config.configure_arg("-DWEBP_BUILD_DWEBP=OFF");
-    config.configure_arg("-DWEBP_BUILD_GIF2WEBP=OFF");
-    config.configure_arg("-DWEBP_BUILD_IMG2WEBP=OFF");
-    config.configure_arg("-DWEBP_BUILD_VWEBP=OFF");
-    config.configure_arg("-DWEBP_BUILD_WEBPINFO=OFF");
-    config.configure_arg("-DWEBP_BUILD_EXTRAS=OFF");
-    config.configure_arg("-DCMAKE_BUILD_TYPE=Release");
-    config.out_dir(PathBuf::from(env::var_os("OUT_DIR").expect("OUT_DIR is not set")).join(name));
-    config.build_target("webp");
-    let dest = config.build();
-
-    println!("cargo:rustc-link-search=native={}", dest.join("build").display());
-    println!("cargo:rustc-link-search=native={}", dest.join("lib").display());
 
     Ok(())
 }
