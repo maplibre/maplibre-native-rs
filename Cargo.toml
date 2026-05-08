@@ -23,7 +23,7 @@ default = ["log", "pool"]
 metal = []
 opengl = []
 vulkan = []
-wgpu = ["dep:wgpu", "dep:binding-generator"]
+wgpu = ["dep:wgpu", "dep:binding-generator", "dep:ureq"]
 log = ["dep:log"]
 pool = ["dep:tokio"]
 
@@ -36,6 +36,7 @@ thiserror.workspace = true
 tokio = { workspace = true, features = ["sync"], optional = true }
 url.workspace = true
 wgpu = { workspace = true, optional = true }
+ureq = { version = "2.12", default-features = false, features = ["tls"], optional = true }
 
 [build-dependencies]
 cmake.workspace = true
