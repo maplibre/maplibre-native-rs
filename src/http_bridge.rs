@@ -5,15 +5,17 @@ use std::pin::Pin;
 
 #[cxx::bridge]
 mod ffi {
+    #[namespace = "mln::bridge"]
     enum Reason {
         Success = 1,
-        NotFound = 2,
-        Server = 3,
-        Connection = 4,
-        RateLimit = 5,
-        Other = 6,
+        NotFound,
+        Server,
+        Connection,
+        RateLimit,
+        Other,
     }
 
+    #[namespace = "mln::bridge"]
     enum Kind {
         Unknown,
         Style,

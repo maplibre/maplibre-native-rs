@@ -2,6 +2,7 @@
 #define RESPONSE_H
 
 #include <mbgl/rust/http_response.hpp>
+#include <mbgl/storage/resource.hpp>
 
 #include "rust/cxx.h"
 

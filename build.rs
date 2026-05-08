@@ -26,8 +26,7 @@ const MLN_REPOSITORY_URL: &str = "https://github.com/Murmele/maplibre-native.git
 const MLN_COMMIT: &str = "608f9b8e8e94fff1c72aed061004a21d71f603c6";
 
 // Files of the bridge
-const BRIDGE_FILES: &[&str] = &[
-    "src/renderer/bridge.rs",
+const BRIDGE_CPP_FILES: &[&str] = &[
     "src/cpp/bridge.cpp",
     "src/cpp/util.cpp",
     "src/cpp/resource_options.h",
@@ -44,6 +43,11 @@ const BRIDGE_FILES: &[&str] = &[
     "src/cpp/layers/layers.cpp",
     "src/cpp/texture.h",
     "src/cpp/texture.cpp",
+];
+
+const BRIDGE_RUST_FILES: &[&str] = &[
+    "src/renderer/bridge.rs",
+    "src/http_bridge.rs"
 ];
 
 const BRIDGE_INCLUDE_DIRS: &[&str] = &[/*"include", */ "src/cpp"];
@@ -330,7 +334,7 @@ fn build_bridge(lib_name: &str, include_dirs: &[PathBuf], api: GraphicsRendering
     let root = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
     let bridge_include_dirs: Vec<PathBuf> =
         BRIDGE_INCLUDE_DIRS.iter().map(|p| root.join(p)).collect();
-    let mut build = cxx_build::bridge("src/renderer/bridge.rs");
+    let mut build = cxx_build::bridges(BRIDGE_RUST_FILES);
     build
         .includes(&bridge_include_dirs)
         .includes(include_dirs)
@@ -342,7 +346,7 @@ fn build_bridge(lib_name: &str, include_dirs: &[PathBuf], api: GraphicsRendering
         build.flag_if_supported("-DMLN_WEBGPU_IMPL_FFI=1");
     }
 
-    for f in BRIDGE_FILES {
+    for f in BRIDGE_CPP_FILES {
         println!("cargo:rerun-if-changed={f}");
         #[allow(clippy::case_sensitive_file_extension_comparisons)]
         if f.ends_with(".cpp") {
