@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.6](https://github.com/maplibre/maplibre-native-rs/compare/v0.4.5...v0.4.6) - 2026-05-08
+
+### Other
+
+- *(deps)* update toml requirement from 0.8 to 1.1 in the all-cargo-version-updates group ([#170](https://github.com/maplibre/maplibre-native-rs/pull/170))
+
 ## [0.4.5](https://github.com/maplibre/maplibre-native-rs/compare/v0.4.4...v0.4.5) - 2026-04-21
 
 ### Added
