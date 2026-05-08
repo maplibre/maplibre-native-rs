@@ -7,7 +7,7 @@ pub use http_bridge::init_rust_http_bridge;
 #[cfg(target_os = "android")]
 mod android;
 #[cfg(target_os = "android")]
-pub use android::init_android_jvm;
+pub use android::init_android;
 
 #[cfg(feature = "pool")]
 mod pool;

@@ -7,54 +7,46 @@ use std::io::Read;
 use cxx::CxxString;
 
 #[cfg(feature = "wgpu")]
-#[repr(C)]
-#[derive(Default)]
-struct RustHttpResponseBridge {
-    data: *const u8,
-    data_len: usize,
-    etag: *const c_char,
-    error_message: *const c_char,
-    error_reason: u8,
-    no_content: bool,
-    not_modified: bool,
-}
-
-#[cfg(feature = "wgpu")]
 unsafe extern "C" {
     fn mbgl_rust_http_set_bridge(
         request_fn: Option<
-            unsafe extern "C" fn(*const CxxString, u8, *mut RustHttpResponseBridge) -> bool,
+            unsafe extern "C" fn(*const CxxString, u8, *mut HttpResponse) -> bool,
         >,
-        release_fn: Option<unsafe extern "C" fn(*mut RustHttpResponseBridge)>,
     );
+}
+
+#[cxx::bridge]
+mod ffi {
+    enum Reason {
+        Success,
+        NotFound,
+        Server,
+        Connection,
+        RateLimit,
+        Other,
+    }
+
+    extern "C++" {
+        include!("response.h");
+        type Reason;
+    }
 }
 
 #[cfg(feature = "wgpu")]
 unsafe extern "C" fn rust_http_bridge_request(
     url: *const CxxString,
     _kind: u8,
-    out_response: *mut RustHttpResponseBridge,
+    out_response: *mut HttpResponse,
 ) -> bool {
-    const REASON_NOT_FOUND: u8 = 2;
-    const REASON_SERVER: u8 = 3;
-    const REASON_CONNECTION: u8 = 4;
-    const REASON_RATE_LIMIT: u8 = 5;
-    const REASON_OTHER: u8 = 6;
-
     let set_error = |response: &mut RustHttpResponseBridge, reason: u8, message: String| {
         let sanitized = message.replace('\0', " ");
         if let Ok(msg) = CString::new(sanitized) {
-            response.error_reason = reason;
-            response.error_message = msg.into_raw();
+            response.setError(reason,  = msg.into_raw())
         }
     };
 
     if out_response.is_null() || url.is_null() {
         return false;
-    }
-
-    unsafe {
-        *out_response = RustHttpResponseBridge::default();
     }
 
     let url_str = match unsafe { (&*url).to_str() } {
@@ -63,7 +55,7 @@ unsafe extern "C" fn rust_http_bridge_request(
             unsafe {
                 set_error(
                     &mut *out_response,
-                    REASON_OTHER,
+                    Reason::Other,
                     format!("Invalid URL string in Rust HTTP bridge: {err}"),
                 );
             }
@@ -77,18 +69,15 @@ unsafe extern "C" fn rust_http_bridge_request(
             let status = response.status();
             unsafe {
                 if status == 204 {
-                    (*out_response).no_content = true;
+                    (*out_response).setNoContent(true);
                     return true;
                 }
                 if status == 304 {
-                    (*out_response).not_modified = true;
+                    (*out_response).setNotModified(true);
                     return true;
                 }
                 if let Some(etag) = response.header("ETag") {
-                    let sanitized = etag.replace('\0', " ");
-                    if let Ok(etag_c) = CString::new(sanitized) {
-                        (*out_response).etag = etag_c.into_raw();
-                    }
+                        (*out_response).setETag(etag.as_bytes());
                 }
             }
 
@@ -98,7 +87,7 @@ unsafe extern "C" fn rust_http_bridge_request(
                 unsafe {
                     set_error(
                         &mut *out_response,
-                        REASON_CONNECTION,
+                        Reason::Connection,
                         format!("Failed reading HTTP response body: {err}"),
                     );
                 }
@@ -119,13 +108,13 @@ unsafe extern "C" fn rust_http_bridge_request(
         }
         Err(ureq::Error::Status(status, response)) => {
             let reason = if status == 404 {
-                REASON_NOT_FOUND
+                Reason::NotFound
             } else if status == 429 {
-                REASON_RATE_LIMIT
+                Reason::RateLimit
             } else if status >= 500 {
-                REASON_SERVER
+                Reason::Server
             } else {
-                REASON_OTHER
+                Reason::Other
             };
 
             let message = {
@@ -150,42 +139,12 @@ unsafe extern "C" fn rust_http_bridge_request(
             unsafe {
                 set_error(
                     &mut *out_response,
-                    REASON_CONNECTION,
+                    Reason::Connection,
                     format!("HTTP transport error: {err}"),
                 );
             }
             true
         }
-    }
-}
-
-#[cfg(feature = "wgpu")]
-unsafe fn free_owned_data(response: &mut RustHttpResponseBridge) {
-    if !response.data.is_null() && response.data_len > 0 {
-        // Rebuild the boxed slice that was leaked in `rust_http_bridge_request`.
-        let raw = core::ptr::slice_from_raw_parts_mut(response.data.cast_mut(), response.data_len);
-        let _ = Box::from_raw(raw);
-    }
-}
-
-#[cfg(feature = "wgpu")]
-unsafe fn free_owned_c_string(ptr: *const c_char) {
-    if !ptr.is_null() {
-        let _ = CString::from_raw(ptr.cast_mut());
-    }
-}
-
-#[cfg(feature = "wgpu")]
-unsafe extern "C" fn rust_http_bridge_release(response: *mut RustHttpResponseBridge) {
-    if response.is_null() {
-        return;
-    }
-
-    unsafe {
-        free_owned_c_string((*response).etag);
-        free_owned_c_string((*response).error_message);
-        free_owned_data(&mut *response);
-        *response = RustHttpResponseBridge::default();
     }
 }
 
