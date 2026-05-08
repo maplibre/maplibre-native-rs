@@ -3,9 +3,6 @@ use std::io::Read;
 #[cfg(feature = "wgpu")]
 use std::pin::Pin;
 
-#[cfg(feature = "wgpu")]
-use cxx::CxxString;
-
 #[cxx::bridge]
 mod ffi {
     enum Reason {
@@ -17,36 +14,42 @@ mod ffi {
         Other = 6,
     }
 
+    enum Kind {
+        Unknown,
+        Style,
+        Source,
+        Tile,
+        Glyphs,
+        SpriteImage,
+        SpriteJSON,
+        Image
+    }
+
+    #[namespace = "mln::bridge"]
     unsafe extern "C++" {
         include!("response.h");
+
+        type Reason;
+        type Kind;
 
         #[namespace = "mbgl"]
         type HttpResponse;
 
-        #[namespace = "mbgl"]
         fn http_response_set_data(response: Pin<&mut HttpResponse>, data: &[u8]);
-
-        #[namespace = "mbgl"]
         fn http_response_set_etag(response: Pin<&mut HttpResponse>, etag: &[u8]);
-
-        #[namespace = "mbgl"]
         fn http_response_set_no_content(response: Pin<&mut HttpResponse>, no_content: bool);
-
-        #[namespace = "mbgl"]
         fn http_response_set_not_modified(response: Pin<&mut HttpResponse>, not_modified: bool);
-
-        #[namespace = "mbgl"]
         fn http_response_set_error(response: Pin<&mut HttpResponse>, reason: Reason, error_message: &str);
     }
 }
 
 #[cfg(feature = "wgpu")]
-use ffi::{HttpResponse, Reason};
+use ffi::{HttpResponse, Kind, Reason};
 
 #[cfg(feature = "wgpu")]
 unsafe extern "C" {
     fn mbgl_rust_http_set_bridge(
-        request_fn: Option<unsafe extern "C" fn(*const CxxString, u8, *mut HttpResponse) -> bool>,
+        request_fn: Option<unsafe extern "C" fn(*const cxx::CxxString, Kind, *mut HttpResponse) -> bool>,
     );
 }
 
@@ -57,8 +60,8 @@ fn set_error(response: Pin<&mut HttpResponse>, reason: Reason, message: impl AsR
 
 #[cfg(feature = "wgpu")]
 unsafe extern "C" fn rust_http_bridge_request(
-    url: *const CxxString,
-    _kind: u8,
+    url: *const cxx::CxxString,
+    _kind: ffi::Kind,
     out_response: *mut HttpResponse,
 ) -> bool {
     if out_response.is_null() || url.is_null() {
