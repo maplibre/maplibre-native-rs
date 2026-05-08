@@ -1,35 +1,58 @@
 #[cfg(feature = "wgpu")]
-use std::ffi::{CString, c_char};
-#[cfg(feature = "wgpu")]
 use std::io::Read;
+#[cfg(feature = "wgpu")]
+use std::pin::Pin;
 
 #[cfg(feature = "wgpu")]
 use cxx::CxxString;
 
-#[cfg(feature = "wgpu")]
-unsafe extern "C" {
-    fn mbgl_rust_http_set_bridge(
-        request_fn: Option<
-            unsafe extern "C" fn(*const CxxString, u8, *mut HttpResponse) -> bool,
-        >,
-    );
-}
-
 #[cxx::bridge]
 mod ffi {
     enum Reason {
-        Success,
-        NotFound,
-        Server,
-        Connection,
-        RateLimit,
-        Other,
+        Success = 1,
+        NotFound = 2,
+        Server = 3,
+        Connection = 4,
+        RateLimit = 5,
+        Other = 6,
     }
 
-    extern "C++" {
+    unsafe extern "C++" {
         include!("response.h");
-        type Reason;
+
+        #[namespace = "mbgl"]
+        type HttpResponse;
+
+        #[namespace = "mbgl"]
+        fn http_response_set_data(response: Pin<&mut HttpResponse>, data: &[u8]);
+
+        #[namespace = "mbgl"]
+        fn http_response_set_etag(response: Pin<&mut HttpResponse>, etag: &[u8]);
+
+        #[namespace = "mbgl"]
+        fn http_response_set_no_content(response: Pin<&mut HttpResponse>, no_content: bool);
+
+        #[namespace = "mbgl"]
+        fn http_response_set_not_modified(response: Pin<&mut HttpResponse>, not_modified: bool);
+
+        #[namespace = "mbgl"]
+        fn http_response_set_error(response: Pin<&mut HttpResponse>, reason: Reason, error_message: &str);
     }
+}
+
+#[cfg(feature = "wgpu")]
+use ffi::{HttpResponse, Reason};
+
+#[cfg(feature = "wgpu")]
+unsafe extern "C" {
+    fn mbgl_rust_http_set_bridge(
+        request_fn: Option<unsafe extern "C" fn(*const CxxString, u8, *mut HttpResponse) -> bool>,
+    );
+}
+
+#[cfg(feature = "wgpu")]
+fn set_error(response: Pin<&mut HttpResponse>, reason: Reason, message: impl AsRef<str>) {
+    ffi::http_response_set_error(response, reason, message.as_ref().replace('\0', " ").as_str());
 }
 
 #[cfg(feature = "wgpu")]
@@ -38,27 +61,20 @@ unsafe extern "C" fn rust_http_bridge_request(
     _kind: u8,
     out_response: *mut HttpResponse,
 ) -> bool {
-    let set_error = |response: &mut RustHttpResponseBridge, reason: u8, message: String| {
-        let sanitized = message.replace('\0', " ");
-        if let Ok(msg) = CString::new(sanitized) {
-            response.setError(reason,  = msg.into_raw())
-        }
-    };
-
     if out_response.is_null() || url.is_null() {
         return false;
     }
 
+    let mut out_response = unsafe { Pin::new_unchecked(&mut *out_response) };
+
     let url_str = match unsafe { (&*url).to_str() } {
         Ok(value) => value,
         Err(err) => {
-            unsafe {
-                set_error(
-                    &mut *out_response,
-                    Reason::Other,
-                    format!("Invalid URL string in Rust HTTP bridge: {err}"),
-                );
-            }
+            set_error(
+                out_response.as_mut(),
+                Reason::Other,
+                format!("Invalid URL string in Rust HTTP bridge: {err}"),
+            );
             return true;
         }
     };
@@ -67,41 +83,31 @@ unsafe extern "C" fn rust_http_bridge_request(
     match request.call() {
         Ok(response) => {
             let status = response.status();
-            unsafe {
-                if status == 204 {
-                    (*out_response).setNoContent(true);
-                    return true;
-                }
-                if status == 304 {
-                    (*out_response).setNotModified(true);
-                    return true;
-                }
-                if let Some(etag) = response.header("ETag") {
-                        (*out_response).setETag(etag.as_bytes());
-                }
+            if status == 204 {
+                ffi::http_response_set_no_content(out_response.as_mut(), true);
+                return true;
+            }
+            if status == 304 {
+                ffi::http_response_set_not_modified(out_response.as_mut(), true);
+                return true;
+            }
+            if let Some(etag) = response.header("ETag") {
+                ffi::http_response_set_etag(out_response.as_mut(), etag.as_bytes());
             }
 
             let mut bytes = Vec::new();
             let mut reader = response.into_reader();
             if let Err(err) = reader.read_to_end(&mut bytes) {
-                unsafe {
-                    set_error(
-                        &mut *out_response,
-                        Reason::Connection,
-                        format!("Failed reading HTTP response body: {err}"),
-                    );
-                }
+                set_error(
+                    out_response.as_mut(),
+                    Reason::Connection,
+                    format!("Failed reading HTTP response body: {err}"),
+                );
                 return true;
             }
 
             if !bytes.is_empty() {
-                let len = bytes.len();
-                let data = bytes.into_boxed_slice();
-                let leaked: &'static mut [u8] = Box::leak(data);
-                unsafe {
-                    (*out_response).data = leaked.as_ptr();
-                    (*out_response).data_len = len;
-                }
+                ffi::http_response_set_data(out_response.as_mut(), &bytes);
             }
 
             true
@@ -117,32 +123,26 @@ unsafe extern "C" fn rust_http_bridge_request(
                 Reason::Other
             };
 
-            let message = {
-                let status_text = response.status_text();
-                if status_text.is_empty() {
-                    format!("HTTP status {status}")
-                } else {
-                    format!("HTTP status {status}: {status_text}")
-                }
-            };
-
-            unsafe {
-                if status == 404 {
-                    (*out_response).no_content = true;
-                }
-                set_error(&mut *out_response, reason, message);
+            if status == 404 {
+                ffi::http_response_set_no_content(out_response.as_mut(), true);
             }
+
+            let status_text = response.status_text();
+            let message = if status_text.is_empty() {
+                format!("HTTP status {status}")
+            } else {
+                format!("HTTP status {status}: {status_text}")
+            };
+            set_error(out_response.as_mut(), reason, message);
 
             true
         }
         Err(ureq::Error::Transport(err)) => {
-            unsafe {
-                set_error(
-                    &mut *out_response,
-                    Reason::Connection,
-                    format!("HTTP transport error: {err}"),
-                );
-            }
+            set_error(
+                out_response.as_mut(),
+                Reason::Connection,
+                format!("HTTP transport error: {err}"),
+            );
             true
         }
     }
@@ -152,7 +152,7 @@ unsafe extern "C" fn rust_http_bridge_request(
 /// Registers the default Rust HTTP bridge callbacks used by MapLibre's Rust platform HTTP file source.
 pub fn init_rust_http_bridge() {
     unsafe {
-        mbgl_rust_http_set_bridge(Some(rust_http_bridge_request), Some(rust_http_bridge_release));
+        mbgl_rust_http_set_bridge(Some(rust_http_bridge_request));
     }
 }
 
