@@ -88,7 +88,7 @@ impl<S> Debug for ImageRenderer<S> {
 
 impl<S> ImageRenderer<S> {
     #[cfg(feature = "wgpu")]
-    /// Bind the renderer to the WGPU device and queue provided by the host UI.
+    /// Bind the renderer to the WGPU device and queue provided by the host UI. So Textures between maplibre-native and a rust application can be shared
     pub fn set_device_queue(&mut self, device: wgpu::Device, queue: wgpu::Queue) {
         self.instance.pin_mut().setDeviceAndQueue(device.into(), queue.into());
     }

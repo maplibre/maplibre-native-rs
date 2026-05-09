@@ -142,6 +142,7 @@ public:
         map->rotateBy(first, second);
     }
 
+    // Set the wgpu device and queue required for rendering when using the wgpu ffi backend
     void setDeviceAndQueue(WGPUDevice device, WGPUQueue queue) {
         frontend->getBackend()->setDevice(device);
         frontend->getBackend()->setQueue(queue);
