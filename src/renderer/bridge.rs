@@ -658,7 +658,7 @@ pub mod ffi {
         #[cfg(feature = "wgpu")]
         type WGPUQueue = binding_generator::WGPUQueueWrapper;
         #[cfg(feature = "wgpu")]
-        type WGPUTexture= binding_generator::WGPUTextureWrapper;
+        type WGPUTexture = binding_generator::WGPUTextureWrapper;
     }
 
     // Declarations for Rust with implementations in C++
