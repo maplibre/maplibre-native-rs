@@ -153,9 +153,7 @@ pub struct WGPUTextureWrapper(WGPUTexture);
 impl TryFrom<WGPUTextureWrapper> for wgpu::Texture {
     type Error = ();
     fn try_from(value: WGPUTextureWrapper) -> Result<Self, Self::Error> {
-        let reference = unsafe {
-            value.0.as_ref().ok_or(())?
-        };
+        let reference = unsafe { value.0.as_ref().ok_or(())? };
         Ok(reference.0.clone())
     }
 }
