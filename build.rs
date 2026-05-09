@@ -36,6 +36,8 @@ const BRIDGE_FILES: &[&str] = &[
     "src/cpp/map_renderer.h",
     "src/cpp/renderer_observer.h",
     "src/cpp/map_observer.h",
+    "src/cpp/rust_file_source.h",
+    "src/cpp/rust_file_source.cpp",
     "src/cpp/rust_log_observer.h",
     "src/cpp/sources/sources.h",
     "src/cpp/sources/sources.cpp",
