@@ -275,7 +275,7 @@ impl ImageRenderer<Continuous> {
             return None;
         }
 
-        let raw_texture = ffi::getRawTextureHandle(&texture_2d);
+        let raw_texture = ffi::getWGPUTexture(&texture_2d);
         raw_texture.try_into().ok()
     }
 }

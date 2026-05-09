@@ -754,7 +754,7 @@ pub mod ffi {
         include!("texture.h");
 
         #[cfg(feature = "wgpu")]
-        fn getRawTextureHandle(texture: &SharedPtr<Texture2D>) -> WGPUTexture;
+        fn getWGPUTexture(texture: &SharedPtr<Texture2D>) -> WGPUTexture;
     }
 
     // Declarations for C++ with implementations in Rust

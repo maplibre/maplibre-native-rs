@@ -4,5 +4,5 @@
 #include <cstdint>
 
 namespace mln::bridge::texture {
-    WGPUTexture getRawTextureHandle(const std::shared_ptr<mbgl::webgpu::Texture2D>&);
+    WGPUTexture getWGPUTexture(const std::shared_ptr<mbgl::webgpu::Texture2D>&);
 }
