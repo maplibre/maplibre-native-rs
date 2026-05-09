@@ -88,6 +88,8 @@ jobs:
           echo "VK_ICD_FILENAMES=$(brew --prefix molten-vk)/etc/vulkan/icd.d/MoltenVK_icd.json" >> $GITHUB_ENV
           echo "DYLD_LIBRARY_PATH=$(brew --prefix vulkan-loader)/lib" >> $GITHUB_ENV
       - run: rustup update stable && rustup default stable
+      - name: Build Slint example
+        run: just build-example_slint
       - name: Run CI tests (Linux OpenGL via Xvfb)
         if: startsWith(matrix.runs-on, 'ubuntu') && matrix.backend == 'opengl'
         run: xvfb-run -a --server-args="-screen 0 1280x1024x24" just ci-test ${{ matrix.backend }}

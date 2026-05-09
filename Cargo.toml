@@ -60,7 +60,7 @@ tokio = { workspace = true, features = ["macros", "sync", "rt-multi-thread"] }
 ##########################################################
 
 [workspace]
-members = [".", "binding-generator", "examples/*"]
+members = [".", "binding-generator", "examples/render", "examples/tile-server"]
 
 [workspace.package]
 edition = "2021"
