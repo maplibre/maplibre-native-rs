@@ -17,7 +17,9 @@
 #include <mbgl/util/tile_server_options.hpp>
 #include <mbgl/util/size.hpp>
 #include <mbgl/storage/resource_options.hpp>
+#if defined(MLN_WEBGPU_IMPL_FFI)
 #include <mbgl/webgpu/texture2d.hpp>
+#endif
 #include <memory>
 #include <vector>
 #include <stdexcept>
@@ -50,12 +52,14 @@ public:
         return mapObserverInstance;
     }
 
+    #if defined(MLN_WEBGPU_IMPL_FFI)
     std::shared_ptr<mbgl::webgpu::Texture2D> takeTexture() {
         // TODO: don't like the static pointer cast
         auto ptr = std::static_pointer_cast<mbgl::webgpu::Texture2D>(this->frontend->takeTexture());
         assert(ptr);
         return ptr;
     }
+    #endif
 
     void style_add_image(rust::Str id, rust::Slice<const unsigned char> data, mbgl::Size size, bool single_distance_field) {
         mbgl::PremultipliedImage image(size, data.data(), data.size());
@@ -143,10 +147,12 @@ public:
     }
 
     // Set the wgpu device and queue required for rendering when using the wgpu ffi backend
+    #if defined(MLN_WEBGPU_IMPL_FFI)
     void setDeviceAndQueue(WGPUDevice device, WGPUQueue queue) {
         frontend->getBackend()->setDevice(device);
         frontend->getBackend()->setQueue(queue);
     }
+    #endif
 public:
     mbgl::util::RunLoop runLoop;
     // Due to CXX limitations, make all these public and access them from the regular functions below

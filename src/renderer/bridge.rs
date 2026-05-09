@@ -664,7 +664,6 @@ pub mod ffi {
     // Declarations for Rust with implementations in C++
     unsafe extern "C++" {
         include!("map_renderer.h");
-        include!("mbgl/webgpu/texture2d.hpp");
 
         // C++ Opaque types
         /// Bridge image for rendering output.
@@ -749,11 +748,11 @@ pub mod ffi {
         fn takeTexture(self: Pin<&mut MapRenderer>) -> SharedPtr<Texture2D>;
     }
 
+    #[cfg(feature = "wgpu")]
     #[namespace = "mln::bridge::texture"]
     unsafe extern "C++" {
         include!("texture.h");
 
-        #[cfg(feature = "wgpu")]
         fn getWGPUTexture(texture: &SharedPtr<Texture2D>) -> WGPUTexture;
     }
 

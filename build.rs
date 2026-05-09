@@ -43,8 +43,6 @@ const BRIDGE_FILES: &[&str] = &[
     "src/cpp/sources/sources.cpp",
     "src/cpp/layers/layers.h",
     "src/cpp/layers/layers.cpp",
-    "src/cpp/texture.h",
-    "src/cpp/texture.cpp",
 ];
 
 const BRIDGE_INCLUDE_DIRS: &[&str] = &[/*"include", */ "src/cpp"];
@@ -307,6 +305,13 @@ fn build_bridge(lib_name: &str, include_dirs: &[PathBuf], api: GraphicsRendering
         if f.ends_with(".cpp") {
             build.file(f);
         }
+    }
+
+    // Texture FFI bridge is only required for the WebGPU backend.
+    if matches!(api, GraphicsRenderingAPI::WGPU) {
+        println!("cargo:rerun-if-changed=src/cpp/texture.h");
+        println!("cargo:rerun-if-changed=src/cpp/texture.cpp");
+        build.file("src/cpp/texture.cpp");
     }
 
     build.compile("maplibre_rust_map_renderer_bindings");
