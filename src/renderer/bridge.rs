@@ -634,6 +634,10 @@ pub mod ffi {
             first: &ScreenCoordinate,
             second: &ScreenCoordinate,
         );
+        fn rotateByDegree(
+            self: Pin<&mut MapRenderer>,
+            angle_degree: f64,
+        );
         /// Loads a style from a URL.
         fn style_load_from_url(self: Pin<&mut MapRenderer>, url: &str);
         /// Sets the renderer size.

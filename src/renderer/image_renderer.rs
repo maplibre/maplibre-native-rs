@@ -253,8 +253,8 @@ impl ImageRenderer<Continuous> {
     }
 
     /// Rotate the map using two screen coordinates that represent the gesture delta.
-    pub fn rotate_by(&mut self, first: ScreenCoordinate, second: ScreenCoordinate) {
-        self.instance.pin_mut().rotateBy(&first, &second);
+    pub fn rotate_by(&mut self, angle_degree: f64) {
+        self.instance.pin_mut().rotateByDegree(angle_degree);
     }
 
     /// Trigger render loop once (animations)

@@ -142,6 +142,10 @@ public:
         map->rotateBy(first, second);
     }
 
+    void rotateByDegree(double angleDegree) {
+        map->rotateBy(angleDegree);
+    }
+
     void setDeviceAndQueue(WGPUDevice device, WGPUQueue queue) {
         frontend->getBackend()->setDevice(device);
         frontend->getBackend()->setQueue(queue);
