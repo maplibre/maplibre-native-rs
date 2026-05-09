@@ -148,6 +148,17 @@ impl WGPUBindGroupImpl {
 
 pub struct WGPUDeviceWrapper(WGPUDevice);
 pub struct WGPUQueueWrapper(WGPUQueue);
+pub struct WGPUTextureWrapper(WGPUTexture);
+
+impl TryFrom<WGPUTextureWrapper> for wgpu::Texture {
+    type Error = ();
+    fn try_from(value: WGPUTextureWrapper) -> Result<Self, Self::Error> {
+        let reference = unsafe {
+            value.0.as_ref().ok_or(())?
+        };
+        Ok(reference.0.clone())
+    }
+}
 
 impl From<wgpu::Device> for WGPUDeviceWrapper {
     fn from(value: wgpu::Device) -> Self {
@@ -169,6 +180,11 @@ unsafe impl cxx::ExternType for WGPUDeviceWrapper {
 
 unsafe impl cxx::ExternType for WGPUQueueWrapper {
     type Id = cxx::type_id!("WGPUQueue");
+    type Kind = cxx::kind::Trivial;
+}
+
+unsafe impl cxx::ExternType for WGPUTextureWrapper {
+    type Id = cxx::type_id!("WGPUTexture");
     type Kind = cxx::kind::Trivial;
 }
 

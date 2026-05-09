@@ -657,6 +657,8 @@ pub mod ffi {
         type WGPUDevice = binding_generator::WGPUDeviceWrapper;
         #[cfg(feature = "wgpu")]
         type WGPUQueue = binding_generator::WGPUQueueWrapper;
+        #[cfg(feature = "wgpu")]
+        type WGPUTexture= binding_generator::WGPUTextureWrapper;
     }
 
     // Declarations for Rust with implementations in C++
@@ -752,7 +754,7 @@ pub mod ffi {
         include!("texture.h");
 
         #[cfg(feature = "wgpu")]
-        fn getRawTextureHandle(texture: &SharedPtr<Texture2D>) -> usize;
+        fn getRawTextureHandle(texture: &SharedPtr<Texture2D>) -> WGPUTexture;
     }
 
     // Declarations for C++ with implementations in Rust

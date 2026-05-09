@@ -276,16 +276,7 @@ impl ImageRenderer<Continuous> {
         }
 
         let raw_texture = ffi::getRawTextureHandle(&texture_2d);
-        if raw_texture == 0 {
-            return None;
-        }
-
-        let texture_handle = raw_texture as binding_generator::WGPUTexture;
-        let texture = unsafe { binding_generator::clone_texture_from_handle(texture_handle) };
-        unsafe {
-            binding_generator::wgpuTextureRelease(texture_handle);
-        }
-        texture
+        raw_texture.try_into().ok()
     }
 }
 
