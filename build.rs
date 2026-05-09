@@ -343,6 +343,36 @@ fn bundle_precompiled() -> Info {
     Info { lib_name, include_dirs, cpp_root }
 }
 
+fn clone_repository<P: AsRef<Path>>(
+    clone_dir: P,
+    folder_name: &str,
+    repository_url: &str,
+    commit: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    fs::create_dir_all(&clone_dir)?;
+    let clone_status = Command::new("git")
+        .current_dir(clone_dir)
+        .args(["clone", "--depth", "1", "--revision", commit, repository_url, folder_name])
+        .status()?;
+    if !clone_status.success() {
+        return Err(format!("Failed to clone maplibre-native repository: {clone_status}").into());
+    }
+    Ok(())
+}
+
+fn submodule_update<P: AsRef<Path>>(repository: P) -> Result<(), Box<dyn std::error::Error>> {
+    let submodule_status = Command::new("git")
+        .current_dir(repository)
+        .args(["submodule", "update", "--init", "--recursive"])
+        .status()?;
+    if !submodule_status.success() {
+        return Err(
+            format!("Failed to initialize maplibre-native submodules: {submodule_status}").into()
+        );
+    }
+    Ok(())
+}
+
 fn build_local(
     respository_dir: PathBuf,
     name: &str,
@@ -368,29 +398,12 @@ fn build_local(
     // Clone Repository
     if !maplibre_native_dir.exists() {
         println!("cargo:warning=Cloning maplibre-native.");
-        fs::create_dir_all(&respository_dir)?;
-        let clone_status = Command::new("git")
-            .current_dir(respository_dir)
-            .args(["clone", "--depth", "1", "--revision", MLN_COMMIT, MLN_REPOSITORY_URL, name])
-            .status()?;
-        if !clone_status.success() {
-            return Err(
-                format!("Failed to clone maplibre-native repository: {clone_status}").into()
-            );
-        }
+        clone_repository(respository_dir, name, MLN_REPOSITORY_URL, MLN_COMMIT)?;
     }
     println!("cargo:rerun-if-changed={}", maplibre_native_dir.as_os_str().to_str().unwrap());
 
     // Update submodules
-    let submodule_status = Command::new("git")
-        .current_dir(maplibre_native_dir.clone())
-        .args(["submodule", "update", "--init", "--recursive"])
-        .status()?;
-    if !submodule_status.success() {
-        return Err(
-            format!("Failed to initialize maplibre-native submodules: {submodule_status}").into()
-        );
-    }
+    submodule_update(&maplibre_native_dir)?;
 
     let mut config = cmake::Config::new(maplibre_native_dir.clone());
     let webgpu_h_include_dir =
