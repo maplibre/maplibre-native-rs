@@ -61,7 +61,8 @@ tokio = { workspace = true, features = ["macros", "sync", "rt-multi-thread"] }
 
 [workspace]
 members = [".", "binding-generator", "examples/render", "examples/tile-server"]
-exclude = ["examples/slint"] # requires wgpu backend which is not compatible with other backends enabled
+# examples/slint requires wgpu backend which is not compatible with other backends enabled
+exclude = ["examples/slint"]
 
 [workspace.package]
 edition = "2021"
