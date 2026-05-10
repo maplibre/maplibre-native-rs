@@ -67,18 +67,22 @@ impl GraphicsRenderingAPI {
     /// - If none are enabled, defaults to Metal on macOS/iOS, Vulkan elsewhere.
     /// - If multiple are enabled, falls back to OpenGL > Metal > Vulkan, with a warning.
     fn from_selected_features() -> Self {
-        const BACKENDS: &[(&str, GraphicsRenderingAPI)] = &[("OPENGL", GraphicsRenderingAPI::OpenGL), 
-                                                            ("METAL", GraphicsRenderingAPI::Metal),
-                                                            ("VULKAN", GraphicsRenderingAPI::Vulkan),
-                                                            ("WGPU", GraphicsRenderingAPI::WGPU)];
+        const BACKENDS: &[(&str, GraphicsRenderingAPI)] = &[
+            ("OPENGL", GraphicsRenderingAPI::OpenGL),
+            ("METAL", GraphicsRenderingAPI::Metal),
+            ("VULKAN", GraphicsRenderingAPI::Vulkan),
+            ("WGPU", GraphicsRenderingAPI::WGPU),
+        ];
 
         let mut selected_backend = None;
         for backend in BACKENDS {
             if env::var(format!("CARGO_FEATURE_{}", backend.0)).is_ok() {
-
                 match selected_backend {
                     None => selected_backend = Some(backend.1),
-                    Some(b) => panic!("Multiple backends selected ({} and {}). Please select only one!", b, backend.1)
+                    Some(b) => panic!(
+                        "Multiple backends selected ({} and {}). Please select only one!",
+                        b, backend.1
+                    ),
                 }
             }
         }
