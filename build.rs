@@ -67,46 +67,25 @@ impl GraphicsRenderingAPI {
     /// - If none are enabled, defaults to Metal on macOS/iOS, Vulkan elsewhere.
     /// - If multiple are enabled, falls back to OpenGL > Metal > Vulkan, with a warning.
     fn from_selected_features() -> Self {
-        let with_opengl = env::var("CARGO_FEATURE_OPENGL").is_ok();
-        let with_metal = env::var("CARGO_FEATURE_METAL").is_ok();
-        let with_vulkan = env::var("CARGO_FEATURE_VULKAN").is_ok();
-        let with_wgpu = env::var("CARGO_FEATURE_WGPU").is_ok();
+        const BACKENDS: &[(&str, GraphicsRenderingAPI)] = &[("OPENGL", GraphicsRenderingAPI::OpenGL), 
+                                                            ("METAL", GraphicsRenderingAPI::Metal),
+                                                            ("VULKAN", GraphicsRenderingAPI::Vulkan),
+                                                            ("WGPU", GraphicsRenderingAPI::WGPU)];
 
-        let target_os = env::var("CARGO_CFG_TARGET_OS").expect("CARGO_CFG_TARGET_OS not set");
-        let is_macos = target_os == "ios" || target_os == "macos";
+        let mut selected_backend = None;
+        for backend in BACKENDS {
+            if env::var(format!("CARGO_FEATURE_{}", backend.0)).is_ok() {
 
-        if with_wgpu {
-            Self::WGPU
-        } else {
-            match (with_metal, with_vulkan, with_opengl) {
-                (true, false, false) => Self::Metal,
-                (false, true, false) => Self::Vulkan,
-                (false, false, true) => Self::OpenGL,
-                (false, false, false) => {
-                    if is_macos {
-                        Self::Metal
-                    } else {
-                        Self::WGPU
-                    }
-                }
-                (_, _, _) => {
-                    // TODO: modify for better defaults
-                    // This might not be the best logic, but it can change at any moment because it's a fallback with a warning
-                    // Current logic: if opengl is enabled, always use that, otherwise pick metal on macOS and vulkan on other platforms
-                    println!("cargo::warning=Features 'metal', 'opengl', and 'vulkan' are mutually exclusive.");
-
-                    let default_choice = if with_opengl {
-                        Self::OpenGL
-                    } else if is_macos {
-                        Self::Metal
-                    } else {
-                        Self::WGPU
-                    };
-                    println!("cargo::warning=Using only '{default_choice}', but this default selection may change in future releases.");
-                    default_choice
+                match selected_backend {
+                    None => selected_backend = Some(backend.1),
+                    Some(b) => panic!("Multiple backends selected ({} and {}). Please select only one!", b, backend.1)
                 }
             }
         }
+        selected_backend.unwrap_or_else(|| {
+            println!("cargo::warning=No backend was selected. WGPU used as default. This default may change in future releases");
+            Self::WGPU
+        })
     }
 }
 impl std::fmt::Display for GraphicsRenderingAPI {
