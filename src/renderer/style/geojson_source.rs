@@ -14,10 +14,6 @@ pub struct Longitude(pub f64);
 ///
 /// Contains settings that control how `GeoJSON` data is processed and rendered,
 /// including tiling parameters and clustering configuration.
-///
-/// Note: Currently, only default options are supported when creating a source.
-/// Custom options support will be added in a future release when `MapLibre`'s
-/// Immutable<T> FFI support is improved.
 #[derive(Debug, Clone)]
 pub struct GeoJSONOptions {
     /// Minimum zoom level. Default: 0
@@ -72,16 +68,6 @@ impl GeoJsonSource {
     /// Create a new `GeoJSON` source with default options
     #[must_use]
     pub fn new(id: &str) -> Self {
-        Self { source_id: id.to_owned(), source: sources::createWithDefaultOptions(id) }
-    }
-
-    /// Create a new `GeoJSON` source with custom options.
-    ///
-    /// Note: Currently maps to default options. Custom option support
-    /// is pending resolution of `MapLibre`'s Immutable<T> FFI constraints.
-    #[must_use]
-    pub fn with_options(id: &str, _options: &GeoJSONOptions) -> Self {
-        // TODO: Pass options to C++ when Immutable<T> FFI support improves
         Self { source_id: id.to_owned(), source: sources::createWithDefaultOptions(id) }
     }
 
