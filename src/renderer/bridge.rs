@@ -61,6 +61,18 @@ impl ScreenCoordinate {
     pub fn new(x: X, y: Y) -> Self {
         Self { x: x.0, y: y.0 }
     }
+
+    /// Get the x coordinate.
+    #[must_use]
+    pub fn x(self) -> f64 {
+        self.x
+    }
+
+    /// Get the y coordinate.
+    #[must_use]
+    pub fn y(self) -> f64 {
+        self.y
+    }
 }
 
 impl Sub for ScreenCoordinate {
@@ -99,15 +111,16 @@ impl Size {
     }
 }
 
-#[cxx::bridge()]
 /// FFI bindings for map source operations.
 ///
 /// This module provides C++/Rust interoperability for various source types.
 /// Currently supports GeoJSON sources, with extensibility for additional source types.
+#[cxx::bridge()]
 pub mod sources {
     #[namespace = "mbgl::style"]
     extern "C++" {
         include!("mbgl/style/sources/geojson_source.hpp");
+
         // Opaque types
         /// A GeoJSON source for MapLibre rendering.
         type GeoJSONSource;
@@ -117,8 +130,10 @@ pub mod sources {
     unsafe extern "C++" {
         include!("sources/sources.h");
 
-        /// Creates a new GeoJSON source with the given ID.
-        fn create(id: &str) -> UniquePtr<GeoJSONSource>;
+        /// Creates a new GeoJSON source with default options.
+        fn createWithDefaultOptions(id: &str) -> UniquePtr<GeoJSONSource>;
+        /// Sets the URL for loading GeoJSON data.
+        fn setURL(source: &UniquePtr<GeoJSONSource>, url: &str);
         /// Sets a point for the GeoJSON source.
         fn setPoint(source: &UniquePtr<GeoJSONSource>, latitude: f64, longitude: f64);
     }
@@ -630,6 +645,22 @@ pub mod ffi {
         type SymbolLayer = super::layers::SymbolLayer;
     }
 
+    #[namespace = "mbgl::webgpu"]
+    extern "C++" {
+        #[cfg(feature = "wgpu")]
+        type Texture2D;
+    }
+
+    #[namespace = ""]
+    extern "C++" {
+        #[cfg(feature = "wgpu")]
+        type WGPUDevice = binding_generator::WGPUDeviceWrapper;
+        #[cfg(feature = "wgpu")]
+        type WGPUQueue = binding_generator::WGPUQueueWrapper;
+        #[cfg(feature = "wgpu")]
+        type WGPUTexture = binding_generator::WGPUTextureWrapper;
+    }
+
     // Declarations for Rust with implementations in C++
     unsafe extern "C++" {
         include!("map_renderer.h");
@@ -641,6 +672,7 @@ pub mod ffi {
         type MapObserver; // Created custom map observer
         /// Map renderer for rendering map content.
         type MapRenderer;
+
         /// Creates a new map renderer instance.
         #[allow(clippy::too_many_arguments)]
         fn MapRenderer_new(
@@ -677,6 +709,14 @@ pub mod ffi {
         fn moveBy(self: Pin<&mut MapRenderer>, delta: &ScreenCoordinate);
         /// Scales the camera based on the given scale factor.
         fn scaleBy(self: Pin<&mut MapRenderer>, scale: f64, pos: &ScreenCoordinate);
+        /// Adjusts the camera pitch by the given delta in degrees.
+        fn pitchBy(self: Pin<&mut MapRenderer>, pitch: f64);
+        /// Rotates the camera using two screen coordinates that define the gesture delta.
+        fn rotateBy(
+            self: Pin<&mut MapRenderer>,
+            first: &ScreenCoordinate,
+            second: &ScreenCoordinate,
+        );
         /// Loads a style from a URL.
         fn style_load_from_url(self: Pin<&mut MapRenderer>, url: &str);
         /// Sets the renderer size.
@@ -700,6 +740,20 @@ pub mod ffi {
         );
         /// Adds a symbol layer to the style.
         fn style_add_symbol_layer(self: Pin<&mut MapRenderer>, layer: UniquePtr<CxxSymbolLayer>);
+
+        #[cfg(feature = "wgpu")]
+        fn setDeviceAndQueue(self: Pin<&mut MapRenderer>, device: WGPUDevice, queue: WGPUQueue);
+
+        #[cfg(feature = "wgpu")]
+        fn takeTexture(self: Pin<&mut MapRenderer>) -> SharedPtr<Texture2D>;
+    }
+
+    #[cfg(feature = "wgpu")]
+    #[namespace = "mln::bridge::texture"]
+    unsafe extern "C++" {
+        include!("texture.h");
+
+        fn getWGPUTexture(texture: &SharedPtr<Texture2D>) -> WGPUTexture;
     }
 
     // Declarations for C++ with implementations in Rust

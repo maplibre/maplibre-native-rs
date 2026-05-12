@@ -6,6 +6,7 @@ use image::DynamicImage;
 mod symbol_layer;
 pub use symbol_layer::SymbolLayer;
 mod geojson_source;
+pub use geojson_source::GeoJSONOptions;
 pub use geojson_source::GeoJsonSource;
 pub use geojson_source::Latitude;
 pub use geojson_source::Longitude;

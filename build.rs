@@ -15,15 +15,14 @@
 //! To build the amalgam library [armerge](https://github.com/tux3/armerge) is required:
 //!     - `cargo install armerge`
 //!     - `sudo apt install llvm` llvm-objcopy required
-
+use downloader::{Download, Downloader};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::{env, fs};
 
-use downloader::{Download, Downloader};
-
 // Used when building locally
-const MLN_COMMIT: &str = "35cf39b72f45cfea55a34ffe7358ade5c950a3c5";
+const MLN_REPOSITORY_URL: &str = "https://github.com/Murmele/maplibre-native.git";
+const MLN_COMMIT: &str = "6d4ff7ce1c4a6b0425233e3528582f6cab167e6f";
 
 // Files of the bridge
 const BRIDGE_FILES: &[&str] = &[
@@ -46,10 +45,10 @@ const BRIDGE_FILES: &[&str] = &[
     "src/cpp/layers/layers.cpp",
 ];
 
-const BRIDGE_INCLUDE_DIRS: &[&str] = &["include", "src/cpp"];
+const BRIDGE_INCLUDE_DIRS: &[&str] = &[/*"include", */ "src/cpp"];
 
 /// Supported graphics rendering APIs.
-#[derive(PartialEq, Eq, Clone, Copy)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
 enum GraphicsRenderingAPI {
     /// [Apple's Metal API](https://developer.apple.com/metal/) (macOS/iOS only)
     Metal,
@@ -57,6 +56,9 @@ enum GraphicsRenderingAPI {
     OpenGL,
     /// [Vulkan API](https://www.vulkan.org/)
     Vulkan,
+    /// [WGPU API](https://github.com/gfx-rs/wgpu)
+    #[expect(clippy::upper_case_acronyms)]
+    WGPU,
 }
 impl GraphicsRenderingAPI {
     /// Selects the rendering API based on enabled cargo features and platform.
@@ -65,41 +67,29 @@ impl GraphicsRenderingAPI {
     /// - If none are enabled, defaults to Metal on macOS/iOS, Vulkan elsewhere.
     /// - If multiple are enabled, falls back to OpenGL > Metal > Vulkan, with a warning.
     fn from_selected_features() -> Self {
-        let with_opengl = env::var("CARGO_FEATURE_OPENGL").is_ok();
-        let with_metal = env::var("CARGO_FEATURE_METAL").is_ok();
-        let with_vulkan = env::var("CARGO_FEATURE_VULKAN").is_ok();
+        const BACKENDS: &[(&str, GraphicsRenderingAPI)] = &[
+            ("OPENGL", GraphicsRenderingAPI::OpenGL),
+            ("METAL", GraphicsRenderingAPI::Metal),
+            ("VULKAN", GraphicsRenderingAPI::Vulkan),
+            ("WGPU", GraphicsRenderingAPI::WGPU),
+        ];
 
-        let target_os = env::var("CARGO_CFG_TARGET_OS").expect("CARGO_CFG_TARGET_OS not set");
-        let is_macos = target_os == "ios" || target_os == "macos";
-
-        match (with_metal, with_vulkan, with_opengl) {
-            (true, false, false) => Self::Metal,
-            (false, true, false) => Self::Vulkan,
-            (false, false, true) => Self::OpenGL,
-            (false, false, false) => {
-                if is_macos {
-                    Self::Metal
-                } else {
-                    Self::Vulkan
+        let mut selected_backend = None;
+        for backend in BACKENDS {
+            if env::var(format!("CARGO_FEATURE_{}", backend.0)).is_ok() {
+                match selected_backend {
+                    None => selected_backend = Some(backend.1),
+                    Some(b) => panic!(
+                        "Multiple backends selected ({} and {}). Please select only one!",
+                        b, backend.1
+                    ),
                 }
             }
-            (_, _, _) => {
-                // TODO: modify for better defaults
-                // This might not be the best logic, but it can change at any moment because it's a fallback with a warning
-                // Current logic: if opengl is enabled, always use that, otherwise pick metal on macOS and vulkan on other platforms
-                println!("cargo::warning=Features 'metal', 'opengl', and 'vulkan' are mutually exclusive.");
-
-                let default_choice = if with_opengl {
-                    Self::OpenGL
-                } else if is_macos {
-                    Self::Metal
-                } else {
-                    Self::Vulkan
-                };
-                println!("cargo::warning=Using only '{default_choice}', but this default selection may change in future releases.");
-                default_choice
-            }
         }
+        selected_backend.unwrap_or_else(|| {
+            println!("cargo::warning=No backend was selected. WGPU used as default. This default may change in future releases");
+            Self::WGPU
+        })
     }
 }
 impl std::fmt::Display for GraphicsRenderingAPI {
@@ -108,6 +98,7 @@ impl std::fmt::Display for GraphicsRenderingAPI {
             Self::Metal => f.write_str("metal"),
             Self::OpenGL => f.write_str("opengl"),
             Self::Vulkan => f.write_str("vulkan"),
+            Self::WGPU => f.write_str("webgpu-wgpu"),
         }
     }
 }
@@ -163,8 +154,12 @@ fn download_static(out_dir: &Path, revision: &str) -> (PathBuf, PathBuf) {
     (library_file, headers_file)
 }
 
+struct CargoTomlInformation {
+    mln_release: String,
+}
+
 /// Reads `[package.metadata.mln].release` from the crate's `Cargo.toml`.
-fn mln_release_from_manifest() -> String {
+fn determine_cargo_toml_information() -> CargoTomlInformation {
     let manifest_dir =
         PathBuf::from(env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR is not set"));
     let manifest_path = manifest_dir.join("Cargo.toml");
@@ -178,7 +173,7 @@ fn mln_release_from_manifest() -> String {
         panic!("Failed to parse manifest as TOML at {}: {err}", manifest_path.display())
     });
 
-    manifest
+    let mln_release = manifest
         .get("package")
         .and_then(|package| package.get("metadata"))
         .and_then(|metadata| metadata.get("mln"))
@@ -190,7 +185,9 @@ fn mln_release_from_manifest() -> String {
                 manifest_path.display()
             )
         })
-        .to_owned()
+        .to_owned();
+
+    CargoTomlInformation { mln_release }
 }
 
 /// Extracts the headers from the downloaded tarball
@@ -217,7 +214,7 @@ fn extract_headers(headers_from: &Path, headers_to: &Path) {
 fn resolve_mln_core() -> (PathBuf, Vec<PathBuf>) {
     let out_dir =
         PathBuf::from(env::var_os("OUT_DIR").expect("OUT_DIR is not set")).join("maplibre-native");
-    let mln_release = mln_release_from_manifest();
+    let mln_release = determine_cargo_toml_information().mln_release;
 
     println!("cargo:rerun-if-env-changed=MLN_CORE_LIBRARY_PATH");
     println!("cargo:rerun-if-env-changed=MLN_CORE_LIBRARY_HEADERS_PATH");
@@ -268,7 +265,7 @@ fn resolve_mln_core() -> (PathBuf, Vec<PathBuf>) {
 }
 
 /// Gather include directories and build the C++ bridge using `cxx_build`.
-fn build_bridge(lib_name: &str, include_dirs: &[PathBuf]) {
+fn build_bridge(lib_name: &str, include_dirs: &[PathBuf], api: GraphicsRenderingAPI) {
     // println!("cargo:warning=Include_dirs: {:?}", include_dirs);
     let root = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
     let bridge_include_dirs: Vec<PathBuf> =
@@ -281,12 +278,23 @@ fn build_bridge(lib_name: &str, include_dirs: &[PathBuf]) {
         .warnings(true)
         .warnings_into_errors(true);
 
+    if matches!(api, GraphicsRenderingAPI::WGPU) {
+        build.flag_if_supported("-DMLN_WEBGPU_IMPL_FFI=1");
+    }
+
     for f in BRIDGE_FILES {
         println!("cargo:rerun-if-changed={f}");
         #[allow(clippy::case_sensitive_file_extension_comparisons)]
         if f.ends_with(".cpp") {
             build.file(f);
         }
+    }
+
+    // Texture FFI bridge is only required for the WebGPU backend.
+    if matches!(api, GraphicsRenderingAPI::WGPU) {
+        println!("cargo:rerun-if-changed=src/cpp/texture.h");
+        println!("cargo:rerun-if-changed=src/cpp/texture.cpp");
+        build.file("src/cpp/texture.cpp");
     }
 
     build.compile("maplibre_rust_map_renderer_bindings");
@@ -323,14 +331,44 @@ fn bundle_precompiled() -> Info {
     Info { lib_name, include_dirs, cpp_root }
 }
 
+fn clone_repository<P: AsRef<Path>>(
+    clone_dir: P,
+    folder_name: &str,
+    repository_url: &str,
+    commit: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    fs::create_dir_all(&clone_dir)?;
+    let clone_status = Command::new("git")
+        .current_dir(clone_dir)
+        .args(["clone", "--depth", "1", "--revision", commit, repository_url, folder_name])
+        .status()?;
+    if !clone_status.success() {
+        return Err(format!("Failed to clone maplibre-native repository: {clone_status}").into());
+    }
+    Ok(())
+}
+
+fn submodule_update<P: AsRef<Path>>(repository: P) -> Result<(), Box<dyn std::error::Error>> {
+    let submodule_status = Command::new("git")
+        .current_dir(repository)
+        .args(["submodule", "update", "--init", "--recursive"])
+        .status()?;
+    if !submodule_status.success() {
+        return Err(
+            format!("Failed to initialize maplibre-native submodules: {submodule_status}").into()
+        );
+    }
+    Ok(())
+}
+
 fn build_local(
-    clone_dir: PathBuf,
+    respository_dir: PathBuf,
     name: &str,
     amalgam_lib: bool,
     target_os: &str,
 ) -> Result<Info, Box<dyn std::error::Error>> {
     const TARGET_NAME: &str = "mbgl-core";
-    let maplibre_native_dir = clone_dir.join(name);
+    let maplibre_native_dir = respository_dir.join(name);
 
     // Some CI cache restores may leave an incomplete directory tree.
     // Require files that prove this is a usable maplibre-native checkout.
@@ -345,41 +383,22 @@ fn build_local(
         fs::remove_dir_all(&maplibre_native_dir)?;
     }
 
+    // Clone Repository
     if !maplibre_native_dir.exists() {
         println!("cargo:warning=Cloning maplibre-native.");
-        fs::create_dir_all(&clone_dir)?;
-        let clone_status = Command::new("git")
-            .current_dir(clone_dir)
-            .args([
-                "clone",
-                "--depth",
-                "1",
-                "--revision",
-                MLN_COMMIT,
-                "https://github.com/maplibre/maplibre-native.git",
-                name,
-            ])
-            .status()?;
-        if !clone_status.success() {
-            return Err(
-                format!("Failed to clone maplibre-native repository: {clone_status}").into()
-            );
-        }
+        clone_repository(respository_dir, name, MLN_REPOSITORY_URL, MLN_COMMIT)?;
     }
-    // println!("cargo:warning=Building maplibre-native.");
     println!("cargo:rerun-if-changed={}", maplibre_native_dir.as_os_str().to_str().unwrap());
-    let submodule_status = Command::new("git")
-        .current_dir(maplibre_native_dir.clone())
-        .args(["submodule", "update", "--init", "--recursive"])
-        .status()?;
-    if !submodule_status.success() {
-        return Err(
-            format!("Failed to initialize maplibre-native submodules: {submodule_status}").into()
-        );
-    }
+
+    // Update submodules
+    submodule_update(&maplibre_native_dir)?;
 
     let mut config = cmake::Config::new(maplibre_native_dir.clone());
+    let webgpu_h_include_dir =
+        fs::canonicalize(PathBuf::from("binding-generator").join("dep").join("webgpu-headers"))
+            .unwrap();
     config.build_target(TARGET_NAME);
+    let api = GraphicsRenderingAPI::from_selected_features();
 
     // maplibre-native's platform/darwin/darwin.cmake calls enable_language(Swift),
     // which the default "Unix Makefiles" generator does not support. Switch to Ninja.
@@ -387,7 +406,7 @@ fn build_local(
         config.generator("Ninja");
     }
 
-    match GraphicsRenderingAPI::from_selected_features() {
+    match api {
         GraphicsRenderingAPI::Metal => {
             config.configure_arg("-DMLN_WITH_METAL=ON");
         }
@@ -396,7 +415,16 @@ fn build_local(
         }
         GraphicsRenderingAPI::Vulkan => {
             config.configure_arg("-DMLN_WITH_VULKAN=ON");
-        } //GraphicsRenderingAPI::WebGPU => config.configure_arg("-DMLN_WITH_WEBGPU=ON").configure_arg("-DMLN_WEBGPU_IMPL_WGPU=ON"),
+        }
+        GraphicsRenderingAPI::WGPU => {
+            config.configure_arg("-DMLN_WITH_WEBGPU=ON");
+            config.configure_arg("-DMLN_WEBGPU_IMPL_FFI=ON");
+            config.configure_arg("-DMLN_WEBGPU_IMPL_WGPU=ON");
+            config.configure_arg(format!(
+                "-DMLN_WEBGPU_IMPL_WEBGPU_HEADER_DIR={}",
+                webgpu_h_include_dir.as_path().as_os_str().to_str().unwrap()
+            ));
+        }
     }
     if amalgam_lib {
         config.configure_arg("-DMLN_CREATE_AMALGAMATION:BOOL=ON");
@@ -414,8 +442,10 @@ fn build_local(
     // println!("cargo:warning=Building maplibre-native done.");
 
     // maplibre-native include directories
-    let include_dirs: Vec<PathBuf> = [
+    let mut include_dirs = Vec::new();
+    let mut maplibre_native_include_dirs = vec![
         "include",
+        "src", // contains offscreen_texture.hpp
         "platform/default/include",
         "vendor/maplibre-native-base/include",
         "vendor/maplibre-native-base/deps/variant/include",
@@ -423,10 +453,25 @@ fn build_local(
         "vendor/maplibre-native-base/deps/geojson.hpp/include",
         "vendor/metal-cpp",
         "vendor/expected-lite/include",
-    ]
-    .into_iter()
-    .map(|s| maplibre_native_dir.join(s))
-    .collect();
+    ];
+    if matches!(api, GraphicsRenderingAPI::WGPU) {
+        maplibre_native_include_dirs.push("vendor/wgpu-native/ffi");
+        maplibre_native_include_dirs.push("vendor/wgpu-native/ffi/webgpu-headers");
+        include_dirs.push(dest.join("build").join("webgpu-cpp"));
+    }
+
+    // maplibre-rs include dirs
+    for i in BRIDGE_INCLUDE_DIRS {
+        include_dirs.push(Path::new(i).to_path_buf());
+    }
+
+    // Move maplibre-native include dirs into maplibre-rs include dirs
+    include_dirs.append(
+        &mut maplibre_native_include_dirs
+            .into_iter()
+            .map(|path| maplibre_native_dir.clone().join(path))
+            .collect::<Vec<PathBuf>>(),
+    );
 
     Ok(Info {
         lib_name: format!("{TARGET_NAME}{}", if amalgam_lib { "-amalgam" } else { "" }),
@@ -440,10 +485,18 @@ fn build_mln() {
     println!("cargo:rerun-if-env-changed=MLN_SYSTEM");
     println!("cargo:rerun-if-env-changed=MLN_PRECOMPILE");
     println!("cargo:rerun-if-env-changed=MLN_CORE_LIBRARY_USE_AMALGAM");
+    println!("cargo:rerun-if-env-changed=MLN_LOCAL_REPOSITORY");
+
     let precompiled = !env::var("MLN_PRECOMPILE").unwrap_or("0".to_string()).eq("0");
     let amalgam_lib =
         precompiled || !env::var("MLN_CORE_LIBRARY_USE_AMALGAM").unwrap_or("0".to_string()).eq("0");
     let system_lib = !env::var("MLN_SYSTEM").unwrap_or("0".to_string()).eq("0");
+    let local_repository = env::var("MLN_LOCAL_REPOSITORY").unwrap_or_default();
+
+    if !local_repository.is_empty() {
+        println!("cargo:warning=Using local repository from: {local_repository}");
+        println!("cargo:rerun-if-env-changed={local_repository}");
+    }
 
     // Add system library search paths for macOS
     let target_os = env::var("CARGO_CFG_TARGET_OS").expect("CARGO_CFG_TARGET_OS not set");
@@ -482,12 +535,27 @@ fn build_mln() {
         panic!("Not implemented")
     } else {
         const MAPLIBRE_NATIVE_DIR_NAME: &str = "maplibre-native";
-        let root = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
-        let clone_dir = root.join("target");
+        let respository_dir = if local_repository.is_empty() {
+            let root = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
+            root.join("target")
+        } else {
+            assert!(
+                local_repository.ends_with(MAPLIBRE_NATIVE_DIR_NAME),
+                "The repository must be called: {MAPLIBRE_NATIVE_DIR_NAME}"
+            );
+            PathBuf::from(local_repository.clone()).parent().unwrap().to_path_buf()
+        };
 
-        match build_local(clone_dir.clone(), MAPLIBRE_NATIVE_DIR_NAME, amalgam_lib, &target_os) {
+        match build_local(
+            respository_dir.clone(),
+            MAPLIBRE_NATIVE_DIR_NAME,
+            amalgam_lib,
+            &target_os,
+        ) {
             Err(e) => {
-                if clone_dir.join(MAPLIBRE_NATIVE_DIR_NAME).exists() {
+                if respository_dir.join(MAPLIBRE_NATIVE_DIR_NAME).exists()
+                    && local_repository.is_empty()
+                {
                     // let _ = fs::remove_dir_all(clone_dir.join(MAPLIBRE_NATIVE_DIR_NAME));
                 }
                 panic!("Failed to build maplibre native: {e}")
@@ -496,9 +564,9 @@ fn build_mln() {
         }
     };
 
-    build_bridge(&info.lib_name, &info.include_dirs);
-    let is_apple = target_os == "macos" || target_os == "ios";
     let backend = GraphicsRenderingAPI::from_selected_features();
+    build_bridge(&info.lib_name, &info.include_dirs, backend);
+    let is_apple = target_os == "macos" || target_os == "ios";
     if !amalgam_lib {
         // The dependent libs are not bundled in the core lib, so we have to link manually
         // Required for mlt-cpp. Cpp root link search was already added above
@@ -546,6 +614,7 @@ fn build_mln() {
     }
     println!("cargo:rustc-link-lib=curl");
     println!("cargo:rustc-link-lib=z");
+
     if is_apple {
         println!("cargo:rustc-link-lib=framework=Foundation");
         println!("cargo:rustc-link-lib=framework=CoreGraphics");
@@ -555,7 +624,6 @@ fn build_mln() {
             println!("cargo:rustc-link-lib=framework=CoreText");
             println!("cargo:rustc-link-lib=framework=ImageIO");
         }
-        GraphicsRenderingAPI::Vulkan => {}
         GraphicsRenderingAPI::OpenGL => {
             println!("cargo:rustc-link-lib=GL");
             println!("cargo:rustc-link-lib=EGL");
@@ -572,6 +640,7 @@ fn build_mln() {
             println!("cargo:rustc-link-lib=framework=AppKit");
             println!("cargo:rustc-link-lib=framework=CoreLocation");
         }
+        GraphicsRenderingAPI::Vulkan | GraphicsRenderingAPI::WGPU => {}
     }
 }
 

@@ -1,0 +1,13 @@
+[package]
+name = "binding-generator"
+version = "0.1.0"
+edition = "2024"
+
+[features]
+
+[dependencies]
+cxx = { workspace = true }
+wgpu = { workspace = true }
+
+[build-dependencies]
+bindgen = "0.71.0"

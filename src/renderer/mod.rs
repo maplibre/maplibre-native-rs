@@ -19,6 +19,7 @@ pub use file_source::{register_file_source_callback, FileSourceRequestCallback, 
 pub use image_renderer::{Continuous, Image, ImageRenderer, RenderingError, Static, Tile};
 pub use map_observer::MapObserver;
 pub use resource_options::ResourceOptions;
+pub use style::GeoJSONOptions;
 pub use style::GeoJsonSource;
 pub use style::SourceId;
 pub use style::Style;

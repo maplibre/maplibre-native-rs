@@ -1,6 +1,9 @@
 #pragma once
 
+#include <cassert>
+#include <cstdint>
 #include <mbgl/gfx/headless_frontend.hpp>
+#include <mbgl/gfx/renderer_backend.hpp>
 #include <mbgl/style/image.hpp>
 #include <mbgl/style/sources/geojson_source.hpp>
 #include <mbgl/style/layers/symbol_layer.hpp>
@@ -13,7 +16,10 @@
 #include <mbgl/util/premultiply.hpp>
 #include <mbgl/util/tile_server_options.hpp>
 #include <mbgl/util/size.hpp>
-#include "mbgl/storage/resource_options.hpp"
+#include <mbgl/storage/resource_options.hpp>
+#if defined(MLN_WEBGPU_IMPL_FFI)
+#include <mbgl/webgpu/texture2d.hpp>
+#endif
 #include <memory>
 #include <vector>
 #include <stdexcept>
@@ -24,6 +30,9 @@
 
 namespace mln {
 namespace bridge {
+
+struct Texture;
+struct TextureView;
 
 constexpr size_t BYTES_PER_PIXEL = 4; // rgba
 
@@ -42,6 +51,15 @@ public:
     std::shared_ptr<MapObserver> observer() {
         return mapObserverInstance;
     }
+
+    #if defined(MLN_WEBGPU_IMPL_FFI)
+    std::shared_ptr<mbgl::webgpu::Texture2D> takeTexture() {
+        // TODO: don't like the static pointer cast
+        auto ptr = std::static_pointer_cast<mbgl::webgpu::Texture2D>(this->frontend->takeTexture());
+        assert(ptr);
+        return ptr;
+    }
+    #endif
 
     void style_add_image(rust::Str id, rust::Slice<const unsigned char> data, mbgl::Size size, bool single_distance_field) {
         mbgl::PremultipliedImage image(size, data.data(), data.size());
@@ -120,7 +138,21 @@ public:
         map->scaleBy(scale, pos);
     }
 
+    void pitchBy(double pitch) {
+        map->pitchBy(pitch);
+    }
 
+    void rotateBy(const mbgl::ScreenCoordinate& first, const mbgl::ScreenCoordinate& second) {
+        map->rotateBy(first, second);
+    }
+
+    // Set the wgpu device and queue required for rendering when using the wgpu ffi backend
+    #if defined(MLN_WEBGPU_IMPL_FFI)
+    void setDeviceAndQueue(WGPUDevice device, WGPUQueue queue) {
+        frontend->getBackend()->setDevice(device);
+        frontend->getBackend()->setQueue(queue);
+    }
+    #endif
 public:
     mbgl::util::RunLoop runLoop;
     // Due to CXX limitations, make all these public and access them from the regular functions below

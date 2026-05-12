@@ -3,41 +3,45 @@ use crate::MapAdapter;
 use maplibre_native::Height;
 use maplibre_native::ScreenCoordinate;
 use maplibre_native::Width;
-use maplibre_native::layers::SymbolAnchorType;
 use slint::ComponentHandle;
 use std::rc::Rc;
 mod headless;
 pub use headless::MapLibre;
 pub use headless::create_map;
-use image::ImageReader;
-use maplibre_native::Style;
-use maplibre_native::{GeoJsonSource, Latitude, Longitude, SymbolLayer};
 use maplibre_native::{X, Y};
 use std::cell::RefCell;
-use std::path::Path;
 
 pub fn init(ui: &MainWindow, map: &Rc<RefCell<MapLibre>>) {
-    loop {
-        let mut borrow = map.borrow_mut();
-        borrow.renderer().render_once();
-
-        if let Some(error) = borrow.style_loading_error() {
-            panic!("Failed to load map: {}", error);
-        }
-
-        if borrow.style_loaded() {
-            drop(borrow);
-            style(map);
-            break;
-        }
-    }
+    ui.window()
+        .set_rendering_notifier({
+            let map = Rc::downgrade(map);
+            move |state, graphics_api| {
+                if matches!(state, slint::RenderingState::RenderingSetup) {
+                    let slint::GraphicsAPI::WGPU { instance: _instance, device, queue, .. } =
+                        graphics_api
+                    else {
+                        return;
+                    };
+                    map.upgrade()
+                        .unwrap()
+                        .borrow_mut()
+                        .renderer()
+                        .set_device_queue(device.clone(), queue.clone());
+                }
+            }
+        })
+        .unwrap();
 
     ui.on_map_size_changed({
         let map = Rc::downgrade(map);
         move |size| {
-            let size =
-                maplibre_native::Size::new(Width(size.width as u32), Height(size.height as u32));
-            map.upgrade().unwrap().borrow_mut().renderer().set_map_size(size);
+            if size.width > 0. && size.height > 0. {
+                let size = maplibre_native::Size::new(
+                    Width(size.width as u32),
+                    Height(size.height as u32),
+                );
+                map.upgrade().unwrap().borrow_mut().set_map_size(size);
+            }
         }
     });
 
@@ -48,19 +52,11 @@ pub fn init(ui: &MainWindow, map: &Rc<RefCell<MapLibre>>) {
             let map = map.upgrade().unwrap();
             let mut map = map.borrow_mut();
             map.renderer().render_once();
-            if map.updated() {
-                let image = map.renderer().read_still_image();
-                let size = image.size();
-                let img = slint::SharedPixelBuffer::<slint::Rgba8Pixel>::clone_from_slice(
-                    image.buffer(),
-                    size.width(),
-                    size.height(),
-                );
-                ui_handle
-                    .upgrade()
-                    .unwrap()
-                    .global::<MapAdapter>()
-                    .set_map_texture(slint::Image::from_rgba8(img)); // TODO: check if the image really changed, otherwise we don't need to clone!
+            if map.updated()
+                && let Some(image) = map.renderer().take_texture()
+                && let Ok(image) = image.try_into()
+            {
+                ui_handle.upgrade().unwrap().global::<MapAdapter>().set_map_texture(image);
             }
         }
     });
@@ -96,26 +92,20 @@ pub fn init(ui: &MainWindow, map: &Rc<RefCell<MapLibre>>) {
             map.upgrade().unwrap().borrow_mut().renderer().scale_by(scale, pos);
         }
     });
-}
 
-fn style(map: &Rc<RefCell<MapLibre>>) {
-    let mut map_borrow = map.borrow_mut();
-    let mut style = Style::get_ref(map_borrow.renderer());
+    ui.global::<MapAdapter>().on_bearing_changed({
+        let map = Rc::downgrade(map);
+        move |delta: f32| {
+            // MapLibre's rotateBy API expects a gesture from one pointer position to another.
+            // Control+wheel provides only a scalar delta, so convert it into a small synthetic drag.
+            map.upgrade().unwrap().borrow_mut().rotate_by(delta);
+        }
+    });
 
-    let image = ImageReader::open(
-        Path::new(env!("CARGO_MANIFEST_DIR")).join("ui").join("icons").join("Marker.png"),
-    )
-    .unwrap()
-    .decode()
-    .unwrap();
-    let image_id = style.add_image("The id", &image, true);
-
-    let mut geo_json_source = GeoJsonSource::new("geojsonsourceid");
-    geo_json_source.set_point(Latitude(52.67655), Longitude(13.28387));
-    let source_id = style.add_source(geo_json_source);
-
-    let layer = SymbolLayer::new("Layer id", &source_id);
-    layer.set_icon_image(&image_id);
-    layer.set_icon_anchor(SymbolAnchorType::Bottom);
-    style.add_layer(layer);
+    ui.global::<MapAdapter>().on_pitch_changed({
+        let map = Rc::downgrade(map);
+        move |delta: f32| {
+            map.upgrade().unwrap().borrow_mut().renderer().pitch_by(delta.into());
+        }
+    });
 }

@@ -23,19 +23,23 @@ default = ["log", "pool"]
 metal = []
 opengl = []
 vulkan = []
+wgpu = ["dep:wgpu", "dep:binding-generator"]
 log = ["dep:log"]
 pool = ["dep:tokio"]
 
 [dependencies]
+binding-generator = { path = "binding-generator", optional = true }
 cxx.workspace = true
 image.workspace = true
 log = { workspace = true, optional = true }
 thiserror.workspace = true
 tokio = { workspace = true, features = ["sync"], optional = true }
 url.workspace = true
+wgpu = { workspace = true, optional = true }
 
 [build-dependencies]
 cmake.workspace = true
+const_format = "0.2.35"
 cxx-build.workspace = true
 downloader.workspace = true
 flate2.workspace = true
@@ -49,9 +53,6 @@ futures.workspace = true
 insta = { workspace = true, features = ["json", "redactions"] }
 tokio = { workspace = true, features = ["macros", "sync", "rt-multi-thread"] }
 
-[lints]
-workspace = true
-
 ##########################################################
 ##########################################################
 ####  Workspace configuration for the entire project  ####
@@ -59,7 +60,9 @@ workspace = true
 ##########################################################
 
 [workspace]
-members = [".", "examples/*"]
+members = [".", "binding-generator", "examples/render", "examples/tile-server"]
+# examples/slint requires wgpu backend which is not compatible with other backends enabled
+exclude = ["examples/slint"]
 
 [workspace.package]
 edition = "2021"
@@ -84,6 +87,7 @@ thiserror = "2.0.16"
 tokio = { version = "1", features = [], default-features = false }
 url = "2.5.7"
 walkdir = "2.5.0"
+wgpu = { version = "29.0.0" }
 
 [workspace.lints.rust]
 missing_debug_implementations = "warn"
@@ -92,6 +96,9 @@ unused_qualifications = "warn"
 
 [workspace.lints.clippy]
 pedantic = { level = "warn", priority = -1 }
+
+[lints]
+workspace = true
 
 # https://insta.rs/docs/quickstart/
 [profile.dev.package]

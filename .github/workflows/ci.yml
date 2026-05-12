@@ -23,7 +23,9 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with: { persist-credentials: false }
+        with:
+          persist-credentials: false
+          submodules: true
       - if: github.event_name != 'release' && github.event_name != 'workflow_dispatch'
         uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
       - run: echo "MLN_PRECOMPILE=0" >> $GITHUB_ENV
@@ -33,6 +35,44 @@ jobs:
         with: { tool: 'just' }
       - run: just env-info install-dependencies 'vulkan'
       - run: just ci-lint
+
+  slint-example:
+    name: Build slint example ${{ matrix.runs-on }} - ${{ matrix.backend }} - Precompiled ${{ matrix.precompiled }}
+    runs-on: ${{ matrix.runs-on }}
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Linux x86
+          - runs-on: ubuntu-latest
+            precompiled: 0
+            amalgam: 0
+          # Linux ARM
+          - runs-on: ubuntu-24.04-arm
+            precompiled: 0
+            amalgam: 0
+          # macOS ARM
+          - runs-on: macos-latest
+            precompiled: 0
+            amalgam: 0
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+          submodules: true
+      - if: github.event_name != 'release' && github.event_name != 'workflow_dispatch'
+        uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+      - uses: taiki-e/install-action@db5fb34fa772531a3ece57ca434f579eb334e0fb # v2.75.30
+        with: { tool: 'just' }
+      - run: echo "MLN_PRECOMPILE=${{ matrix.precompiled }}" >> $GITHUB_ENV
+      - run: echo "MLN_CORE_LIBRARY_USE_AMALGAM=${{ matrix.amalgam }}" >> $GITHUB_ENV
+      - run: just env-info install-dependencies 'wgpu'
+      - run: rustup update stable && rustup default stable
+      - name: Build Slint example
+        run: just build-example_slint
+
   test:
     name: Test ${{ matrix.runs-on }} - ${{ matrix.backend }} - Precompiled ${{ matrix.precompiled }}
     runs-on: ${{ matrix.runs-on }}
@@ -71,7 +111,9 @@ jobs:
             amalgam: 0
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with: { persist-credentials: false }
+        with:
+          persist-credentials: false
+          submodules: true
       - if: github.event_name != 'release' && github.event_name != 'workflow_dispatch'
         uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
       - uses: taiki-e/install-action@ec28e287910af896fd98e04056d31fa68607e7ad # v2.77.4
@@ -125,7 +167,9 @@ jobs:
             amalgam: 0
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with: { persist-credentials: false }
+        with:
+          persist-credentials: false
+          submodules: true
       - if: github.event_name != 'release' && github.event_name != 'workflow_dispatch'
         uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
       - uses: taiki-e/install-action@ec28e287910af896fd98e04056d31fa68607e7ad # v2.77.4
@@ -154,7 +198,7 @@ jobs:
   # This final step is needed to mark the whole workflow as successful
   # Don't change its name - it is used by the merge protection rules
   ci-passed:
-    needs: [ lint, test, test-msrv ]
+    needs: [ lint, test, test-msrv, slint-example ]
     if: always()
     runs-on: ubuntu-latest
     permissions: {}
@@ -184,7 +228,9 @@ jobs:
       MLN_PRECOMPILE: 1
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with: { persist-credentials: false }
+        with:
+          persist-credentials: false
+          submodules: true
       - uses: dtolnay/rust-toolchain@stable
       - name: Publish to crates.io if crate's version is newer
         uses: release-plz/action@064f4d1e36c843611ddf013be726beaa4ad804db # v0.5.129

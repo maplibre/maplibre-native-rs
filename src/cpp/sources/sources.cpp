@@ -4,8 +4,12 @@
 #include <memory>
 
 namespace mln::bridge::style::sources::geojson {
-    std::unique_ptr<mbgl::style::GeoJSONSource> create(rust::Str id) {
+    std::unique_ptr<mbgl::style::GeoJSONSource> createWithDefaultOptions(rust::Str id) {
         return std::make_unique<mbgl::style::GeoJSONSource>(std::string(id));
+    }
+
+    void setURL(const std::unique_ptr<mbgl::style::GeoJSONSource>& source, rust::Str url) {
+        source->setURL(std::string(url));
     }
 
     void setPoint(const std::unique_ptr<mbgl::style::GeoJSONSource>& source, double latitude, double longitude) {

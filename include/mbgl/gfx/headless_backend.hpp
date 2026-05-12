@@ -23,6 +23,7 @@ public:
     }
 
     virtual PremultipliedImage readStillImage() = 0;
+    virtual gfx::Texture2DPtr takeTexture() { return nullptr; }
     virtual RendererBackend* getRendererBackend() = 0;
     void setSize(Size);
 
