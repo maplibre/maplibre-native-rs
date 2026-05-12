@@ -39,6 +39,12 @@ macro_rules! opaque_handle_types {
     };
 }
 
+mod generated_bindings {
+    #![allow(rustdoc::broken_intra_doc_links)]
+    include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
+}
+use generated_bindings::*;
+
 pub struct WGPUDeviceImpl(wgpu::Device);
 pub struct WGPUQueueImpl(wgpu::Queue);
 
@@ -211,8 +217,6 @@ opaque_handle_types!(
     WGPURenderBundleEncoderImpl,
     WGPUSurfaceImpl,
 );
-
-include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuCreateInstance(
