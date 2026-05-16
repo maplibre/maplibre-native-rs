@@ -347,24 +347,20 @@ fn build_local(
 
     if !maplibre_native_dir.exists() {
         println!("cargo:warning=Cloning maplibre-native.");
-        fs::create_dir_all(&clone_dir)?;
-        let clone_status = Command::new("git")
-            .current_dir(clone_dir)
-            .args([
-                "clone",
-                "--depth",
-                "1",
-                "--revision",
-                MLN_COMMIT,
-                "https://github.com/maplibre/maplibre-native.git",
-                name,
-            ])
-            .status()?;
-        if !clone_status.success() {
-            return Err(
-                format!("Failed to clone maplibre-native repository: {clone_status}").into()
-            );
-        }
+        fs::create_dir_all(&maplibre_native_dir)?;
+        // `git clone --revision` only exists in git >= 2.49 (May 2025); use
+        // init + fetch + checkout so older git works too.
+        let git = |args: &[&str]| -> Result<(), Box<dyn std::error::Error>> {
+            let status = Command::new("git").current_dir(&maplibre_native_dir).args(args).status()?;
+            if !status.success() {
+                return Err(format!("git {} failed: {status}", args.join(" ")).into());
+            }
+            Ok(())
+        };
+        git(&["init", "--quiet"])?;
+        git(&["remote", "add", "origin", "https://github.com/maplibre/maplibre-native.git"])?;
+        git(&["fetch", "--depth", "1", "origin", MLN_COMMIT])?;
+        git(&["checkout", "--quiet", "FETCH_HEAD"])?;
     }
     // println!("cargo:warning=Building maplibre-native.");
     println!("cargo:rerun-if-changed={}", maplibre_native_dir.as_os_str().to_str().unwrap());
