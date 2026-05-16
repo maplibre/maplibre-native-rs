@@ -324,7 +324,7 @@ fn bundle_precompiled() -> Info {
 }
 
 fn build_local(
-    clone_dir: PathBuf,
+    clone_dir: &Path,
     name: &str,
     amalgam_lib: bool,
     target_os: &str,
@@ -482,7 +482,7 @@ fn build_mln() {
         let root = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
         let clone_dir = root.join("target");
 
-        match build_local(clone_dir.clone(), MAPLIBRE_NATIVE_DIR_NAME, amalgam_lib, &target_os) {
+        match build_local(&clone_dir, MAPLIBRE_NATIVE_DIR_NAME, amalgam_lib, &target_os) {
             Err(e) => {
                 if clone_dir.join(MAPLIBRE_NATIVE_DIR_NAME).exists() {
                     // let _ = fs::remove_dir_all(clone_dir.join(MAPLIBRE_NATIVE_DIR_NAME));
