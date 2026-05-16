@@ -351,7 +351,8 @@ fn build_local(
         // `git clone --revision` only exists in git >= 2.49 (May 2025); use
         // init + fetch + checkout so older git works too.
         let git = |args: &[&str]| -> Result<(), Box<dyn std::error::Error>> {
-            let status = Command::new("git").current_dir(&maplibre_native_dir).args(args).status()?;
+            let status =
+                Command::new("git").current_dir(&maplibre_native_dir).args(args).status()?;
             if !status.success() {
                 return Err(format!("git {} failed: {status}", args.join(" ")).into());
             }
