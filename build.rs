@@ -348,7 +348,7 @@ fn build_local(
     if !maplibre_native_dir.exists() {
         println!("cargo:warning=Cloning maplibre-native.");
         fs::create_dir_all(&maplibre_native_dir)?;
-        // `git clone --revision` only exists in git >= 2.49 (May 2025); use
+        // `git clone --revision` only exists in git >= 2.49 (March 2025); use
         // init + fetch + checkout so older git works too.
         let git = |args: &[&str]| -> Result<(), Box<dyn std::error::Error>> {
             let status =
