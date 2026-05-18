@@ -269,14 +269,15 @@ fn build_bridge(lib_name: &str, include_dirs: &[PathBuf]) {
     println!("cargo:rerun-if-changed={BRIDGE_CPP_DIR}");
 
     // Compile C++ bridge sources.
-    build.files(
-        walkdir::WalkDir::new(root.join(BRIDGE_CPP_DIR))
-            .into_iter()
-            .filter_map(Result::ok)
-            .filter(|e| e.file_type().is_file())
-            .map(walkdir::DirEntry::into_path)
-            .filter(|p| p.extension().and_then(|e| e.to_str()) == Some("cpp")),
-    );
+    let mut cpp_files = walkdir::WalkDir::new(root.join(BRIDGE_CPP_DIR))
+        .into_iter()
+        .filter_map(Result::ok)
+        .filter(|e| e.file_type().is_file())
+        .map(walkdir::DirEntry::into_path)
+        .filter(|p| p.extension().and_then(|e| e.to_str()) == Some("cpp"))
+        .collect::<Vec<_>>();
+    cpp_files.sort();
+    build.files(cpp_files);
 
     build.compile("maplibre_rust_map_renderer_bindings");
 
