@@ -270,7 +270,7 @@ fn build_bridge(lib_name: &str, include_dirs: &[PathBuf]) {
 
     // Compile C++ bridge sources.
     build.files(
-        walkdir::WalkDir::new(&root.join(BRIDGE_CPP_DIR))
+        walkdir::WalkDir::new(root.join(BRIDGE_CPP_DIR))
             .into_iter()
             .filter_map(Result::ok)
             .filter(|e| e.file_type().is_file())
