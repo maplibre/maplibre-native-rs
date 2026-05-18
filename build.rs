@@ -25,26 +25,8 @@ use downloader::{Download, Downloader};
 // Used when building locally
 const MLN_COMMIT: &str = "35cf39b72f45cfea55a34ffe7358ade5c950a3c5";
 
-// Files of the bridge
-const BRIDGE_FILES: &[&str] = &[
-    "src/renderer/bridge.rs",
-    "src/cpp/bridge.cpp",
-    "src/cpp/util.cpp",
-    "src/cpp/resource_options.h",
-    "src/cpp/resource_options.cpp",
-    "src/cpp/tile_server_options.h",
-    "src/cpp/tile_server_options.cpp",
-    "src/cpp/map_renderer.h",
-    "src/cpp/renderer_observer.h",
-    "src/cpp/map_observer.h",
-    "src/cpp/rust_file_source.h",
-    "src/cpp/rust_file_source.cpp",
-    "src/cpp/rust_log_observer.h",
-    "src/cpp/sources/sources.h",
-    "src/cpp/sources/sources.cpp",
-    "src/cpp/layers/layers.h",
-    "src/cpp/layers/layers.cpp",
-];
+const BRIDGE_RS: &str = "src/renderer/bridge.rs";
+const BRIDGE_CPP_DIR: &str = "src/cpp";
 
 const BRIDGE_INCLUDE_DIRS: &[&str] = &["include", "src/cpp"];
 
@@ -273,7 +255,7 @@ fn build_bridge(lib_name: &str, include_dirs: &[PathBuf]) {
     let root = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
     let bridge_include_dirs: Vec<PathBuf> =
         BRIDGE_INCLUDE_DIRS.iter().map(|p| root.join(p)).collect();
-    let mut build = cxx_build::bridge("src/renderer/bridge.rs");
+    let mut build = cxx_build::bridge(BRIDGE_RS);
     build
         .includes(&bridge_include_dirs)
         .includes(include_dirs)
@@ -281,13 +263,20 @@ fn build_bridge(lib_name: &str, include_dirs: &[PathBuf]) {
         .warnings(true)
         .warnings_into_errors(true);
 
-    for f in BRIDGE_FILES {
-        println!("cargo:rerun-if-changed={f}");
-        #[allow(clippy::case_sensitive_file_extension_comparisons)]
-        if f.ends_with(".cpp") {
-            build.file(f);
-        }
-    }
+    // Watch the Rust side of the cxx bridge.
+    println!("cargo:rerun-if-changed={BRIDGE_RS}");
+    // Watch the C++ bridge source tree.
+    println!("cargo:rerun-if-changed={BRIDGE_CPP_DIR}");
+
+    // Compile C++ bridge sources.
+    build.files(
+        walkdir::WalkDir::new(&root.join(BRIDGE_CPP_DIR))
+            .into_iter()
+            .filter_map(Result::ok)
+            .filter(|e| e.file_type().is_file())
+            .map(walkdir::DirEntry::into_path)
+            .filter(|p| p.extension().and_then(|e| e.to_str()) == Some("cpp")),
+    );
 
     build.compile("maplibre_rust_map_renderer_bindings");
 
@@ -363,8 +352,6 @@ fn build_local(
         git(&["fetch", "--depth", "1", "origin", MLN_COMMIT])?;
         git(&["checkout", "--quiet", "FETCH_HEAD"])?;
     }
-    // println!("cargo:warning=Building maplibre-native.");
-    println!("cargo:rerun-if-changed={}", maplibre_native_dir.as_os_str().to_str().unwrap());
     let submodule_status = Command::new("git")
         .current_dir(maplibre_native_dir.clone())
         .args(["submodule", "update", "--init", "--recursive"])
