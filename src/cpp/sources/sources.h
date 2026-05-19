@@ -6,8 +6,13 @@ namespace mbgl::style {
     class GeoJSONSource;
 }
 
+namespace mln::bridge::geojson {
+    class GeoJson;
+}
+
 namespace mln::bridge::style::sources::geojson {
     std::unique_ptr<mbgl::style::GeoJSONSource> create(rust::Str id);
 
-    void setPoint(const std::unique_ptr<mbgl::style::GeoJSONSource>& source, double latitude, double longitude);
+    void setGeoJson(const std::unique_ptr<mbgl::style::GeoJSONSource>& source,
+                    const mln::bridge::geojson::GeoJson& geojson);
 }

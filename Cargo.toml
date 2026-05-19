@@ -23,13 +23,16 @@ default = ["log", "pool"]
 metal = []
 opengl = []
 vulkan = []
+geojson = ["dep:geojson", "dep:serde_json"]
 log = ["dep:log"]
 pool = ["dep:tokio"]
 
 [dependencies]
 cxx.workspace = true
+geojson = { workspace = true, optional = true }
 image.workspace = true
 log = { workspace = true, optional = true }
+serde_json = { workspace = true, optional = true }
 thiserror.workspace = true
 tokio = { workspace = true, features = ["sync"], optional = true }
 url.workspace = true
@@ -47,6 +50,7 @@ walkdir.workspace = true
 env_logger.workspace = true
 futures.workspace = true
 insta = { workspace = true, features = ["json", "redactions"] }
+serde_json.workspace = true
 tokio = { workspace = true, features = ["macros", "sync", "rt-multi-thread"] }
 
 [lints]
@@ -75,10 +79,12 @@ downloader = "0.2"
 env_logger = "0.11"
 flate2 = "1.1"
 futures = "0.3"
+geojson = "1.0.0"
 image = "0.25"
 insta = "1.43"
 log = "0.4"
 maplibre_native = { path = ".", version = "0.4.6" }
+serde_json = "1.0"
 tar = "0.4.44"
 thiserror = "2.0.16"
 tokio = { version = "1", features = [], default-features = false }

@@ -1,6 +1,8 @@
-use crate::renderer::bridge::layers::{self, SymbolAnchorType};
-use cxx::UniquePtr;
 use std::fmt;
+
+use cxx::UniquePtr;
+
+use crate::renderer::bridge::layers::{self, SymbolAnchorType};
 
 /// A symbol layer for rendering labels and icons on the map.
 pub struct SymbolLayer {
@@ -20,12 +22,12 @@ impl SymbolLayer {
     }
 
     /// Set the icon used as marker
-    pub fn set_icon_image<T: super::StyleImageRef>(&self, image_id: &T) {
+    pub fn set_icon_image<T: super::StyleImageRef>(&mut self, image_id: &T) {
         layers::setIconImage(&self.layer, image_id.image_id());
     }
 
     /// Set the anchor point of the image
-    pub fn set_icon_anchor(&self, anchor: SymbolAnchorType) {
+    pub fn set_icon_anchor(&mut self, anchor: SymbolAnchorType) {
         layers::setIconAnchor(&self.layer, anchor);
     }
 

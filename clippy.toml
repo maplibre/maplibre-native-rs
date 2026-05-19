@@ -1,2 +1,3 @@
 allow-unwrap-in-tests = true
 avoid-breaking-exported-api = false
+doc-valid-idents = ["MapLibre", "GeoJSON", ".."]

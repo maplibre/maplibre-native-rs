@@ -5,15 +5,21 @@ publish = false
 edition = "2024"
 
 [features]
-default = ["vulkan"]
+# Backend is selected per-OS through target-specific dependencies below. The
+# explicit features here let callers override (`cargo run --features ...`).
 vulkan = ["maplibre_native/vulkan"]
 opengl = ["maplibre_native/opengl"]
 metal = ["maplibre_native/metal"]
 
 [dependencies]
 image = { workspace = true }
-maplibre_native = { path = "../.." }
-slint = { version = "1.15", features = ["backend-android-activity-06"] }
+slint = { version = "1.16", features = ["backend-android-activity-06"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+maplibre_native = { path = "../..", features = ["metal"] }
+
+[target.'cfg(not(target_os = "macos"))'.dependencies]
+maplibre_native = { path = "../..", features = ["vulkan"] }
 
 [build-dependencies]
-slint-build = { version = "1.15" }
+slint-build = { version = "1.16" }

@@ -18,6 +18,9 @@ pub fn set_log_thread_enabled(enable: bool) {
 }
 
 fn log_from_cpp(severity: ffi::EventSeverity, event: ffi::Event, code: i64, message: &str) {
+    #[cfg(not(feature = "log"))]
+    let _ = (severity, event, code, message);
+
     #[cfg(feature = "log")]
     match severity {
         ffi::EventSeverity::Debug => log::debug!("{event:?} (code={code}) {message}"),
@@ -100,6 +103,31 @@ impl Size {
 }
 
 #[cxx::bridge()]
+/// FFI bindings for GeoJSON values.
+pub mod geojson {
+    #[namespace = "mln::bridge::geojson"]
+    unsafe extern "C++" {
+        include!("geojson/geojson.h");
+
+        /// A MapLibre Native GeoJSON value.
+        type GeoJson;
+
+        /// Parses a GeoJSON string into a MapLibre Native GeoJSON value.
+        fn parse(json: &str) -> Result<UniquePtr<GeoJson>>;
+        /// Copies a MapLibre Native GeoJSON value.
+        fn clone(geojson: &GeoJson) -> UniquePtr<GeoJson>;
+        /// Serializes a MapLibre Native GeoJSON value to a JSON string.
+        fn stringify(geojson: &GeoJson) -> Result<String>;
+    }
+}
+
+impl std::fmt::Debug for geojson::GeoJson {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("GeoJson").finish()
+    }
+}
+
+#[cxx::bridge()]
 /// FFI bindings for map source operations.
 ///
 /// This module provides C++/Rust interoperability for various source types.
@@ -113,14 +141,23 @@ pub mod sources {
         type GeoJSONSource;
     }
 
+    #[namespace = "mln::bridge::geojson"]
+    extern "C++" {
+        include!("geojson/geojson.h");
+
+        /// A MapLibre Native GeoJSON value.
+        #[rust_name = "CxxGeoJson"]
+        type GeoJson = super::geojson::GeoJson;
+    }
+
     #[namespace = "mln::bridge::style::sources::geojson"]
     unsafe extern "C++" {
         include!("sources/sources.h");
 
         /// Creates a new GeoJSON source with the given ID.
         fn create(id: &str) -> UniquePtr<GeoJSONSource>;
-        /// Sets a point for the GeoJSON source.
-        fn setPoint(source: &UniquePtr<GeoJSONSource>, latitude: f64, longitude: f64);
+        /// Sets the GeoJSON data for the source.
+        fn setGeoJson(source: &UniquePtr<GeoJSONSource>, geojson: &CxxGeoJson);
     }
 }
 
@@ -162,8 +199,18 @@ pub mod layers {
 
     #[namespace = "mbgl::style"]
     extern "C++" {
+        include!("mbgl/style/layers/circle_layer.hpp");
+        include!("mbgl/style/layers/fill_layer.hpp");
+        include!("mbgl/style/layers/line_layer.hpp");
         include!("mbgl/style/layers/symbol_layer.hpp");
         include!("mbgl/style/types.hpp");
+
+        /// A circle layer for rendering point data.
+        type CircleLayer;
+        /// A fill layer for rendering polygon data.
+        type FillLayer;
+        /// A line layer for rendering line data.
+        type LineLayer;
         // Opaque types
         /// A symbol layer for rendering labels and icons on the map.
         type SymbolLayer;
@@ -172,9 +219,50 @@ pub mod layers {
         type SymbolAnchorType;
     }
 
+    #[namespace = "mbgl"]
+    extern "C++" {
+        include!("mbgl/util/color.hpp");
+
+        /// A MapLibre Native premultiplied RGBA color.
+        type Color = super::super::style::Color;
+    }
+
     #[namespace = "mln::bridge::style::layers"]
     unsafe extern "C++" {
         include!("layers/layers.h");
+
+        /// Creates a new circle layer.
+        #[must_use]
+        pub(crate) fn create_circle_layer(
+            layer_id: &str,
+            source_id: &str,
+        ) -> UniquePtr<CircleLayer>;
+        /// Sets the circle color.
+        fn setCircleColor(layer: &UniquePtr<CircleLayer>, color: &Color);
+        /// Sets the circle opacity.
+        fn setCircleOpacity(layer: &UniquePtr<CircleLayer>, opacity: f32);
+        /// Sets the circle radius in pixels.
+        fn setCircleRadius(layer: &UniquePtr<CircleLayer>, radius: f32);
+
+        /// Creates a new fill layer.
+        #[must_use]
+        pub(crate) fn create_fill_layer(layer_id: &str, source_id: &str) -> UniquePtr<FillLayer>;
+        /// Sets the fill color.
+        fn setFillColor(layer: &UniquePtr<FillLayer>, color: &Color);
+        /// Sets the fill opacity.
+        fn setFillOpacity(layer: &UniquePtr<FillLayer>, opacity: f32);
+        /// Sets the fill outline color.
+        fn setFillOutlineColor(layer: &UniquePtr<FillLayer>, color: &Color);
+
+        /// Creates a new line layer.
+        #[must_use]
+        pub(crate) fn create_line_layer(layer_id: &str, source_id: &str) -> UniquePtr<LineLayer>;
+        /// Sets the line color.
+        fn setLineColor(layer: &UniquePtr<LineLayer>, color: &Color);
+        /// Sets the line opacity.
+        fn setLineOpacity(layer: &UniquePtr<LineLayer>, opacity: f32);
+        /// Sets the line width in pixels.
+        fn setLineWidth(layer: &UniquePtr<LineLayer>, width: f32);
 
         /// Creates a new symbol layer.
         #[must_use]
@@ -186,6 +274,24 @@ pub mod layers {
         fn setIconImage(layer: &UniquePtr<SymbolLayer>, image_id: &str);
         /// Sets the anchor point for layer icons.
         fn setIconAnchor(layer: &UniquePtr<SymbolLayer>, anchor: SymbolAnchorType);
+    }
+}
+
+impl std::fmt::Debug for layers::CircleLayer {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CircleLayer").finish()
+    }
+}
+
+impl std::fmt::Debug for layers::FillLayer {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("FillLayer").finish()
+    }
+}
+
+impl std::fmt::Debug for layers::LineLayer {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("LineLayer").finish()
     }
 }
 
@@ -622,9 +728,18 @@ pub mod ffi {
 
     #[namespace = "mbgl::style"]
     extern "C++" {
+        /// Circle layer opaque type.
+        #[rust_name = "CxxCircleLayer"]
+        type CircleLayer = super::layers::CircleLayer;
+        /// Fill layer opaque type.
+        #[rust_name = "CxxFillLayer"]
+        type FillLayer = super::layers::FillLayer;
         /// GeoJSON source opaque type.
         #[rust_name = "CxxGeoJSONSource"]
         type GeoJSONSource = super::sources::GeoJSONSource;
+        /// Line layer opaque type.
+        #[rust_name = "CxxLineLayer"]
+        type LineLayer = super::layers::LineLayer;
         /// Symbol layer opaque type.
         #[rust_name = "CxxSymbolLayer"]
         type SymbolLayer = super::layers::SymbolLayer;
@@ -698,6 +813,12 @@ pub mod ffi {
             self: Pin<&mut MapRenderer>,
             source: UniquePtr<CxxGeoJSONSource>,
         );
+        /// Adds a circle layer to the style.
+        fn style_add_circle_layer(self: Pin<&mut MapRenderer>, layer: UniquePtr<CxxCircleLayer>);
+        /// Adds a fill layer to the style.
+        fn style_add_fill_layer(self: Pin<&mut MapRenderer>, layer: UniquePtr<CxxFillLayer>);
+        /// Adds a line layer to the style.
+        fn style_add_line_layer(self: Pin<&mut MapRenderer>, layer: UniquePtr<CxxLineLayer>);
         /// Adds a symbol layer to the style.
         fn style_add_symbol_layer(self: Pin<&mut MapRenderer>, layer: UniquePtr<CxxSymbolLayer>);
     }
