@@ -46,10 +46,13 @@ impl Color {
     /// Panics if any channel is outside the `0.0..=1.0` range.
     #[must_use]
     pub fn rgba(red: f32, green: f32, blue: f32, alpha: f32) -> Self {
-        assert!((0.0..=1.0).contains(&red));
-        assert!((0.0..=1.0).contains(&green));
-        assert!((0.0..=1.0).contains(&blue));
-        assert!((0.0..=1.0).contains(&alpha));
+        assert!(
+            (0.0..=1.0).contains(&red)
+                && (0.0..=1.0).contains(&green)
+                && (0.0..=1.0).contains(&blue)
+                && (0.0..=1.0).contains(&alpha),
+            "color channels must be in the 0.0..=1.0 range; got rgba({red}, {green}, {blue}, {alpha})",
+        );
         Self { r: red * alpha, g: green * alpha, b: blue * alpha, a: alpha }
     }
 }
