@@ -4,7 +4,6 @@ use std::num::NonZeroU32;
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
-#[cfg(feature = "opengl")]
 use std::sync::{Mutex, MutexGuard};
 
 use maplibre_native::{
@@ -14,17 +13,11 @@ use maplibre_native::{
 
 const RENDER_TIMEOUT: Duration = Duration::from_secs(5);
 
-#[cfg(feature = "opengl")]
-// OpenGL through X11/GLX on Xvfb can abort when multiple renderers run at once.
 static RENDER_TEST_LOCK: Mutex<()> = Mutex::new(());
 
-#[cfg(feature = "opengl")]
 fn render_test_lock() -> MutexGuard<'static, ()> {
     RENDER_TEST_LOCK.lock().expect("render test lock should not be poisoned")
 }
-
-#[cfg(not(feature = "opengl"))]
-fn render_test_lock() {}
 
 fn fixture_path(name: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests").join("fixtures").join(name)
