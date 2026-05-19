@@ -40,6 +40,10 @@ impl Color {
     }
 
     /// Creates an RGBA color from channel values in the `0.0..=1.0` range.
+    ///
+    /// # Panics
+    ///
+    /// Panics if any channel is outside the `0.0..=1.0` range.
     #[must_use]
     pub fn rgba(red: f32, green: f32, blue: f32, alpha: f32) -> Self {
         assert!((0.0..=1.0).contains(&red));
