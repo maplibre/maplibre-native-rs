@@ -2,8 +2,11 @@
 
 #include <mbgl/gfx/headless_frontend.hpp>
 #include <mbgl/style/image.hpp>
-#include <mbgl/style/sources/geojson_source.hpp>
+#include <mbgl/style/layers/circle_layer.hpp>
+#include <mbgl/style/layers/fill_layer.hpp>
+#include <mbgl/style/layers/line_layer.hpp>
 #include <mbgl/style/layers/symbol_layer.hpp>
+#include <mbgl/style/sources/geojson_source.hpp>
 #include <mbgl/map/map.hpp>
 #include <mbgl/map/map_options.hpp>
 #include <mbgl/style/style.hpp>
@@ -56,6 +59,18 @@ public:
 
     void style_add_geojson_source(std::unique_ptr<mbgl::style::GeoJSONSource> source) {
         map->getStyle().addSource(std::move(source));
+    }
+
+    void style_add_circle_layer(std::unique_ptr<mbgl::style::CircleLayer> layer) {
+        map->getStyle().addLayer(std::move(layer));
+    }
+
+    void style_add_fill_layer(std::unique_ptr<mbgl::style::FillLayer> layer) {
+        map->getStyle().addLayer(std::move(layer));
+    }
+
+    void style_add_line_layer(std::unique_ptr<mbgl::style::LineLayer> layer) {
+        map->getStyle().addLayer(std::move(layer));
     }
 
     void style_add_symbol_layer(std::unique_ptr<mbgl::style::SymbolLayer> layer) {

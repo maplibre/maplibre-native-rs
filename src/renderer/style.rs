@@ -1,14 +1,66 @@
 //! Style abstractions for sources, layers, and images.
 
+mod circle_layer;
+mod fill_layer;
+mod geojson;
+mod geojson_source;
+mod line_layer;
+mod symbol_layer;
+
+use image::DynamicImage;
+
 use crate::renderer::bridge::ffi::Size;
 use crate::ImageRenderer;
-use image::DynamicImage;
-mod symbol_layer;
-pub use symbol_layer::SymbolLayer;
-mod geojson_source;
+pub use circle_layer::CircleLayer;
+pub use fill_layer::FillLayer;
+pub use geojson::{GeoJson, GeoJsonError};
 pub use geojson_source::GeoJsonSource;
-pub use geojson_source::Latitude;
-pub use geojson_source::Longitude;
+pub use line_layer::LineLayer;
+pub use symbol_layer::SymbolLayer;
+
+/// A color constructed from straight RGBA channels in the `0.0..=1.0` range.
+///
+/// MapLibre Native stores colors as premultiplied RGBA. Constructors on this
+/// type accept straight RGBA and store the premultiplied representation expected
+/// by MapLibre Native.
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Color {
+    r: f32,
+    g: f32,
+    b: f32,
+    a: f32,
+}
+
+impl Color {
+    /// Creates an opaque RGB color from channel values in the `0.0..=1.0` range.
+    #[must_use]
+    pub fn rgb(red: f32, green: f32, blue: f32) -> Self {
+        Self::rgba(red, green, blue, 1.0)
+    }
+
+    /// Creates an RGBA color from channel values in the `0.0..=1.0` range.
+    ///
+    /// # Panics
+    ///
+    /// Panics if any channel is outside the `0.0..=1.0` range.
+    #[must_use]
+    pub fn rgba(red: f32, green: f32, blue: f32, alpha: f32) -> Self {
+        assert!(
+            (0.0..=1.0).contains(&red)
+                && (0.0..=1.0).contains(&green)
+                && (0.0..=1.0).contains(&blue)
+                && (0.0..=1.0).contains(&alpha),
+            "color channels must be in the 0.0..=1.0 range; got rgba({red}, {green}, {blue}, {alpha})",
+        );
+        Self { r: red * alpha, g: green * alpha, b: blue * alpha, a: alpha }
+    }
+}
+
+unsafe impl cxx::ExternType for Color {
+    type Id = cxx::type_id!("mbgl::Color");
+    type Kind = cxx::kind::Trivial;
+}
 
 /// Shared interface for style sources that expose a stable source ID.
 pub trait StyleSourceRef {
@@ -59,6 +111,7 @@ impl StyleImageRef for ImageId {
 }
 
 /// A style source for rendering data layers.
+#[non_exhaustive]
 #[derive(Debug)]
 pub enum StyleSource {
     /// A `GeoJSON` source.
@@ -66,8 +119,15 @@ pub enum StyleSource {
 }
 
 /// A style layer for rendering.
+#[non_exhaustive]
 #[derive(Debug)]
 pub enum StyleLayer {
+    /// A circle layer.
+    Circle(CircleLayer),
+    /// A fill layer.
+    Fill(FillLayer),
+    /// A line layer.
+    Line(LineLayer),
     /// A symbol layer.
     Symbol(SymbolLayer),
 }
@@ -129,9 +189,33 @@ impl<'a, S> Style<'a, S> {
     /// Add a new layer
     pub fn add_layer<T: Into<StyleLayer>>(&mut self, layer: T) {
         match layer.into() {
+            StyleLayer::Circle(layer) => {
+                self.image_renderer.instance.pin_mut().style_add_circle_layer(layer.into_inner());
+            }
+            StyleLayer::Fill(layer) => {
+                self.image_renderer.instance.pin_mut().style_add_fill_layer(layer.into_inner());
+            }
+            StyleLayer::Line(layer) => {
+                self.image_renderer.instance.pin_mut().style_add_line_layer(layer.into_inner());
+            }
             StyleLayer::Symbol(layer) => {
                 self.image_renderer.instance.pin_mut().style_add_symbol_layer(layer.into_inner());
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Color;
+
+    #[test]
+    fn rgba_stores_premultiplied_channels() {
+        assert_eq!(Color::rgba(1.0, 0.0, 0.0, 0.5), Color { r: 0.5, g: 0.0, b: 0.0, a: 0.5 });
+    }
+
+    #[test]
+    fn rgb_stores_opaque_channels() {
+        assert_eq!(Color::rgb(1.0, 0.0, 0.0), Color { r: 1.0, g: 0.0, b: 0.0, a: 1.0 });
     }
 }

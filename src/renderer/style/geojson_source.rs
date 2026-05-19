@@ -1,31 +1,25 @@
-use crate::renderer::bridge::sources;
-use cxx::UniquePtr;
 use std::fmt;
 
-/// Latitude coordinate value.
-#[derive(Debug, Clone, Copy)]
-pub struct Latitude(pub f64);
+use cxx::UniquePtr;
 
-/// Longitude coordinate value.
-#[derive(Debug, Clone, Copy)]
-pub struct Longitude(pub f64);
+use crate::renderer::{bridge::sources, style::GeoJson};
 
-/// A `GeoJSON` source for rendering geographic data.
+/// A GeoJSON source for rendering geographic data.
 pub struct GeoJsonSource {
     source_id: String,
     source: UniquePtr<sources::GeoJSONSource>,
 }
 
 impl GeoJsonSource {
-    /// Create a new `GeoJSON` source
+    /// Create a new GeoJSON source
     #[must_use]
     pub fn new(id: &str) -> Self {
         Self { source_id: id.to_owned(), source: sources::create(id) }
     }
 
-    /// Sets the point for this source.
-    pub fn set_point(&mut self, latitude: Latitude, longitude: Longitude) {
-        sources::setPoint(&self.source, latitude.0, longitude.0);
+    /// Sets the GeoJSON data for this source.
+    pub fn set_geojson(&mut self, geojson: &GeoJson) {
+        sources::setGeoJson(&self.source, geojson.as_inner());
     }
 
     pub(crate) fn into_inner(self) -> UniquePtr<sources::GeoJSONSource> {

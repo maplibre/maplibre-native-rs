@@ -1,18 +1,15 @@
 use crate::MainWindow;
 use crate::MapAdapter;
-use maplibre_native::Height;
-use maplibre_native::ScreenCoordinate;
-use maplibre_native::Width;
-use maplibre_native::layers::SymbolAnchorType;
 use slint::ComponentHandle;
 use std::rc::Rc;
 mod headless;
 pub use headless::MapLibre;
 pub use headless::create_map;
 use image::ImageReader;
-use maplibre_native::Style;
-use maplibre_native::{GeoJsonSource, Latitude, Longitude, SymbolLayer};
-use maplibre_native::{X, Y};
+use maplibre_native::{
+    CircleLayer, Color, FillLayer, GeoJson, GeoJsonSource, Height, LineLayer, ScreenCoordinate,
+    Style, SymbolLayer, Width, X, Y, layers::SymbolAnchorType,
+};
 use std::cell::RefCell;
 use std::path::Path;
 
@@ -110,11 +107,73 @@ fn style(map: &Rc<RefCell<MapLibre>>) {
     .unwrap();
     let image_id = style.add_image("The id", &image, true);
 
-    let mut geo_json_source = GeoJsonSource::new("geojsonsourceid");
-    geo_json_source.set_point(Latitude(52.67655), Longitude(13.28387));
-    let source_id = style.add_source(geo_json_source);
+    let mut shapes_source = GeoJsonSource::new("shapes-source");
+    let shapes = r#"{
+        "type": "FeatureCollection",
+        "features": [
+            {
+                "type": "Feature",
+                "properties": {},
+                "geometry": {
+                    "type": "Polygon",
+                    "coordinates": [[
+                        [-30.0, -30.0],
+                        [30.0, -30.0],
+                        [30.0, 30.0],
+                        [-30.0, 30.0],
+                        [-30.0, -30.0]
+                    ]]
+                }
+            },
+            {
+                "type": "Feature",
+                "properties": {},
+                "geometry": {
+                    "type": "LineString",
+                    "coordinates": [[-60.0, 0.0], [60.0, 0.0]]
+                }
+            }
+        ]
+    }"#
+    .parse::<GeoJson>()
+    .expect("shapes GeoJSON should parse");
+    shapes_source.set_geojson(&shapes);
+    let shapes_id = style.add_source(shapes_source);
 
-    let layer = SymbolLayer::new("Layer id", &source_id);
+    let mut markers_source = GeoJsonSource::new("markers-source");
+    let markers = r#"{
+        "type": "FeatureCollection",
+        "features": [
+            {
+                "type": "Feature",
+                "properties": {},
+                "geometry": {
+                    "type": "Point",
+                    "coordinates": [13.28387, 52.67655]
+                }
+            }
+        ]
+    }"#
+    .parse::<GeoJson>()
+    .expect("marker GeoJSON should parse");
+    markers_source.set_geojson(&markers);
+    let markers_id = style.add_source(markers_source);
+
+    let mut fill = FillLayer::new("Fill layer id", &shapes_id);
+    fill.set_fill_color(Color::rgba(0.0, 0.45, 0.95, 0.35));
+    style.add_layer(fill);
+
+    let mut line = LineLayer::new("Line layer id", &shapes_id);
+    line.set_line_color(Color::rgb(0.0, 0.5, 0.8));
+    line.set_line_width(3.0);
+    style.add_layer(line);
+
+    let mut circle = CircleLayer::new("Circle layer id", &shapes_id);
+    circle.set_circle_color(Color::rgba(0.0, 0.7, 0.5, 0.85));
+    circle.set_circle_radius(7.0);
+    style.add_layer(circle);
+
+    let mut layer = SymbolLayer::new("Layer id", &markers_id);
     layer.set_icon_image(&image_id);
     layer.set_icon_anchor(SymbolAnchorType::Bottom);
     style.add_layer(layer);

@@ -1,6 +1,6 @@
 #include "sources.h"
+#include "geojson/geojson.h"
 #include <mbgl/style/sources/geojson_source.hpp>
-#include <mbgl/util/geometry.hpp>
 #include <memory>
 
 namespace mln::bridge::style::sources::geojson {
@@ -8,7 +8,8 @@ namespace mln::bridge::style::sources::geojson {
         return std::make_unique<mbgl::style::GeoJSONSource>(std::string(id));
     }
 
-    void setPoint(const std::unique_ptr<mbgl::style::GeoJSONSource>& source, double latitude, double longitude) {
-        source->setGeoJSON(mbgl::Geometry<double>{mbgl::Point<double>{longitude, latitude}});
+    void setGeoJson(const std::unique_ptr<mbgl::style::GeoJSONSource>& source,
+                    const mln::bridge::geojson::GeoJson& geojson) {
+        source->setGeoJSON(geojson.get());
     }
 }
