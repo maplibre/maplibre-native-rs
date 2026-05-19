@@ -1,6 +1,6 @@
 use super::MapObserver;
-use crate::renderer::bridge::ffi;
-use crate::renderer::bridge::ffi::BridgeImage;
+use crate::bridge::ffi;
+use crate::bridge::ffi::BridgeImage;
 use crate::renderer::MapDebugOptions;
 use crate::{Latitude, Longitude, ScreenCoordinate, Size};
 use cxx::UniquePtr;

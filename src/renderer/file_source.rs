@@ -11,9 +11,7 @@
 // trait, not just a derive macro.
 use std::fmt::Debug;
 
-use crate::renderer::bridge::file_source::{
-    register_rust_file_source_factory, FsErrorReason, ResourceKind,
-};
+use crate::bridge::file_source::{register_rust_file_source_factory, FsErrorReason, ResourceKind};
 use crate::renderer::callbacks::callback;
 
 /// Return value for a resource request callback.
@@ -87,13 +85,13 @@ where
 
 /// Bridge function invoked by C++ for every resource request. Not called
 /// directly from user code — exposed via the cxx bridge in
-/// `src/renderer/bridge.rs`.
+/// `src/bridge.rs`.
 pub(crate) fn fs_request_callback(
     callback: &FileSourceRequestCallback,
     url: &str,
     kind: ResourceKind,
-) -> crate::renderer::bridge::file_source::RustFsResponse {
-    use crate::renderer::bridge::file_source::RustFsResponse;
+) -> crate::bridge::file_source::RustFsResponse {
+    use crate::bridge::file_source::RustFsResponse;
     #[cfg(feature = "log")]
     log::debug!("rust-fs request kind={kind:?} url={url}");
     match (callback.0)(url, kind) {

@@ -2,17 +2,26 @@ use std::fmt;
 
 use cxx::UniquePtr;
 
-use crate::renderer::{bridge::layers, style::Color};
+use crate::bridge::layers;
+use crate::style::Color;
 
 /// A fill layer for rendering polygon data.
 pub struct FillLayer {
+    layer_id: String,
     layer: UniquePtr<layers::FillLayer>,
 }
 
 impl FillLayer {
     /// Creates a new fill layer with the given layer and source IDs.
-    pub fn new<S: super::StyleSourceRef>(layer_id: &str, source: &S) -> Self {
-        Self { layer: layers::create_fill_layer(layer_id, source.source_id()) }
+    pub fn new(layer_id: &str, source_id: impl AsRef<str>) -> Self {
+        Self {
+            layer_id: layer_id.to_owned(),
+            layer: layers::create_fill_layer(layer_id, source_id.as_ref()),
+        }
+    }
+
+    pub(crate) fn layer_id(&self) -> &str {
+        &self.layer_id
     }
 
     /// Sets the fill color.
@@ -37,12 +46,9 @@ impl FillLayer {
 
 impl fmt::Debug for FillLayer {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("FillLayer").field("Pointer", &self.layer.as_ptr()).finish()
-    }
-}
-
-impl From<FillLayer> for super::StyleLayer {
-    fn from(value: FillLayer) -> Self {
-        Self::Fill(value)
+        f.debug_struct("FillLayer")
+            .field("layer_id", &self.layer_id)
+            .field("Pointer", &self.layer.as_ptr())
+            .finish()
     }
 }

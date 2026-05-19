@@ -1,6 +1,6 @@
 //! Image renderer configuration and builder
 
-use crate::renderer::bridge::ffi;
+use crate::bridge::ffi;
 use crate::renderer::{Continuous, ImageRenderer, MapMode, Static, Tile};
 use crate::ResourceOptions;
 use std::marker::PhantomData;

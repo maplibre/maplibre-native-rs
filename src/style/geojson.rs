@@ -2,10 +2,11 @@ use std::{fmt, str::FromStr};
 
 use cxx::UniquePtr;
 
-use crate::renderer::bridge::geojson;
+use crate::bridge::geojson;
 
 /// Error returned when creating a MapLibre Native GeoJSON value.
 #[derive(Debug, thiserror::Error)]
+#[non_exhaustive]
 pub enum GeoJsonError {
     /// MapLibre Native rejected or failed to serialize the GeoJSON data.
     #[error("GeoJSON error: {0}")]

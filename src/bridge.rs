@@ -78,7 +78,7 @@ impl Sub for ScreenCoordinate {
 #[derive(Debug, Clone, Copy)]
 pub struct Size {
     width: u32,
-    heigth: u32,
+    height: u32,
 }
 
 impl Size {
@@ -86,7 +86,7 @@ impl Size {
     #[must_use]
     #[allow(clippy::needless_pass_by_value)]
     pub fn new(width: Width, height: Height) -> Self {
-        Self { width: width.0, heigth: height.0 }
+        Self { width: width.0, height: height.0 }
     }
 
     /// get width
@@ -98,7 +98,7 @@ impl Size {
     /// get height
     #[must_use]
     pub fn height(self) -> u32 {
-        self.heigth
+        self.height
     }
 }
 
@@ -135,8 +135,11 @@ impl std::fmt::Debug for geojson::GeoJson {
 pub mod sources {
     #[namespace = "mbgl::style"]
     extern "C++" {
+        include!("mbgl/style/source.hpp");
         include!("mbgl/style/sources/geojson_source.hpp");
         // Opaque types
+        /// Base class for all MapLibre Native style sources.
+        type Source;
         /// A GeoJSON source for MapLibre rendering.
         type GeoJSONSource;
     }
@@ -148,6 +151,14 @@ pub mod sources {
         /// A MapLibre Native GeoJSON value.
         #[rust_name = "CxxGeoJson"]
         type GeoJson = super::geojson::GeoJson;
+    }
+
+    #[namespace = "mln::bridge::style::sources"]
+    unsafe extern "C++" {
+        include!("sources/sources.h");
+
+        /// Upcasts a GeoJSON source handle to the base `Source` type.
+        fn geojson_into_source(source: UniquePtr<GeoJSONSource>) -> UniquePtr<Source>;
     }
 
     #[namespace = "mln::bridge::style::sources::geojson"]
@@ -167,11 +178,17 @@ impl std::fmt::Debug for sources::GeoJSONSource {
     }
 }
 
+impl std::fmt::Debug for sources::Source {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Source").finish()
+    }
+}
+
 #[cxx::bridge()]
 /// FFI bindings for map layer operations.
 ///
 /// This module provides C++/Rust interoperability for various layer types.
-/// Currently supports symbol layers, with extensibility for additional layer types like fill, line, and background layers.
+/// Currently supports circle, fill, line, and symbol layers.
 pub mod layers {
     // Must have the same namespace than on the C++ side
     #[namespace = "mbgl::style"]
@@ -198,19 +215,52 @@ pub mod layers {
     }
 
     #[namespace = "mbgl::style"]
+    /// Line cap type.
+    pub enum LineCapType {
+        /// Round line cap.
+        Round,
+        /// Butt line cap.
+        Butt,
+        /// Square line cap.
+        Square,
+    }
+
+    #[namespace = "mbgl::style"]
+    /// Line join type.
+    pub enum LineJoinType {
+        /// Miter line join.
+        Miter,
+        /// Bevel line join.
+        Bevel,
+        /// Round line join.
+        Round,
+        /// Internal MapLibre Native line join type.
+        FakeRound,
+        /// Internal MapLibre Native line join type.
+        FlipBevel,
+    }
+
+    #[namespace = "mbgl::style"]
     extern "C++" {
+        include!("mbgl/style/layer.hpp");
         include!("mbgl/style/layers/circle_layer.hpp");
         include!("mbgl/style/layers/fill_layer.hpp");
         include!("mbgl/style/layers/line_layer.hpp");
         include!("mbgl/style/layers/symbol_layer.hpp");
         include!("mbgl/style/types.hpp");
 
+        /// Base class for all MapLibre Native style layers.
+        type Layer;
         /// A circle layer for rendering point data.
         type CircleLayer;
         /// A fill layer for rendering polygon data.
         type FillLayer;
         /// A line layer for rendering line data.
         type LineLayer;
+        /// Line cap type.
+        type LineCapType;
+        /// Line join type.
+        type LineJoinType;
         // Opaque types
         /// A symbol layer for rendering labels and icons on the map.
         type SymbolLayer;
@@ -224,12 +274,25 @@ pub mod layers {
         include!("mbgl/util/color.hpp");
 
         /// A MapLibre Native premultiplied RGBA color.
-        type Color = super::super::style::Color;
+        type Color = crate::style::Color;
     }
 
     #[namespace = "mln::bridge::style::layers"]
     unsafe extern "C++" {
         include!("layers/layers.h");
+
+        /// Upcasts a circle layer handle to the base `Layer` type.
+        #[must_use]
+        fn circle_into_layer(layer: UniquePtr<CircleLayer>) -> UniquePtr<Layer>;
+        /// Upcasts a fill layer handle to the base `Layer` type.
+        #[must_use]
+        fn fill_into_layer(layer: UniquePtr<FillLayer>) -> UniquePtr<Layer>;
+        /// Upcasts a line layer handle to the base `Layer` type.
+        #[must_use]
+        fn line_into_layer(layer: UniquePtr<LineLayer>) -> UniquePtr<Layer>;
+        /// Upcasts a symbol layer handle to the base `Layer` type.
+        #[must_use]
+        fn symbol_into_layer(layer: UniquePtr<SymbolLayer>) -> UniquePtr<Layer>;
 
         /// Creates a new circle layer.
         #[must_use]
@@ -243,6 +306,12 @@ pub mod layers {
         fn setCircleOpacity(layer: &UniquePtr<CircleLayer>, opacity: f32);
         /// Sets the circle radius in pixels.
         fn setCircleRadius(layer: &UniquePtr<CircleLayer>, radius: f32);
+        /// Sets the circle stroke color.
+        fn setCircleStrokeColor(layer: &UniquePtr<CircleLayer>, color: &Color);
+        /// Sets the circle stroke opacity.
+        fn setCircleStrokeOpacity(layer: &UniquePtr<CircleLayer>, opacity: f32);
+        /// Sets the circle stroke width in pixels.
+        fn setCircleStrokeWidth(layer: &UniquePtr<CircleLayer>, width: f32);
 
         /// Creates a new fill layer.
         #[must_use]
@@ -259,6 +328,10 @@ pub mod layers {
         pub(crate) fn create_line_layer(layer_id: &str, source_id: &str) -> UniquePtr<LineLayer>;
         /// Sets the line color.
         fn setLineColor(layer: &UniquePtr<LineLayer>, color: &Color);
+        /// Sets the line cap.
+        fn setLineCap(layer: &UniquePtr<LineLayer>, cap: LineCapType);
+        /// Sets the line join.
+        fn setLineJoin(layer: &UniquePtr<LineLayer>, join: LineJoinType);
         /// Sets the line opacity.
         fn setLineOpacity(layer: &UniquePtr<LineLayer>, opacity: f32);
         /// Sets the line width in pixels.
@@ -292,6 +365,36 @@ impl std::fmt::Debug for layers::FillLayer {
 impl std::fmt::Debug for layers::LineLayer {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("LineLayer").finish()
+    }
+}
+
+impl std::fmt::Debug for layers::Layer {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Layer").finish()
+    }
+}
+
+impl std::fmt::Debug for layers::LineCapType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match *self {
+            Self::Round => f.write_str("Round"),
+            Self::Butt => f.write_str("Butt"),
+            Self::Square => f.write_str("Square"),
+            _ => f.write_str("LineCapType"),
+        }
+    }
+}
+
+impl std::fmt::Debug for layers::LineJoinType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match *self {
+            Self::Miter => f.write_str("Miter"),
+            Self::Bevel => f.write_str("Bevel"),
+            Self::Round => f.write_str("Round"),
+            Self::FakeRound => f.write_str("FakeRound"),
+            Self::FlipBevel => f.write_str("FlipBevel"),
+            _ => f.write_str("LineJoinType"),
+        }
     }
 }
 
@@ -728,21 +831,12 @@ pub mod ffi {
 
     #[namespace = "mbgl::style"]
     extern "C++" {
-        /// Circle layer opaque type.
-        #[rust_name = "CxxCircleLayer"]
-        type CircleLayer = super::layers::CircleLayer;
-        /// Fill layer opaque type.
-        #[rust_name = "CxxFillLayer"]
-        type FillLayer = super::layers::FillLayer;
-        /// GeoJSON source opaque type.
-        #[rust_name = "CxxGeoJSONSource"]
-        type GeoJSONSource = super::sources::GeoJSONSource;
-        /// Line layer opaque type.
-        #[rust_name = "CxxLineLayer"]
-        type LineLayer = super::layers::LineLayer;
-        /// Symbol layer opaque type.
-        #[rust_name = "CxxSymbolLayer"]
-        type SymbolLayer = super::layers::SymbolLayer;
+        /// Base source opaque type.
+        #[rust_name = "CxxSource"]
+        type Source = super::sources::Source;
+        /// Base layer opaque type.
+        #[rust_name = "CxxLayer"]
+        type Layer = super::layers::Layer;
     }
 
     // Declarations for Rust with implementations in C++
@@ -804,23 +898,26 @@ pub mod ffi {
             id: &str,
             data: &[u8],
             size: Size,
-            single_distance_field: bool,
-        );
+            sdf: bool,
+        ) -> Result<()>;
         /// Removes an image from the style.
         fn style_remove_image(self: Pin<&mut MapRenderer>, id: &str);
-        /// Adds a GeoJSON source to the style.
-        fn style_add_geojson_source(
+        /// Adds a source to the style.
+        fn style_add_source(
             self: Pin<&mut MapRenderer>,
-            source: UniquePtr<CxxGeoJSONSource>,
-        );
-        /// Adds a circle layer to the style.
-        fn style_add_circle_layer(self: Pin<&mut MapRenderer>, layer: UniquePtr<CxxCircleLayer>);
-        /// Adds a fill layer to the style.
-        fn style_add_fill_layer(self: Pin<&mut MapRenderer>, layer: UniquePtr<CxxFillLayer>);
-        /// Adds a line layer to the style.
-        fn style_add_line_layer(self: Pin<&mut MapRenderer>, layer: UniquePtr<CxxLineLayer>);
-        /// Adds a symbol layer to the style.
-        fn style_add_symbol_layer(self: Pin<&mut MapRenderer>, layer: UniquePtr<CxxSymbolLayer>);
+            source: UniquePtr<CxxSource>,
+        ) -> Result<()>;
+        /// Removes a source from the style by ID.
+        fn style_remove_source(self: Pin<&mut MapRenderer>, id: &str);
+        /// Adds a layer to the style, optionally before an existing layer
+        /// (pass an empty `before_id` to append to the end of the style).
+        fn style_add_layer(
+            self: Pin<&mut MapRenderer>,
+            layer: UniquePtr<CxxLayer>,
+            before_id: &str,
+        ) -> Result<()>;
+        /// Removes a layer from the style by ID.
+        fn style_remove_layer(self: Pin<&mut MapRenderer>, id: &str);
     }
 
     // Declarations for C++ with implementations in Rust
