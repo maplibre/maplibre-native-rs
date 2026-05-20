@@ -13,6 +13,7 @@ use maplibre_native::{
 
 const RENDER_TIMEOUT: Duration = Duration::from_secs(5);
 
+// TODO: Remove this once rendering can be started safely from multiple Rust threads.
 static RENDER_TEST_LOCK: Mutex<()> = Mutex::new(());
 
 fn render_test_lock() -> MutexGuard<'static, ()> {
