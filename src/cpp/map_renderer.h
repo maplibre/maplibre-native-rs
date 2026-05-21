@@ -34,12 +34,24 @@ struct BridgeImage;
 
 class MapRenderer {
 public:
-    explicit MapRenderer(std::unique_ptr<mbgl::HeadlessFrontend> frontendInstance,
-                         std::shared_ptr<MapObserver> mapObserverInstance,
-                         std::unique_ptr<mbgl::Map> mapInstance)
-        : frontend(std::move(frontendInstance)),
-          mapObserverInstance(mapObserverInstance),
-          map(std::move(mapInstance)) {}
+    explicit MapRenderer(mbgl::MapMode mapMode,
+                         mbgl::Size size,
+                         float pixelRatio,
+                         const mbgl::ResourceOptions& resourceOptions,
+                         bool useDedicatedRunLoop)
+        : runLoop(useDedicatedRunLoop ? mbgl::util::RunLoop::Type::New
+                                      : mbgl::util::RunLoop::Type::Default),
+          mapObserverInstance(std::make_shared<MapObserver>()) {
+        frontend = std::make_unique<mbgl::HeadlessFrontend>(size, pixelRatio);
+
+        mbgl::MapOptions mapOptions;
+        mapOptions.withMapMode(mapMode).withSize(size).withPixelRatio(pixelRatio);
+
+        // Set up logging observer for Rust bridge
+        auto logObserver = std::make_unique<mln::bridge::RustLogObserver>();
+        mbgl::Log::setObserver(std::move(logObserver));
+        map = std::make_unique<mbgl::Map>(*frontend, *mapObserverInstance, mapOptions, resourceOptions);
+    }
     ~MapRenderer() {}
 
     std::shared_ptr<MapObserver> observer() {
@@ -150,21 +162,11 @@ inline std::unique_ptr<MapRenderer> MapRenderer_new(
             uint32_t width,
             uint32_t height,
             float pixelRatio,
-            const mbgl::ResourceOptions& resourceOptions
+            const mbgl::ResourceOptions& resourceOptions,
+            bool useDedicatedRunLoop
 ) {
     mbgl::Size size = {width, height};
-    auto mapObserver = std::make_shared<MapObserver>();
-    auto frontend = std::make_unique<mbgl::HeadlessFrontend>(size, pixelRatio);
-
-    mbgl::MapOptions mapOptions;
-    mapOptions.withMapMode(mapMode).withSize(size).withPixelRatio(pixelRatio);
-
-    // Set up logging observer for Rust bridge
-    auto logObserver = std::make_unique<mln::bridge::RustLogObserver>();
-    mbgl::Log::setObserver(std::move(logObserver));
-    auto map = std::make_unique<mbgl::Map>(*frontend, *mapObserver, mapOptions, resourceOptions);
-
-    return std::make_unique<MapRenderer>(std::move(frontend), mapObserver, std::move(map));
+    return std::make_unique<MapRenderer>(mapMode, size, pixelRatio, resourceOptions, useDedicatedRunLoop);
 }
 
 struct BridgeImage {
