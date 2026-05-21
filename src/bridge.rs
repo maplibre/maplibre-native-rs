@@ -898,7 +898,7 @@ pub mod ffi {
             id: &str,
             data: &[u8],
             size: Size,
-            sdf: bool,
+            signed_distance_field: bool,
         ) -> Result<()>;
         /// Removes an image from the style.
         fn style_remove_image(self: Pin<&mut MapRenderer>, id: &str);
