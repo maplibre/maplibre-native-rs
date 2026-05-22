@@ -23,7 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- *(static)* move the `set_map_size` function from continuous only to also be avaliable in static mode ([#161](https://github.com/maplibre/maplibre-native-rs/pull/161))
+- *(static)* move the `set_map_size` function from continuous only to also be available in static mode ([#161](https://github.com/maplibre/maplibre-native-rs/pull/161))
 
 ## [0.4.4](https://github.com/maplibre/maplibre-native-rs/compare/v0.4.3...v0.4.4) - 2026-04-21
 
@@ -84,7 +84,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- *(renderer)* refactored parts of the public API to be nicer to work with and less error prawn ([#66](https://github.com/maplibre/maplibre-native-rs/pull/66))
+- *(renderer)* refactored parts of the public API to be nicer to work with and less error prone ([#66](https://github.com/maplibre/maplibre-native-rs/pull/66))
 - *(renderer)* logging via `log` from maplibre-native ([#71](https://github.com/maplibre/maplibre-native-rs/pull/71))
 
 ### Other
