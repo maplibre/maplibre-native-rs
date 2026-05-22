@@ -858,6 +858,7 @@ pub mod ffi {
             height: u32,
             pixelRatio: f32,
             resource_options: &CxxResourceOptions,
+            useDedicatedRunLoop: bool,
         ) -> UniquePtr<MapRenderer>;
         /// Reads the current still image from the renderer.
         fn readStillImage(self: Pin<&mut MapRenderer>) -> UniquePtr<BridgeImage>;

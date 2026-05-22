@@ -6,6 +6,26 @@ use crate::ResourceOptions;
 use std::marker::PhantomData;
 use std::num::NonZeroU32;
 
+/// Run loop configuration for an [`ImageRenderer`].
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum RunLoopMode {
+    /// Use a dedicated run loop for this renderer.
+    ///
+    /// This is the default. Suitable for worker-thread pools where each worker
+    /// owns its renderer. The renderer should be constructed and used on the
+    /// same thread.
+    #[default]
+    Dedicated,
+    /// Use MapLibre Native's process-wide default run loop.
+    ///
+    /// Suitable for single-threaded usage where all renderers are constructed and
+    /// used from the same thread. Constructing or using renderers in this mode
+    /// from multiple threads can hang or abort because the default loop is
+    /// process-shared.
+    Shared,
+}
+
 /// Builder for configuring [`ImageRenderer`] instances
 ///
 /// # Examples
@@ -23,10 +43,12 @@ use std::num::NonZeroU32;
 pub struct ImageRendererBuilder {
     /// Image width in pixels
     width: NonZeroU32,
-    /// Image height in pixelsHash
+    /// Image height in pixels
     height: NonZeroU32,
     /// Pixel ratio for high-DPI displays
     pixel_ratio: f32,
+    /// Run loop mode for this renderer
+    run_loop_mode: RunLoopMode,
 
     resource_options: Option<ResourceOptions>,
 }
@@ -38,6 +60,7 @@ impl Default for ImageRendererBuilder {
             width: NonZeroU32::new(512).unwrap(),
             height: NonZeroU32::new(512).unwrap(),
             pixel_ratio: 1.0,
+            run_loop_mode: RunLoopMode::default(),
             resource_options: None,
         }
     }
@@ -79,6 +102,15 @@ impl ImageRendererBuilder {
         self
     }
 
+    /// Sets the run loop mode for the renderer.
+    ///
+    /// Default: [`RunLoopMode::Dedicated`]
+    #[must_use]
+    pub fn with_run_loop_mode(mut self, run_loop_mode: RunLoopMode) -> Self {
+        self.run_loop_mode = run_loop_mode;
+        self
+    }
+
     /// Builds a static image renderer
     #[must_use]
     pub fn build_static_renderer(self) -> ImageRenderer<Static> {
@@ -111,8 +143,63 @@ impl<S> ImageRenderer<S> {
             opts.height.get(),
             opts.pixel_ratio,
             resource_options.as_ref(),
+            opts.run_loop_mode == RunLoopMode::Dedicated,
         );
 
         Self { instance: map, style_specified: false, _marker: PhantomData }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{ImageRendererBuilder, RunLoopMode};
+    use std::{num::NonZeroU32, path::PathBuf, thread};
+
+    fn fixture_path(name: &str) -> PathBuf {
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests").join("fixtures").join(name)
+    }
+
+    #[test]
+    fn dedicated_run_loop_supports_worker_threads() {
+        let handles = (0..2).map(|_| {
+            thread::spawn(|| {
+                let mut renderer = ImageRendererBuilder::new()
+                    .with_size(NonZeroU32::new(128).unwrap(), NonZeroU32::new(128).unwrap())
+                    .with_pixel_ratio(1.0)
+                    .build_static_renderer();
+
+                renderer
+                    .load_style_from_path(fixture_path("test-style.json"))
+                    .expect("test style should load");
+                let image = renderer
+                    .render_static(0.0, 0.0, 0.0, 0.0, 0.0)
+                    .expect("dedicated run loop should render");
+
+                assert_eq!(image.as_image().width(), 128);
+                assert_eq!(image.as_image().height(), 128);
+            })
+        });
+
+        for handle in handles {
+            handle.join().expect("render thread should not panic");
+        }
+    }
+
+    #[test]
+    fn shared_run_loop_renders_on_single_thread() {
+        let mut renderer = ImageRendererBuilder::new()
+            .with_size(NonZeroU32::new(128).unwrap(), NonZeroU32::new(128).unwrap())
+            .with_pixel_ratio(1.0)
+            .with_run_loop_mode(RunLoopMode::Shared)
+            .build_static_renderer();
+
+        renderer
+            .load_style_from_path(fixture_path("test-style.json"))
+            .expect("test style should load");
+        let image =
+            renderer.render_static(0.0, 0.0, 0.0, 0.0, 0.0).expect("shared run loop should render");
+
+        assert_eq!(image.as_image().width(), 128);
+        assert_eq!(image.as_image().height(), 128);
     }
 }
