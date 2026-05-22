@@ -17,7 +17,7 @@ fn fixture_path(name: &str) -> PathBuf {
 fn has_non_background_pixel(image: &image::RgbaImage) -> bool {
     image.pixels().any(|pixel| {
         let [red, green, blue, alpha] = pixel.0;
-        alpha > 0 && !(red > 245 && blue > 220 && green < 20)
+        alpha > 0 && !(red > 245 && green > 220 && blue < 20)
     })
 }
 

@@ -78,7 +78,7 @@ impl Sub for ScreenCoordinate {
 #[derive(Debug, Clone, Copy)]
 pub struct Size {
     width: u32,
-    heigth: u32,
+    height: u32,
 }
 
 impl Size {
@@ -86,7 +86,7 @@ impl Size {
     #[must_use]
     #[allow(clippy::needless_pass_by_value)]
     pub fn new(width: Width, height: Height) -> Self {
-        Self { width: width.0, heigth: height.0 }
+        Self { width: width.0, height: height.0 }
     }
 
     /// get width
@@ -98,7 +98,7 @@ impl Size {
     /// get height
     #[must_use]
     pub fn height(self) -> u32 {
-        self.heigth
+        self.height
     }
 }
 
@@ -871,7 +871,7 @@ mod test {
     use crate::{ScreenCoordinate, X, Y};
 
     #[test]
-    fn screen_corrdinate_diff() {
+    fn screen_coordinate_diff() {
         let s1 = ScreenCoordinate::new(X(5.), Y(-1.));
         let s2 = ScreenCoordinate::new(X(3.), Y(-10.));
 

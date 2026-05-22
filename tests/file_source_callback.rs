@@ -95,7 +95,7 @@ fn file_source_callback_serves_inline_style() {
         let [r, g, b, a] = p.0;
         if a >= 250
             && (i32::from(r) - 255).abs() <= 2
-            && (i32::from(g) - 128).abs() <= 3
+            && (i32::from(g) - 128).abs() <= 2
             && i32::from(b) <= 2
         {
             saw_orange = true;
