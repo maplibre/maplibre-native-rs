@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.1](https://github.com/maplibre/maplibre-native-rs/compare/v0.5.0...v0.5.1) - 2026-05-22
+
+### Other
+
+- Fix typos, formatting, and test logic across build.rs, CHANGELOG.md, bridge.rs, and tests ([#191](https://github.com/maplibre/maplibre-native-rs/pull/191))
+
 ## [0.5.0](https://github.com/maplibre/maplibre-native-rs/compare/v0.4.6...v0.5.0) - 2026-05-19
 
 ### Added
