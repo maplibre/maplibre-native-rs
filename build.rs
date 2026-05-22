@@ -2,9 +2,9 @@
 //! Set `MLN_CORE_LIBRARY_PATH` and `MLN_CORE_LIBRARY_HEADERS_PATH` environment variables to use a local version of maplibre
 //!
 //! If you don't use the AMALGAM library define the env variable `MLN_CORE_LIBRARY_NO_AMALGAM` (value does not matter).
-//! In this case all dependend libraries get linked manually
+//! In this case all dependent libraries get linked manually
 //!
-//! IMPORTANT: The library path must point to the amalgan library which contains all the dependent libraries if `MLN_CORE_LIBRARY_NO_AMALGAM` is not set!
+//! IMPORTANT: The library path must point to the amalgam library which contains all the dependent libraries if `MLN_CORE_LIBRARY_NO_AMALGAM` is not set!
 //!
 //! Required libraries:
 //! Fedora:
@@ -203,7 +203,7 @@ fn resolve_mln_core() -> (PathBuf, Vec<PathBuf>) {
 
     println!("cargo:rerun-if-env-changed=MLN_CORE_LIBRARY_PATH");
     println!("cargo:rerun-if-env-changed=MLN_CORE_LIBRARY_HEADERS_PATH");
-    let (library_file, headers) =match (env::var_os("MLN_CORE_LIBRARY_PATH"), env::var_os("MLN_CORE_LIBRARY_HEADERS_PATH")) {
+    let (library_file, headers) = match (env::var_os("MLN_CORE_LIBRARY_PATH"), env::var_os("MLN_CORE_LIBRARY_HEADERS_PATH")) {
       (Some(library_path),Some(headers_path)) => {
         println!("cargo:warning=Local library and headers will be used");
         let _ = headers_path.clone().into_string().inspect(|s| println!("cargo:rerun-if-changed={s}"));

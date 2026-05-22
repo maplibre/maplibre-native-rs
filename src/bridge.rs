@@ -968,7 +968,7 @@ mod test {
     use crate::{ScreenCoordinate, X, Y};
 
     #[test]
-    fn screen_corrdinate_diff() {
+    fn screen_coordinate_diff() {
         let s1 = ScreenCoordinate::new(X(5.), Y(-1.));
         let s2 = ScreenCoordinate::new(X(3.), Y(-10.));
 
