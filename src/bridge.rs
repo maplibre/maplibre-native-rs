@@ -850,6 +850,10 @@ pub mod ffi {
         type MapObserver; // Created custom map observer
         /// Map renderer for rendering map content.
         type MapRenderer;
+        /// In-flight render request.
+        type RenderRequest;
+        /// Ticks the current thread's MapLibre Native run loop once.
+        fn currentThreadRunLoopTick();
         /// Creates a new map renderer instance.
         #[allow(clippy::too_many_arguments)]
         fn MapRenderer_new(
@@ -858,7 +862,6 @@ pub mod ffi {
             height: u32,
             pixelRatio: f32,
             resource_options: &CxxResourceOptions,
-            useDedicatedRunLoop: bool,
         ) -> UniquePtr<MapRenderer>;
         /// Reads the current still image from the renderer.
         fn readStillImage(self: Pin<&mut MapRenderer>) -> UniquePtr<BridgeImage>;
@@ -870,8 +873,23 @@ pub mod ffi {
         fn bufferLength(self: &BridgeImage) -> usize;
         /// Renders a single frame.
         fn render_once(self: Pin<&mut MapRenderer>);
-        /// Renders continuously.
-        fn render(self: Pin<&mut MapRenderer>) -> UniquePtr<CxxString>;
+        /// Submits a render request without waiting for completion.
+        fn submitRender(
+            self: Pin<&mut MapRenderer>,
+            lat: f64,
+            lon: f64,
+            zoom: f64,
+            bearing: f64,
+            pitch: f64,
+        ) -> UniquePtr<RenderRequest>;
+        /// Returns whether a render request has completed.
+        fn isReady(self: &RenderRequest) -> bool;
+        /// Returns whether a completed render request failed.
+        fn hasError(self: &RenderRequest) -> bool;
+        /// Returns the native error message for a failed render request.
+        fn errorMessage(self: &RenderRequest) -> String;
+        /// Takes the rendered image bytes from a completed render request.
+        fn takeImage(self: Pin<&mut RenderRequest>) -> UniquePtr<CxxString>;
         /// Sets debug visualization flags.
         fn setDebugFlags(self: Pin<&mut MapRenderer>, flags: MapDebugOptions);
         /// Sets the camera position and orientation.

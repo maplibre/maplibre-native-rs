@@ -1,5 +1,6 @@
 #pragma once
 
+#include <mbgl/actor/scheduler.hpp>
 #include <mbgl/gfx/headless_frontend.hpp>
 #include <mbgl/style/image.hpp>
 #include <mbgl/style/layer.hpp>
@@ -13,6 +14,7 @@
 #include <mbgl/util/tile_server_options.hpp>
 #include <mbgl/util/size.hpp>
 #include "mbgl/storage/resource_options.hpp"
+#include <cassert>
 #include <memory>
 #include <optional>
 #include <vector>
@@ -28,17 +30,51 @@ namespace bridge {
 constexpr size_t BYTES_PER_PIXEL = 4; // rgba
 
 struct BridgeImage;
+class RenderRequest;
+
+inline mbgl::util::RunLoop& threadRunLoop() {
+    // MapLibre Native's RunLoop is thread-affine. Keep one private loop per
+    // renderer-owning thread and share it between renderers on that thread.
+    thread_local mbgl::util::RunLoop loop(mbgl::util::RunLoop::Type::New);
+    return loop;
+}
+
+inline void bindThreadRunLoop() {
+    mbgl::Scheduler::SetCurrent(&threadRunLoop());
+}
+
+inline void currentThreadRunLoopTick() {
+    // Tick can be driven through a Rust handle without constructing a renderer first.
+    bindThreadRunLoop();
+    threadRunLoop().runOnce();
+}
+
+inline std::unique_ptr<std::string> encodeImage(mbgl::PremultipliedImage image) {
+    auto unpremultipliedImage = mbgl::util::unpremultiply(std::move(image));
+
+    const size_t pixelCount = unpremultipliedImage.size.width * unpremultipliedImage.size.height;
+    std::string data;
+    data.reserve(pixelCount * BYTES_PER_PIXEL);
+
+    uint32_t width = unpremultipliedImage.size.width;
+    uint32_t height = unpremultipliedImage.size.height;
+    data.append(reinterpret_cast<const char*>(&width), sizeof(uint32_t));
+    data.append(reinterpret_cast<const char*>(&height), sizeof(uint32_t));
+
+    const char* pixelData = reinterpret_cast<const char*>(unpremultipliedImage.data.get());
+    data.append(pixelData, pixelCount * BYTES_PER_PIXEL);
+
+    return std::make_unique<std::string>(std::move(data));
+}
 
 class MapRenderer {
 public:
     explicit MapRenderer(mbgl::MapMode mapMode,
                          mbgl::Size size,
                          float pixelRatio,
-                         const mbgl::ResourceOptions& resourceOptions,
-                         bool useDedicatedRunLoop)
-        : runLoop(useDedicatedRunLoop ? mbgl::util::RunLoop::Type::New
-                                      : mbgl::util::RunLoop::Type::Default),
-          mapObserverInstance(std::make_shared<MapObserver>()) {
+                         const mbgl::ResourceOptions& resourceOptions)
+        : mapObserverInstance(std::make_shared<MapObserver>()) {
+        bindThreadRunLoop();
         frontend = std::make_unique<mbgl::HeadlessFrontend>(size, pixelRatio);
 
         mbgl::MapOptions mapOptions;
@@ -103,23 +139,10 @@ public:
         frontend->renderOnce(*map);
     }
 
-    std::unique_ptr<std::string> render() {
-        auto result = frontend->render(*map);
-        auto unpremultipliedImage = mbgl::util::unpremultiply(std::move(result.image));
+    std::unique_ptr<RenderRequest> submitRender(double lat, double lon, double zoom, double bearing, double pitch);
 
-        const size_t pixelCount = unpremultipliedImage.size.width * unpremultipliedImage.size.height;
-        std::string data;
-        data.reserve(pixelCount * BYTES_PER_PIXEL);
-
-        uint32_t width = unpremultipliedImage.size.width;
-        uint32_t height = unpremultipliedImage.size.height;
-        data.append(reinterpret_cast<const char*>(&width), sizeof(uint32_t));
-        data.append(reinterpret_cast<const char*>(&height), sizeof(uint32_t));
-
-        const char* pixelData = reinterpret_cast<const char*>(unpremultipliedImage.data.get());
-        data.append(pixelData, pixelCount * BYTES_PER_PIXEL);
-
-        return std::make_unique<std::string>(std::move(data));
+    std::unique_ptr<std::string> readStillImageBytes() {
+        return encodeImage(frontend->readStillImage());
     }
 
     void setSize(const mbgl::Size& size) {
@@ -149,24 +172,95 @@ public:
 
 
 public:
-    mbgl::util::RunLoop runLoop;
-    // Due to CXX limitations, make all these public and access them from the regular functions below
-    // Hold all objects here, because frontent and the observers are passed by reference to the map
+    // CXX bridge helpers below access these directly. Keep them alive here
+    // because the frontend and observer are passed by reference to the map.
     std::unique_ptr<mbgl::HeadlessFrontend> frontend;
     std::shared_ptr<MapObserver> mapObserverInstance;
     std::unique_ptr<mbgl::Map> map;
 };
+
+class RenderRequest {
+public:
+    struct State {
+        bool ready = false;
+        std::exception_ptr error;
+        std::unique_ptr<std::string> image;
+    };
+
+    RenderRequest()
+        : state(std::make_shared<State>()) {}
+
+    std::shared_ptr<State> getState() const {
+        return state;
+    }
+
+    bool isReady() const {
+        return state->ready;
+    }
+
+    bool hasError() const {
+        return state->error != nullptr;
+    }
+
+    rust::String errorMessage() const {
+        if (!state->error) {
+            return rust::String();
+        }
+
+        try {
+            std::rethrow_exception(state->error);
+        } catch (const std::exception& error) {
+            return rust::String(error.what());
+        } catch (...) {
+            return rust::String("Unknown render error");
+        }
+    }
+
+    std::unique_ptr<std::string> takeImage() {
+        assert(state->ready);
+        assert(!state->error);
+        assert(state->image);
+        assert(!taken);
+        taken = true;
+        return std::move(state->image);
+    }
+
+private:
+    std::shared_ptr<State> state;
+    bool taken = false;
+};
+
+inline std::unique_ptr<RenderRequest> MapRenderer::submitRender(
+        double lat,
+        double lon,
+        double zoom,
+        double bearing,
+        double pitch) {
+    setCamera(lat, lon, zoom, bearing, pitch);
+
+    auto request = std::make_unique<RenderRequest>();
+    auto state = request->getState();
+
+    map->renderStill([this, state](const std::exception_ptr& error) {
+        state->error = error;
+        if (!error) {
+            state->image = readStillImageBytes();
+        }
+        state->ready = true;
+    });
+
+    return request;
+}
 
 inline std::unique_ptr<MapRenderer> MapRenderer_new(
             mbgl::MapMode mapMode,
             uint32_t width,
             uint32_t height,
             float pixelRatio,
-            const mbgl::ResourceOptions& resourceOptions,
-            bool useDedicatedRunLoop
+            const mbgl::ResourceOptions& resourceOptions
 ) {
     mbgl::Size size = {width, height};
-    return std::make_unique<MapRenderer>(mapMode, size, pixelRatio, resourceOptions, useDedicatedRunLoop);
+    return std::make_unique<MapRenderer>(mapMode, size, pixelRatio, resourceOptions);
 }
 
 struct BridgeImage {

@@ -2,6 +2,7 @@ use super::MapObserver;
 use crate::bridge::ffi;
 use crate::bridge::ffi::BridgeImage;
 use crate::renderer::MapDebugOptions;
+use crate::RunLoopHandle;
 use crate::{Latitude, Longitude, ScreenCoordinate, Size};
 use cxx::UniquePtr;
 use image::{ImageBuffer, Rgba};
@@ -75,7 +76,68 @@ pub struct Continuous;
 pub struct ImageRenderer<S> {
     pub(crate) instance: UniquePtr<ffi::MapRenderer>,
     pub(crate) _marker: PhantomData<S>,
+    pub(crate) _not_send: PhantomData<*mut ()>,
     pub(crate) style_specified: bool,
+}
+
+/// In-flight render request.
+///
+/// Tick the current thread's run loop via [`RunLoopHandle::tick`] until
+/// [`is_ready`](Self::is_ready) returns `true`, then call
+/// [`finish`](Self::finish).
+#[must_use = "render requests must be finished or waited on to complete the render"]
+pub struct RenderRequest<'a, S> {
+    instance: UniquePtr<ffi::RenderRequest>,
+    _renderer: PhantomData<&'a mut ImageRenderer<S>>,
+    _not_send: PhantomData<*mut ()>,
+}
+
+impl<S> Debug for RenderRequest<'_, S> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("RenderRequest").field("ready", &self.is_ready()).finish_non_exhaustive()
+    }
+}
+
+impl<S> RenderRequest<'_, S> {
+    /// Returns whether the render request has completed.
+    #[must_use]
+    pub fn is_ready(&self) -> bool {
+        self.instance.isReady()
+    }
+
+    /// Returns the rendered image.
+    ///
+    /// # Panics
+    ///
+    /// If [`is_ready`](Self::is_ready) returns `false`.
+    ///
+    /// # Errors
+    ///
+    /// If the underlying render failed or produced invalid image data.
+    pub fn finish(mut self) -> Result<Image, RenderingError> {
+        assert!(self.is_ready(), "render request is not ready");
+
+        if self.instance.hasError() {
+            return Err(RenderingError::Native(self.instance.errorMessage()));
+        }
+
+        let data = self.instance.pin_mut().takeImage();
+        let bytes = data.as_bytes();
+        Image::from_raw(bytes).ok_or(RenderingError::InvalidImageData)
+    }
+
+    /// Ticks the run loop until ready, then calls [`finish`](Self::finish).
+    ///
+    /// # Errors
+    ///
+    /// If the underlying render failed or produced invalid image data.
+    pub fn wait(self) -> Result<Image, RenderingError> {
+        let run_loop = RunLoopHandle::current();
+        while !self.is_ready() {
+            run_loop.tick();
+        }
+        self.finish()
+    }
 }
 
 impl<S> Debug for ImageRenderer<S> {
@@ -138,8 +200,7 @@ impl ImageRenderer<Static> {
     /// Render the map as a static [`Image`] where the camera can be freely controlled.
     ///
     /// # Errors
-    /// Returns an error if
-    /// - the style has not been specified via either [`load_style_from_path`](Self::load_style_from_path) or [`load_style_from_url`](Self::load_style_from_url).
+    /// If no style has been loaded.
     pub fn render_static(
         &mut self,
         lat: f64,
@@ -148,16 +209,27 @@ impl ImageRenderer<Static> {
         bearing: f64,
         pitch: f64,
     ) -> Result<Image, RenderingError> {
+        self.submit_render_static(lat, lon, zoom, bearing, pitch)?.wait()
+    }
+
+    /// Submits a static render request. See [`RenderRequest`].
+    ///
+    /// # Errors
+    /// If no style has been loaded.
+    pub fn submit_render_static(
+        &mut self,
+        lat: f64,
+        lon: f64,
+        zoom: f64,
+        bearing: f64,
+        pitch: f64,
+    ) -> Result<RenderRequest<'_, Static>, RenderingError> {
         if !self.style_specified {
             return Err(RenderingError::StyleNotSpecified);
         }
 
-        self.instance.pin_mut().setCamera(lat, lon, zoom, bearing, pitch);
-        let data = self.instance.pin_mut().render();
-        let bytes = data.as_bytes();
-
-        let image = Image::from_raw(bytes).ok_or(RenderingError::InvalidImageData)?;
-        Ok(image)
+        let request = self.instance.pin_mut().submitRender(lat, lon, zoom, bearing, pitch);
+        Ok(RenderRequest { instance: request, _renderer: PhantomData, _not_send: PhantomData })
     }
 }
 
@@ -165,20 +237,28 @@ impl ImageRenderer<Tile> {
     /// Render a top-down tile of the map as a static [`Image`].
     ///
     /// # Errors
-    /// Returns an error if
-    /// - the style has not been specified via either [`load_style_from_path`](Self::load_style_from_path) or [`load_style_from_url`](Self::load_style_from_url).
+    /// If no style has been loaded.
     pub fn render_tile(&mut self, zoom: u8, x: u32, y: u32) -> Result<Image, RenderingError> {
+        self.submit_render_tile(zoom, x, y)?.wait()
+    }
+
+    /// Submits a tile render request. See [`RenderRequest`].
+    ///
+    /// # Errors
+    /// If no style has been loaded.
+    pub fn submit_render_tile(
+        &mut self,
+        zoom: u8,
+        x: u32,
+        y: u32,
+    ) -> Result<RenderRequest<'_, Tile>, RenderingError> {
         if !self.style_specified {
             return Err(RenderingError::StyleNotSpecified);
         }
 
         let (lat, lon) = coords_to_lat_lon(f64::from(zoom), x, y);
-        self.instance.pin_mut().setCamera(lat.0, lon.0, f64::from(zoom), 0.0, 0.0);
-
-        let data = self.instance.pin_mut().render();
-        let bytes = data.as_bytes();
-        let image = Image::from_raw(bytes).ok_or(RenderingError::InvalidImageData)?;
-        Ok(image)
+        let request = self.instance.pin_mut().submitRender(lat.0, lon.0, f64::from(zoom), 0.0, 0.0);
+        Ok(RenderRequest { instance: request, _renderer: PhantomData, _not_send: PhantomData })
     }
 }
 
@@ -265,11 +345,14 @@ fn coords_to_lat_lon(zoom: f64, x: u32, y: u32) -> (Latitude, Longitude) {
 #[derive(thiserror::Error, Debug)]
 pub enum RenderingError {
     /// Style must be specified before rendering can occur.
-    #[error("Style must be specified to render a tile")]
+    #[error("Style must be specified before rendering")]
     StyleNotSpecified,
     /// The renderer returned invalid or corrupted image data.
     #[error("Invalid image data received from renderer")]
     InvalidImageData,
+    /// MapLibre Native returned a rendering error.
+    #[error("Native rendering error: {0}")]
+    Native(String),
 }
 
 #[cfg(test)]

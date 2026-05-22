@@ -4,21 +4,12 @@ use std::num::NonZeroU32;
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
-use std::sync::{Mutex, MutexGuard};
-
 use maplibre_native::{
     CircleLayer, Color, FillLayer, GeoJson, GeoJsonSource, Image, ImageRenderer,
     ImageRendererBuilder, LineCap, LineJoin, LineLayer, Static, Style,
 };
 
 const RENDER_TIMEOUT: Duration = Duration::from_secs(5);
-
-// TODO: Remove this once rendering can be started safely from multiple Rust threads.
-static RENDER_TEST_LOCK: Mutex<()> = Mutex::new(());
-
-fn render_test_lock() -> MutexGuard<'static, ()> {
-    RENDER_TEST_LOCK.lock().expect("render test lock should not be poisoned")
-}
 
 fn fixture_path(name: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests").join("fixtures").join(name)
@@ -104,7 +95,6 @@ where
 
 #[test]
 fn geojson_source_renders_circle_line_and_fill_layers() {
-    let _guard = render_test_lock();
     let mut renderer = renderer();
 
     let mut source = GeoJsonSource::new("geojson-test-source");
@@ -142,7 +132,6 @@ fn geojson_source_renders_circle_line_and_fill_layers() {
 
 #[test]
 fn layer_management_methods_smoke_test() {
-    let _guard = render_test_lock();
     let mut renderer = renderer();
     let mut style = Style::get_ref(&mut renderer);
 
