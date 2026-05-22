@@ -54,7 +54,7 @@ inline std::unique_ptr<std::string> encodeImage(mbgl::PremultipliedImage image) 
 
     const size_t pixelCount = unpremultipliedImage.size.width * unpremultipliedImage.size.height;
     std::string data;
-    data.reserve(pixelCount * BYTES_PER_PIXEL);
+    data.reserve(2 * sizeof(uint32_t) + pixelCount * BYTES_PER_PIXEL);
 
     uint32_t width = unpremultipliedImage.size.width;
     uint32_t height = unpremultipliedImage.size.height;
@@ -190,6 +190,15 @@ public:
     RenderRequest()
         : state(std::make_shared<State>()) {}
 
+    ~RenderRequest() {
+        // If the request is dropped before completion, drive the run loop here
+        // while the borrowed renderer is still alive, so MapLibre Native returns to
+        // an idle state before the next submitRender.
+        while (!state->ready) {
+            currentThreadRunLoopTick();
+        }
+    }
+
     std::shared_ptr<State> getState() const {
         return state;
     }
@@ -199,7 +208,7 @@ public:
     }
 
     bool hasError() const {
-        return state->error != nullptr;
+        return static_cast<bool>(state->error);
     }
 
     rust::String errorMessage() const {
