@@ -76,6 +76,7 @@ pub struct Continuous;
 pub struct ImageRenderer<S> {
     pub(crate) instance: UniquePtr<ffi::MapRenderer>,
     pub(crate) _marker: PhantomData<S>,
+    // Makes this type !Send and !Sync: the underlying run loop is thread-affine.
     pub(crate) _not_send: PhantomData<*mut ()>,
     pub(crate) style_specified: bool,
 }
@@ -85,10 +86,17 @@ pub struct ImageRenderer<S> {
 /// Tick the current thread's run loop via [`RunLoopHandle::tick`] until
 /// [`is_ready`](Self::is_ready) returns `true`, then call
 /// [`finish`](Self::finish).
+///
+/// This is intentionally a runtime-agnostic primitive rather than a
+/// [`std::future::Future`]. No async runtime drives MapLibre Native's libuv
+/// run loop, so the caller advances it explicitly via
+/// [`RunLoopHandle::tick`]; a bare `Future` would never make progress under
+/// e.g. tokio without an explicit ticker.
 #[must_use = "render requests must be finished or waited on to complete the render"]
 pub struct RenderRequest<'a, S> {
     instance: UniquePtr<ffi::RenderRequest>,
     _renderer: PhantomData<&'a mut ImageRenderer<S>>,
+    // Makes this type !Send and !Sync: the underlying run loop is thread-affine.
     _not_send: PhantomData<*mut ()>,
 }
 
@@ -126,7 +134,8 @@ impl<S> RenderRequest<'_, S> {
         Image::from_raw(bytes).ok_or(RenderingError::InvalidImageData)
     }
 
-    /// Ticks the run loop until ready, then calls [`finish`](Self::finish).
+    /// Blocks on the current thread by ticking the run loop until ready, then
+    /// calls [`finish`](Self::finish).
     ///
     /// # Errors
     ///
@@ -212,7 +221,11 @@ impl ImageRenderer<Static> {
         self.submit_render_static(lat, lon, zoom, bearing, pitch)?.wait()
     }
 
-    /// Submits a static render request. See [`RenderRequest`].
+    /// Submits a static render request without blocking.
+    ///
+    /// Use this when driving one or more requests manually with
+    /// [`RunLoopHandle::tick`]. Use [`render_static`](Self::render_static) for
+    /// the blocking convenience API.
     ///
     /// # Errors
     /// If no style has been loaded.
@@ -242,7 +255,11 @@ impl ImageRenderer<Tile> {
         self.submit_render_tile(zoom, x, y)?.wait()
     }
 
-    /// Submits a tile render request. See [`RenderRequest`].
+    /// Submits a tile render request without blocking.
+    ///
+    /// Use this when driving one or more requests manually with
+    /// [`RunLoopHandle::tick`]. Use [`render_tile`](Self::render_tile) for the
+    /// blocking convenience API.
     ///
     /// # Errors
     /// If no style has been loaded.

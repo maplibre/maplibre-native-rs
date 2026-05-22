@@ -71,6 +71,7 @@ fn multiple_renderers_render_on_single_thread() {
     let second_request =
         second.submit_render_static(0.0, 0.0, 0.0, 0.0, 0.0).expect("second render should submit");
 
+    // Both requests are driven from the same thread-local run loop.
     tick_until_ready(|| first_request.is_ready() && second_request.is_ready());
 
     let first_image = first_request.finish().expect("first renderer should render");
