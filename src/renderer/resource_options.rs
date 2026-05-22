@@ -1,4 +1,4 @@
-use crate::renderer::bridge::resource_options;
+use crate::bridge::resource_options;
 use crate::renderer::tile_server_options::TileServerOptions;
 use cxx::UniquePtr;
 use std::{fmt::Debug, path::PathBuf};

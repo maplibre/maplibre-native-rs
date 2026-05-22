@@ -1,6 +1,6 @@
 //! Tile server options builder.
 
-use crate::renderer::bridge::tile_server_options;
+use crate::bridge::tile_server_options;
 use cxx::UniquePtr;
 use std::fmt;
 use std::path::PathBuf;

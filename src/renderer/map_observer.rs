@@ -2,8 +2,8 @@
 
 use std::fmt::Debug;
 
-use crate::renderer::bridge::ffi;
-use crate::renderer::bridge::map_observer;
+use crate::bridge::ffi;
+use crate::bridge::map_observer;
 use crate::renderer::callbacks::{
     CameraDidChangeCallback, FailingLoadingMapCallback, FinishRenderingFrameCallback, VoidCallback,
 };

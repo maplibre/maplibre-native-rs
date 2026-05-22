@@ -2,11 +2,7 @@
 
 #include <mbgl/gfx/headless_frontend.hpp>
 #include <mbgl/style/image.hpp>
-#include <mbgl/style/layers/circle_layer.hpp>
-#include <mbgl/style/layers/fill_layer.hpp>
-#include <mbgl/style/layers/line_layer.hpp>
-#include <mbgl/style/layers/symbol_layer.hpp>
-#include <mbgl/style/sources/geojson_source.hpp>
+#include <mbgl/style/layer.hpp>
 #include <mbgl/map/map.hpp>
 #include <mbgl/map/map_options.hpp>
 #include <mbgl/style/style.hpp>
@@ -18,6 +14,7 @@
 #include <mbgl/util/size.hpp>
 #include "mbgl/storage/resource_options.hpp"
 #include <memory>
+#include <optional>
 #include <vector>
 #include <stdexcept>
 #include "rust/cxx.h"
@@ -58,35 +55,38 @@ public:
         return mapObserverInstance;
     }
 
-    void style_add_image(rust::Str id, rust::Slice<const unsigned char> data, mbgl::Size size, bool single_distance_field) {
+    void style_add_image(rust::Str id,
+                         rust::Slice<const unsigned char> data,
+                         mbgl::Size size,
+                         bool signed_distance_field) {
         mbgl::PremultipliedImage image(size, data.data(), data.size());
 
         const float pixelRatio = 1.0;
-        map->getStyle().addImage(std::make_unique<mbgl::style::Image>(std::string(id), std::move(image), pixelRatio, single_distance_field));
+        map->getStyle().addImage(std::make_unique<mbgl::style::Image>(
+            std::string(id), std::move(image), pixelRatio, signed_distance_field));
     }
 
     void style_remove_image(rust::Str id) {
         map->getStyle().removeImage(std::string(id));
     }
 
-    void style_add_geojson_source(std::unique_ptr<mbgl::style::GeoJSONSource> source) {
+    void style_add_source(std::unique_ptr<mbgl::style::Source> source) {
         map->getStyle().addSource(std::move(source));
     }
 
-    void style_add_circle_layer(std::unique_ptr<mbgl::style::CircleLayer> layer) {
-        map->getStyle().addLayer(std::move(layer));
+    void style_remove_source(rust::Str id) {
+        map->getStyle().removeSource(std::string(id));
     }
 
-    void style_add_fill_layer(std::unique_ptr<mbgl::style::FillLayer> layer) {
-        map->getStyle().addLayer(std::move(layer));
+    void style_add_layer(std::unique_ptr<mbgl::style::Layer> layer, rust::Str before_id) {
+        // An empty before_id string means no before layer was specified.
+        map->getStyle().addLayer(
+            std::move(layer),
+            before_id.empty() ? std::nullopt : std::optional<std::string>{std::string(before_id)});
     }
 
-    void style_add_line_layer(std::unique_ptr<mbgl::style::LineLayer> layer) {
-        map->getStyle().addLayer(std::move(layer));
-    }
-
-    void style_add_symbol_layer(std::unique_ptr<mbgl::style::SymbolLayer> layer) {
-        map->getStyle().addLayer(std::move(layer));
+    void style_remove_layer(rust::Str id) {
+        map->getStyle().removeLayer(std::string(id));
     }
 
     void style_load_from_url(const rust::Str styleUrl) {

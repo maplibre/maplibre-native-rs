@@ -34,7 +34,7 @@ namespace bridge {
 // `Resource::Kind` and `Response::Error::Reason` into top-level aliases
 // the cxx::bridge can pick up. Same pattern as `MapObserverCameraChangeMode`
 // in src/cpp/map_observer.h. Names + discriminants must stay aligned with
-// the Rust-side enum declarations in src/renderer/bridge.rs; cxx codegen
+// the Rust-side enum declarations in src/bridge.rs; cxx codegen
 // validates the match at compile time.
 using ResourceKind = mbgl::Resource::Kind;
 using FsErrorReason = mbgl::Response::Error::Reason;

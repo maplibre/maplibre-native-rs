@@ -2,7 +2,8 @@ use std::fmt;
 
 use cxx::UniquePtr;
 
-use crate::renderer::{bridge::sources, style::GeoJson};
+use crate::bridge::sources;
+use crate::style::GeoJson;
 
 /// A GeoJSON source for rendering geographic data.
 pub struct GeoJsonSource {
@@ -15,6 +16,10 @@ impl GeoJsonSource {
     #[must_use]
     pub fn new(id: &str) -> Self {
         Self { source_id: id.to_owned(), source: sources::create(id) }
+    }
+
+    pub(crate) fn source_id(&self) -> &str {
+        &self.source_id
     }
 
     /// Sets the GeoJSON data for this source.
@@ -33,17 +38,5 @@ impl fmt::Debug for GeoJsonSource {
             .field("source_id", &self.source_id)
             .field("Pointer", &self.source.as_ptr())
             .finish()
-    }
-}
-
-impl super::StyleSourceRef for GeoJsonSource {
-    fn source_id(&self) -> &str {
-        &self.source_id
-    }
-}
-
-impl From<GeoJsonSource> for super::StyleSource {
-    fn from(value: GeoJsonSource) -> Self {
-        Self::GeoJson(value)
     }
 }
