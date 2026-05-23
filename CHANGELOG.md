@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0](https://github.com/maplibre/maplibre-native-rs/compare/v0.5.0...v0.6.0) - 2026-05-23
+
+### Other
+
+- *(renderer)* [**breaking**] drop RunLoopMode in favor of thread-local run loops ([#190](https://github.com/maplibre/maplibre-native-rs/pull/190))
+
 ## [0.5.0](https://github.com/maplibre/maplibre-native-rs/compare/v0.4.6...v0.5.0) - 2026-05-19
 
 ### Added
