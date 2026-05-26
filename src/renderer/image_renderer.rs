@@ -203,6 +203,11 @@ impl<S> ImageRenderer<S> {
     pub fn set_map_size(&mut self, size: Size) {
         self.instance.pin_mut().setSize(&size);
     }
+
+    /// Get access to the map observer to setup callbacks.
+    pub fn map_observer(&mut self) -> MapObserver {
+        MapObserver::new(self.instance.pin_mut().observer())
+    }
 }
 
 impl ImageRenderer<Static> {
@@ -321,11 +326,6 @@ impl ImageRenderer<Continuous> {
         pitch: f64,
     ) {
         self.instance.pin_mut().setCamera(latitude.0, longitude.0, zoom, bearing, pitch);
-    }
-
-    /// Get access to the map observer to setup callbacks
-    pub fn map_observer(&mut self) -> MapObserver {
-        MapObserver::new(self.instance.pin_mut().observer())
     }
 
     /// Move map by
