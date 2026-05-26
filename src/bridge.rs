@@ -907,6 +907,8 @@ pub mod ffi {
         fn scaleBy(self: Pin<&mut MapRenderer>, scale: f64, pos: &ScreenCoordinate);
         /// Loads a style from a URL.
         fn style_load_from_url(self: Pin<&mut MapRenderer>, url: &str);
+        /// Loads a style from a JSON string.
+        fn style_load_from_json(self: Pin<&mut MapRenderer>, json: &str);
         /// Sets the renderer size.
         fn setSize(self: Pin<&mut MapRenderer>, size: &Size);
         /// Gets the map observer.

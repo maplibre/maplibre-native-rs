@@ -84,6 +84,20 @@ fn multiple_renderers_render_on_single_thread() {
 }
 
 #[test]
+fn load_style_from_json_renders() {
+    let mut renderer = ImageRendererBuilder::new()
+        .with_size(NonZeroU32::new(128).unwrap(), NonZeroU32::new(128).unwrap())
+        .with_pixel_ratio(1.0)
+        .build_static_renderer();
+
+    renderer.load_style_from_json(include_str!("fixtures/test-style.json"));
+
+    let image = renderer.render_static(0.0, 0.0, 0.0, 0.0, 0.0).expect("JSON style should render");
+    assert_eq!(image.as_image().width(), 128);
+    assert_eq!(image.as_image().height(), 128);
+}
+
+#[test]
 fn tile_render_request_renders() {
     let mut renderer = ImageRendererBuilder::new()
         .with_size(NonZeroU32::new(128).unwrap(), NonZeroU32::new(128).unwrap())

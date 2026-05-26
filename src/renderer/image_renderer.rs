@@ -165,6 +165,13 @@ impl<S> ImageRenderer<S> {
         self
     }
 
+    /// Loads the style from a JSON string.
+    pub fn load_style_from_json(&mut self, json: impl AsRef<str>) -> &mut Self {
+        self.style_specified = true;
+        self.instance.pin_mut().style_load_from_json(json.as_ref());
+        self
+    }
+
     /// Load the style from the specified path.
     ///
     /// The style will be loaded from the path, but won't be refreshed automatically if the file changes

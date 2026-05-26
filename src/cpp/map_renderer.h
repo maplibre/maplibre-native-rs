@@ -129,6 +129,10 @@ public:
         map->getStyle().loadURL((std::string)styleUrl);
     }
 
+    void style_load_from_json(const rust::Str styleJson) {
+        map->getStyle().loadJSON((std::string)styleJson);
+    }
+
     std::unique_ptr<BridgeImage> readStillImage() {
         auto image = frontend->readStillImage();
         auto unpremultipliedImage = mbgl::util::unpremultiply(std::move(image));
