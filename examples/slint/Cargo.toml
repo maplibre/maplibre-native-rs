@@ -15,9 +15,10 @@ metal = ["maplibre_native/metal"]
 env_logger = "0.11"
 image = { version = "0.25" }
 maplibre_native = { path = "../.." }
-slint = { git = "https://github.com/Murmele/slint.git", branch = "mm/wgpu-29", features = ["backend-android-activity-06", "renderer-femtovg-wgpu", "unstable-wgpu-29", "compat-1-2"] }
+# next release after 1.16.1 this can be changed to release again
+slint = { git = "https://github.com/slint-ui/slint.git", rev = "055dfb65d608408eea1c64232e2647be550226e6", features = ["backend-android-activity-06", "renderer-femtovg-wgpu", "unstable-wgpu-29", "compat-1-2"] }
 
 [build-dependencies]
-slint-build = { git = "https://github.com/Murmele/slint.git", branch = "mm/wgpu-29" }
+slint-build = { git = "https://github.com/slint-ui/slint.git", rev = "055dfb65d608408eea1c64232e2647be550226e6" }
 
 [workspace]
