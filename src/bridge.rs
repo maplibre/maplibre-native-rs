@@ -33,37 +33,14 @@ fn log_from_cpp(severity: ffi::EventSeverity, event: ffi::Event, code: i64, mess
     }
 }
 
-/// An x value
-#[derive(Debug)]
-pub struct X(pub f64);
-
-/// An y value
-#[derive(Debug)]
-pub struct Y(pub f64);
-
-/// A width value
-#[derive(Debug)]
-pub struct Width(pub u32);
-
-/// A height value
-#[derive(Debug)]
-pub struct Height(pub u32);
-
 /// A position in screen coordinates
 #[repr(C)]
-#[derive(Default, Debug, Clone, Copy)]
+#[derive(Default, Debug, Clone, Copy, PartialEq)]
 pub struct ScreenCoordinate {
-    x: f64,
-    y: f64,
-}
-
-impl ScreenCoordinate {
-    /// Create a new `ScreenCoordinate` object
-    #[must_use]
-    #[allow(clippy::needless_pass_by_value)]
-    pub fn new(x: X, y: Y) -> Self {
-        Self { x: x.0, y: y.0 }
-    }
+    /// Horizontal position in screen pixels.
+    pub x: f64,
+    /// Vertical position in screen pixels.
+    pub y: f64,
 }
 
 impl Sub for ScreenCoordinate {
@@ -77,29 +54,10 @@ impl Sub for ScreenCoordinate {
 #[repr(C)]
 #[derive(Debug, Clone, Copy)]
 pub struct Size {
-    width: u32,
-    height: u32,
-}
-
-impl Size {
-    /// Create a new size object
-    #[must_use]
-    #[allow(clippy::needless_pass_by_value)]
-    pub fn new(width: Width, height: Height) -> Self {
-        Self { width: width.0, height: height.0 }
-    }
-
-    /// get width
-    #[must_use]
-    pub fn width(self) -> u32 {
-        self.width
-    }
-
-    /// get height
-    #[must_use]
-    pub fn height(self) -> u32 {
-        self.height
-    }
+    /// Width in pixels.
+    pub width: u32,
+    /// Height in pixels.
+    pub height: u32,
 }
 
 #[cxx::bridge()]
@@ -696,7 +654,7 @@ pub mod file_source {
     }
 }
 
-#[allow(clippy::borrow_as_ptr)]
+#[allow(clippy::borrow_as_ptr, unused_qualifications)]
 #[cxx::bridge(namespace = "mln::bridge")]
 /// Core FFI definitions and types for the MapLibre bridge.
 pub mod ffi {
@@ -747,6 +705,60 @@ pub mod ffi {
         ///
         /// Note: This option does nothing in Release builds of the SDK
         DepthBuffer = 0b1000_0000, // 1 << 7
+    }
+
+    /// A geographic coordinate.
+    #[derive(Debug, Clone, Copy, PartialEq, Default)]
+    pub struct LatLng {
+        /// Latitude in degrees.
+        pub lat: f64,
+        /// Longitude in degrees.
+        pub lng: f64,
+    }
+
+    /// A geographic bounding box.
+    #[derive(Debug, Clone, Copy, PartialEq, Default)]
+    pub struct LatLngBounds {
+        /// Southwest corner of the bounds.
+        pub southwest: LatLng,
+        /// Northeast corner of the bounds.
+        pub northeast: LatLng,
+    }
+
+    /// Insets from each edge of the renderer viewport.
+    #[derive(Default, Debug, Clone, Copy, PartialEq)]
+    pub struct EdgeInsets {
+        /// Top inset in logical pixels.
+        pub top: f64,
+        /// Left inset in logical pixels.
+        pub left: f64,
+        /// Bottom inset in logical pixels.
+        pub bottom: f64,
+        /// Right inset in logical pixels.
+        pub right: f64,
+    }
+
+    /// FFI representation of partial camera options.
+    #[derive(Debug, Clone, Copy, Default)]
+    pub struct FfiCameraOptions {
+        pub has_center: bool,
+        pub center: LatLng,
+        pub has_center_altitude: bool,
+        pub center_altitude: f64,
+        pub has_padding: bool,
+        pub padding: EdgeInsets,
+        pub has_anchor: bool,
+        pub anchor: ScreenCoordinate,
+        pub has_zoom: bool,
+        pub zoom: f64,
+        pub has_bearing: bool,
+        pub bearing: f64,
+        pub has_pitch: bool,
+        pub pitch: f64,
+        pub has_roll: bool,
+        pub roll: f64,
+        pub has_fov: bool,
+        pub fov: f64,
     }
 
     /// MapLibre Native Event Severity levels
@@ -852,6 +864,7 @@ pub mod ffi {
         type MapRenderer;
         /// In-flight render request.
         type RenderRequest;
+
         /// Ticks the current thread's MapLibre Native run loop once.
         fn currentThreadRunLoopTick();
         /// Creates a new map renderer instance.
@@ -874,14 +887,15 @@ pub mod ffi {
         /// Renders a single frame.
         fn render_once(self: Pin<&mut MapRenderer>);
         /// Submits a render request without waiting for completion.
-        fn submitRender(
+        fn submitRender(self: Pin<&mut MapRenderer>) -> UniquePtr<RenderRequest>;
+        /// Calculates camera options that fit geographic bounds.
+        fn cameraForLatLngBounds(
             self: Pin<&mut MapRenderer>,
-            lat: f64,
-            lon: f64,
-            zoom: f64,
+            bounds: &LatLngBounds,
+            padding: &EdgeInsets,
             bearing: f64,
             pitch: f64,
-        ) -> UniquePtr<RenderRequest>;
+        ) -> FfiCameraOptions;
         /// Returns whether a render request has completed.
         fn isReady(self: &RenderRequest) -> bool;
         /// Returns whether a completed render request failed.
@@ -892,15 +906,8 @@ pub mod ffi {
         fn takeImage(self: Pin<&mut RenderRequest>) -> UniquePtr<CxxString>;
         /// Sets debug visualization flags.
         fn setDebugFlags(self: Pin<&mut MapRenderer>, flags: MapDebugOptions);
-        /// Sets the camera position and orientation.
-        fn setCamera(
-            self: Pin<&mut MapRenderer>,
-            lat: f64,
-            lon: f64,
-            zoom: f64,
-            bearing: f64,
-            pitch: f64,
-        );
+        /// Jumps to the requested camera options.
+        fn jumpTo(self: Pin<&mut MapRenderer>, camera: &FfiCameraOptions);
         /// Moves the camera by the given delta.
         fn moveBy(self: Pin<&mut MapRenderer>, delta: &ScreenCoordinate);
         /// Scales the camera based on the given scale factor.
@@ -985,12 +992,12 @@ unsafe impl cxx::ExternType for ScreenCoordinate {
 
 #[cfg(test)]
 mod test {
-    use crate::{ScreenCoordinate, X, Y};
+    use crate::ScreenCoordinate;
 
     #[test]
     fn screen_coordinate_diff() {
-        let s1 = ScreenCoordinate::new(X(5.), Y(-1.));
-        let s2 = ScreenCoordinate::new(X(3.), Y(-10.));
+        let s1 = ScreenCoordinate { x: 5., y: -1. };
+        let s2 = ScreenCoordinate { x: 3., y: -10. };
 
         let res = s1 - s2;
         assert!((res.x - 2.).abs() < 0.00001);

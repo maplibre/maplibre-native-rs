@@ -11,8 +11,8 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
 use maplibre_native::{
-    register_file_source_callback, FsResponse, Height, ImageRendererBuilder, ResourceKind, Size,
-    Width,
+    register_file_source_callback, CameraUpdate, FsResponse, ImageRendererBuilder, LatLng,
+    ResourceKind, Size,
 };
 
 // A minimal style that renders a solid background. No tile sources — keeps
@@ -63,9 +63,17 @@ fn file_source_callback_serves_inline_style() {
     // than `load_style_from_path` so no file on disk is required.
     let url: url::Url = "https://example.invalid/inline-style.json".parse().unwrap();
     renderer.load_style_from_url(&url);
-    renderer.set_map_size(Size::new(Width(64), Height(64)));
+    renderer.set_map_size(Size { width: 64, height: 64 });
 
-    let image = renderer.render_static(0.0, 0.0, 0.0, 0.0, 0.0).expect("render should succeed");
+    let image = renderer
+        .render_static(&CameraUpdate {
+            center: Some(LatLng { lat: 0.0, lng: 0.0 }),
+            zoom: Some(0.0),
+            bearing: Some(0.0),
+            pitch: Some(0.0),
+            ..Default::default()
+        })
+        .expect("render should succeed");
 
     // Dimensions: 64x64 logical * 1.0 ratio = 64x64 physical.
     let buf = image.as_image();

@@ -32,14 +32,19 @@ We also support the following other features:
 At its core, we work as follows:
 
 ```rust
-use maplibre_native::{ImageRendererBuilder, Image};
+use maplibre_native::{CameraUpdate, ImageRendererBuilder, Image, LatLng};
 use std::num::NonZeroU32;
 
 let mut renderer = ImageRendererBuilder::new()
                       .with_size(NonZeroU32::new(512).unwrap(),NonZeroU32::new(512).unwrap())
                       .build_static_renderer();
 renderer.load_style_from_url(&"https://demotiles.maplibre.org/style.json".parse().unwrap());
-let image: Image = renderer.render_static(0.0, 0.0, 0.0, 0.0, 0.0).unwrap();
+let camera = CameraUpdate {
+    center: Some(LatLng { lat: 0.0, lng: 0.0 }),
+    zoom: Some(0.0),
+    ..Default::default()
+};
+let image: Image = renderer.render_static(&camera).unwrap();
 
 // Access the underlying ImageBuffer for all operations
 let img_buffer = image.as_image();

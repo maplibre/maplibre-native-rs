@@ -5,14 +5,24 @@ use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
 use maplibre_native::{
-    CircleLayer, Color, FillLayer, GeoJson, GeoJsonSource, Image, ImageRenderer,
-    ImageRendererBuilder, LineCap, LineJoin, LineLayer, Static, Style,
+    CameraUpdate, CircleLayer, Color, FillLayer, GeoJson, GeoJsonSource, Image, ImageRenderer,
+    ImageRendererBuilder, LatLng, LineCap, LineJoin, LineLayer, Static, Style,
 };
 
 const RENDER_TIMEOUT: Duration = Duration::from_secs(5);
 
 fn fixture_path(name: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests").join("fixtures").join(name)
+}
+
+fn camera(zoom: f64) -> CameraUpdate {
+    CameraUpdate {
+        center: Some(LatLng { lat: 0.0, lng: 0.0 }),
+        zoom: Some(zoom),
+        bearing: Some(0.0),
+        pitch: Some(0.0),
+        ..Default::default()
+    }
 }
 
 fn renderer() -> ImageRenderer<Static> {
@@ -23,7 +33,7 @@ fn renderer() -> ImageRenderer<Static> {
 
     renderer.load_style_from_path(fixture_path("test-style.json")).expect("test style should load");
     let background =
-        renderer.render_static(0.0, 0.0, 0.0, 0.0, 0.0).expect("background style should render");
+        renderer.render_static(&camera(0.0)).expect("background style should render");
     assert_eq!(background.as_image().width(), 128);
     renderer
 }
@@ -82,7 +92,7 @@ where
     let started = Instant::now();
     loop {
         let frame =
-            renderer.render_static(0.0, 0.0, 1.0, 0.0, 0.0).expect("GeoJSON layers should render");
+            renderer.render_static(&camera(1.0)).expect("GeoJSON layers should render");
         if predicate(&frame) {
             break frame;
         }

@@ -3,7 +3,7 @@ use crate::bridge::ffi;
 use crate::bridge::ffi::BridgeImage;
 use crate::renderer::MapDebugOptions;
 use crate::RunLoopHandle;
-use crate::{Latitude, Longitude, ScreenCoordinate, Size};
+use crate::{CameraUpdate, EdgeInsets, LatLng, LatLngBounds, ScreenCoordinate, Size};
 use cxx::UniquePtr;
 use image::{ImageBuffer, Rgba};
 use std::f64::consts::PI;
@@ -20,7 +20,7 @@ use std::path::Path;
 ///
 /// ```no_run
 /// # fn foo() {
-/// use maplibre_native::{ImageRendererBuilder, Image};
+/// use maplibre_native::{CameraUpdate, Image, ImageRendererBuilder, LatLng};
 /// use std::num::NonZeroU32;
 ///
 /// let mut renderer = ImageRendererBuilder::new()
@@ -28,7 +28,12 @@ use std::path::Path;
 ///     .build_static_renderer();
 ///
 /// renderer.load_style_from_url(&"https://demotiles.maplibre.org/style.json".parse().unwrap());
-/// let image: Image = renderer.render_static(0.0, 0.0, 0.0, 0.0, 0.0).unwrap();
+/// let camera = CameraUpdate {
+///     center: Some(LatLng { lat: 0.0, lng: 0.0 }),
+///     zoom: Some(0.0),
+///     ..Default::default()
+/// };
+/// let image: Image = renderer.render_static(&camera).unwrap();
 ///
 /// // Access the underlying ImageBuffer for all operations
 /// let img_buffer = image.as_image();
@@ -215,46 +220,57 @@ impl<S> ImageRenderer<S> {
     pub fn map_observer(&mut self) -> MapObserver {
         MapObserver::new(self.instance.pin_mut().observer())
     }
+
+    /// Calculates a camera update that fits geographic bounds.
+    #[must_use]
+    pub fn camera_for_bounds(
+        &mut self,
+        bounds: LatLngBounds,
+        padding: Option<EdgeInsets>,
+        bearing: f64,
+        pitch: f64,
+    ) -> CameraUpdate {
+        let padding = padding.unwrap_or_default();
+        let camera =
+            self.instance.pin_mut().cameraForLatLngBounds(&bounds, &padding, bearing, pitch);
+        CameraUpdate::from_camera_options(camera)
+    }
+
+    fn submit_with_camera(
+        &mut self,
+        camera: &CameraUpdate,
+    ) -> Result<RenderRequest<'_, S>, RenderingError> {
+        if !self.style_specified {
+            return Err(RenderingError::StyleNotSpecified);
+        }
+        self.instance.pin_mut().jumpTo(&camera.to_camera_options());
+        let request = self.instance.pin_mut().submitRender();
+        Ok(RenderRequest { instance: request, _renderer: PhantomData, _not_send: PhantomData })
+    }
 }
 
 impl ImageRenderer<Static> {
-    /// Render the map as a static [`Image`] where the camera can be freely controlled.
+    /// Render the map as a static [`Image`] using camera options.
     ///
     /// # Errors
     /// If no style has been loaded.
-    pub fn render_static(
-        &mut self,
-        lat: f64,
-        lon: f64,
-        zoom: f64,
-        bearing: f64,
-        pitch: f64,
-    ) -> Result<Image, RenderingError> {
-        self.submit_render_static(lat, lon, zoom, bearing, pitch)?.wait()
+    pub fn render_static(&mut self, camera: &CameraUpdate) -> Result<Image, RenderingError> {
+        self.submit_render_static(camera)?.wait()
     }
 
-    /// Submits a static render request without blocking.
+    /// Submits a static render request using camera options.
     ///
     /// Use this when driving one or more requests manually with
-    /// [`RunLoopHandle::tick`]. Use [`render_static`](Self::render_static) for
-    /// the blocking convenience API.
+    /// [`RunLoopHandle::tick`]. Use [`render_static`](Self::render_static) for the
+    /// blocking convenience API.
     ///
     /// # Errors
     /// If no style has been loaded.
     pub fn submit_render_static(
         &mut self,
-        lat: f64,
-        lon: f64,
-        zoom: f64,
-        bearing: f64,
-        pitch: f64,
+        camera: &CameraUpdate,
     ) -> Result<RenderRequest<'_, Static>, RenderingError> {
-        if !self.style_specified {
-            return Err(RenderingError::StyleNotSpecified);
-        }
-
-        let request = self.instance.pin_mut().submitRender(lat, lon, zoom, bearing, pitch);
-        Ok(RenderRequest { instance: request, _renderer: PhantomData, _not_send: PhantomData })
+        self.submit_with_camera(camera)
     }
 }
 
@@ -281,13 +297,14 @@ impl ImageRenderer<Tile> {
         x: u32,
         y: u32,
     ) -> Result<RenderRequest<'_, Tile>, RenderingError> {
-        if !self.style_specified {
-            return Err(RenderingError::StyleNotSpecified);
-        }
-
-        let (lat, lon) = coords_to_lat_lon(f64::from(zoom), x, y);
-        let request = self.instance.pin_mut().submitRender(lat.0, lon.0, f64::from(zoom), 0.0, 0.0);
-        Ok(RenderRequest { instance: request, _renderer: PhantomData, _not_send: PhantomData })
+        let center = tile_coords_to_latlng(f64::from(zoom), x, y);
+        self.submit_with_camera(&CameraUpdate {
+            center: Some(center),
+            zoom: Some(f64::from(zoom)),
+            bearing: Some(0.0),
+            pitch: Some(0.0),
+            ..Default::default()
+        })
     }
 }
 
@@ -318,21 +335,14 @@ impl ImagePtr {
 }
 
 impl ImageRenderer<Continuous> {
-    /// Set the camera position using geographic coordinates.
+    /// Applies a partial camera update immediately.
     ///
-    /// See [this grapic](https://en.wikipedia.org/wiki/Degrees_of_freedom_(mechanics)#/media/File:Flight_dynamics_with_text.svg)
+    /// See [this graphic](https://en.wikipedia.org/wiki/Degrees_of_freedom_(mechanics)#/media/File:Flight_dynamics_with_text.svg)
     /// as a reminder what bearing, pitch (and yaw) is.
     ///
     /// Important: Without setting the camera initially no image will be generated!
-    pub fn set_camera(
-        &mut self,
-        latitude: Latitude,
-        longitude: Longitude,
-        zoom: f64,
-        bearing: f64,
-        pitch: f64,
-    ) {
-        self.instance.pin_mut().setCamera(latitude.0, longitude.0, zoom, bearing, pitch);
+    pub fn update_camera(&mut self, camera: &CameraUpdate) {
+        self.instance.pin_mut().jumpTo(&camera.to_camera_options());
     }
 
     /// Move map by
@@ -357,12 +367,12 @@ impl ImageRenderer<Continuous> {
 }
 
 #[allow(clippy::cast_precision_loss)]
-fn coords_to_lat_lon(zoom: f64, x: u32, y: u32) -> (Latitude, Longitude) {
+fn tile_coords_to_latlng(zoom: f64, x: u32, y: u32) -> LatLng {
     // https://github.com/oldmammuth/slippy_map_tilenames/blob/058678480f4b50b622cda7a48b98647292272346/src/lib.rs#L114
     let zz = 2_f64.powf(zoom);
     let lng = (f64::from(x) + 0.5) / zz * 360_f64 - 180_f64;
     let lat = ((PI * (1_f64 - 2_f64 * (f64::from(y) + 0.5) / zz)).sinh()).atan().to_degrees();
-    (Latitude(lat), Longitude(lng))
+    LatLng { lat, lng }
 }
 
 /// Errors that can occur during map rendering operations.
@@ -381,21 +391,19 @@ pub enum RenderingError {
 
 #[cfg(test)]
 mod tests {
-    use super::{coords_to_lat_lon, Latitude, Longitude};
+    use super::tile_coords_to_latlng;
 
     #[test]
     fn converts_tile_zero_to_geographic_center() {
-        let (lat, lon) = coords_to_lat_lon(0.0, 0, 0);
-        assert!(matches!(lat, Latitude(v) if v.abs() < f64::EPSILON));
-        assert!(matches!(lon, Longitude(v) if v.abs() < f64::EPSILON));
+        let center = tile_coords_to_latlng(0.0, 0, 0);
+        assert!(center.lat.abs() < f64::EPSILON);
+        assert!(center.lng.abs() < f64::EPSILON);
     }
 
     #[test]
     fn tile_coordinate_conversion_returns_typed_coordinates() {
-        let (lat, lon) = coords_to_lat_lon(1.0, 1, 1);
-        let Latitude(lat) = lat;
-        let Longitude(lon) = lon;
-        assert!((-90.0..=90.0).contains(&lat));
-        assert!((-180.0..=180.0).contains(&lon));
+        let center = tile_coords_to_latlng(1.0, 1, 1);
+        assert!((-90.0..=90.0).contains(&center.lat));
+        assert!((-180.0..=180.0).contains(&center.lng));
     }
 }
