@@ -32,8 +32,7 @@ fn renderer() -> ImageRenderer<Static> {
         .build_static_renderer();
 
     renderer.load_style_from_path(fixture_path("test-style.json")).expect("test style should load");
-    let background =
-        renderer.render_static(&camera(0.0)).expect("background style should render");
+    let background = renderer.render_static(&camera(0.0)).expect("background style should render");
     assert_eq!(background.as_image().width(), 128);
     renderer
 }
@@ -91,8 +90,7 @@ where
 {
     let started = Instant::now();
     loop {
-        let frame =
-            renderer.render_static(&camera(1.0)).expect("GeoJSON layers should render");
+        let frame = renderer.render_static(&camera(1.0)).expect("GeoJSON layers should render");
         if predicate(&frame) {
             break frame;
         }

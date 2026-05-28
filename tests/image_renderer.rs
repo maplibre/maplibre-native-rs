@@ -50,9 +50,8 @@ fn thread_run_loop_supports_worker_threads() {
             renderer
                 .load_style_from_path(fixture_path("test-style.json"))
                 .expect("test style should load");
-            let image = renderer
-                .render_static(&test_camera())
-                .expect("thread run loop should render");
+            let image =
+                renderer.render_static(&test_camera()).expect("thread run loop should render");
 
             assert_eq!(image.as_image().width(), 128);
             assert_eq!(image.as_image().height(), 128);
@@ -80,9 +79,8 @@ fn multiple_renderers_render_on_single_thread() {
 
     let first_request =
         first.submit_render_static(&test_camera()).expect("first render should submit");
-    let second_request = second
-        .submit_render_static(&test_camera())
-        .expect("second render should submit");
+    let second_request =
+        second.submit_render_static(&test_camera()).expect("second render should submit");
 
     // Both requests are driven from the same thread-local run loop.
     tick_until_ready(|| first_request.is_ready() && second_request.is_ready());
@@ -105,9 +103,8 @@ fn load_style_from_json_renders() {
 
     renderer.load_style_from_json(include_str!("fixtures/test-style.json"));
 
-    let request = renderer
-        .submit_render_static(&test_camera())
-        .expect("JSON style render should submit");
+    let request =
+        renderer.submit_render_static(&test_camera()).expect("JSON style render should submit");
     tick_until_ready(|| request.is_ready());
 
     let image = request.finish().expect("JSON style should render");
@@ -147,9 +144,7 @@ fn camera_for_bounds_renders() {
         northeast: LatLng { lat: 10.0, lng: 10.0 },
     };
     let camera = renderer.camera_for_bounds(bounds, Some(EdgeInsets::all(8.0)), 0.0, 0.0);
-    let request = renderer
-        .submit_render_static(&camera)
-        .expect("bounds-fit render should submit");
+    let request = renderer.submit_render_static(&camera).expect("bounds-fit render should submit");
     tick_until_ready(|| request.is_ready());
 
     let image = request.finish().expect("bounds-fit renderer should render");
@@ -166,8 +161,7 @@ fn dropping_render_request_before_renderer_is_safe() {
 
     renderer.load_style_from_path(fixture_path("test-style.json")).expect("test style should load");
 
-    let request =
-        renderer.submit_render_static(&test_camera()).expect("render should submit");
+    let request = renderer.submit_render_static(&test_camera()).expect("render should submit");
     drop(request);
     drop(renderer);
 }
