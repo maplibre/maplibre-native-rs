@@ -17,7 +17,7 @@ pub fn init(ui: &MainWindow, map: &Rc<RefCell<MapLibre>>) {
             let map = Rc::downgrade(map);
             move |state, graphics_api| {
                 if matches!(state, slint::RenderingState::RenderingSetup) {
-                    let slint::GraphicsAPI::WGPU { instance: _instance, device, queue, .. } =
+                    let slint::GraphicsAPI::WGPU29 { instance: _instance, device, queue, .. } =
                         graphics_api
                     else {
                         return;
