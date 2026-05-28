@@ -2,6 +2,7 @@ use std::env;
 use std::path::PathBuf;
 
 fn main() {
+    println!("cargo:rerun-if-changed=wgpu.h");
     println!("cargo:rerun-if-changed=dep/webgpu-headers/webgpu.h");
 
     #[rustfmt::skip]

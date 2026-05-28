@@ -10,4 +10,4 @@ cxx = { workspace = true }
 wgpu = { workspace = true }
 
 [build-dependencies]
-bindgen = "0.71.0"
+bindgen = "0.72.0"
