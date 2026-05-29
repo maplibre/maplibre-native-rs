@@ -5,7 +5,6 @@
 #include <mbgl/map/camera.hpp>
 #include <mbgl/renderer/renderer_frontend.hpp>
 #include <mbgl/util/async_task.hpp>
-#include <mbgl/gfx/offscreen_texture.hpp>
 
 #include <atomic>
 #include <memory>
@@ -57,9 +56,7 @@ public:
     LatLng latLngForPixel(const ScreenCoordinate&);
 
     PremultipliedImage readStillImage();
-    gfx::Texture2DPtr takeTexture();
     RenderResult render(Map&);
-
     void renderOnce(Map&);
     void renderFrame();
 

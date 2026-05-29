@@ -12,7 +12,7 @@ namespace mln::bridge::style::sources {
 }
 
 namespace mln::bridge::style::sources::geojson {
-    std::unique_ptr<mbgl::style::GeoJSONSource> createWithDefaultOptions(rust::Str id) {
+    std::unique_ptr<mbgl::style::GeoJSONSource> create(rust::Str id) {
         return std::make_unique<mbgl::style::GeoJSONSource>(std::string(id));
     }
 

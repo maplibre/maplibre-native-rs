@@ -15,7 +15,7 @@ impl GeoJsonSource {
     /// Create a new `GeoJSON` source with default options
     #[must_use]
     pub fn new(id: &str) -> Self {
-        Self { source_id: id.to_owned(), source: sources::createWithDefaultOptions(id) }
+        Self { source_id: id.to_owned(), source: sources::create(id) }
     }
 
     /// Sets the URL for loading `GeoJSON` data.

@@ -182,6 +182,8 @@ pub mod sources {
         fn create(id: &str) -> UniquePtr<GeoJSONSource>;
         /// Sets the GeoJSON data for the source.
         fn setGeoJson(source: &UniquePtr<GeoJSONSource>, geojson: &CxxGeoJson);
+        /// Sets the URL for loading GeoJSON data.
+        fn setURL(source: &UniquePtr<GeoJSONSource>, url: &str);
     }
 }
 
@@ -280,22 +282,6 @@ pub mod layers {
 
         /// Symbol anchor position type.
         type SymbolAnchorType;
-    }
-
-    #[namespace = "mbgl::webgpu"]
-    extern "C++" {
-        #[cfg(feature = "wgpu")]
-        type Texture2D;
-    }
-
-    #[namespace = ""]
-    extern "C++" {
-        #[cfg(feature = "wgpu")]
-        type WGPUDevice = binding_generator::WGPUDeviceWrapper;
-        #[cfg(feature = "wgpu")]
-        type WGPUQueue = binding_generator::WGPUQueueWrapper;
-        #[cfg(feature = "wgpu")]
-        type WGPUTexture = binding_generator::WGPUTextureWrapper;
     }
 
     #[namespace = "mbgl"]
