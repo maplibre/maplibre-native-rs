@@ -1,4 +1,5 @@
 use crate::Size;
+use maplibre_native::tile_server_options::TileServerOptions;
 use maplibre_native::Continuous;
 use maplibre_native::ImageRenderer;
 use maplibre_native::ImageRendererBuilder;
@@ -6,7 +7,6 @@ use maplibre_native::MapLoadError;
 use maplibre_native::ResourceOptions;
 use maplibre_native::ScreenCoordinate;
 use maplibre_native::Size as MapSize;
-use maplibre_native::tile_server_options::TileServerOptions;
 use maplibre_native::{Latitude, Longitude};
 use maplibre_native::{X, Y};
 use std::cell::RefCell;
@@ -67,7 +67,7 @@ impl MapLibre {
         self.renderer.set_map_size(size);
     }
 
-    // Invers the map rotation logic from MapLibre's `Map::rotateBy` to convert a control+wheel delta into a synthetic drag gesture.
+    // Inverse the map rotation logic from MapLibre's `Map::rotateBy` to convert a control+wheel delta into a synthetic drag gesture.
     pub fn rotate_by(&mut self, delta: f32) {
         let first = self.position();
         let mut center = ScreenCoordinate::new(

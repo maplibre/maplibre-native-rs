@@ -152,8 +152,11 @@ impl WGPUBindGroupImpl {
     }
 }
 
+#[repr(C)]
 pub struct WGPUDeviceWrapper(WGPUDevice);
+#[repr(C)]
 pub struct WGPUQueueWrapper(WGPUQueue);
+#[repr(C)]
 pub struct WGPUTextureWrapper(WGPUTexture);
 
 impl TryFrom<WGPUTextureWrapper> for wgpu::Texture {

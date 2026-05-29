@@ -7,11 +7,6 @@ namespace mln::bridge::texture {
             return nullptr;
         }
         WGPUTexture texture = texture2d->getTexture();
-        if (!texture) {
-            return nullptr;
-        }
-        // Retain so Rust can safely clone and then release its temporary handle.
-        wgpuTextureAddRef(texture);
         return texture;
     }
 }

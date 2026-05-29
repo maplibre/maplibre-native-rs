@@ -4,19 +4,10 @@ version = "0.1.0"
 publish = false
 edition = "2024"
 
-[features]
-default = ["wgpu"]
-wgpu = ["maplibre_native/wgpu"]
-# Backend is selected per-OS through target-specific dependencies below. The
-# explicit features here let callers override (`cargo run --features ...`).
-metal = ["maplibre_native/metal"]
-opengl = ["maplibre_native/opengl"]
-vulkan = ["maplibre_native/vulkan"]
-
 [dependencies]
 env_logger = "0.11"
 image = { version = "0.25" }
-maplibre_native = { path = "../.." }
+maplibre_native = { path = "../..", features = ["wgpu"] }
 # next release after 1.16.1 this can be changed to release again
 slint = { git = "https://github.com/slint-ui/slint.git", rev = "055dfb65d608408eea1c64232e2647be550226e6", features = ["backend-android-activity-06", "renderer-femtovg-wgpu", "unstable-wgpu-29", "compat-1-2"] }
 

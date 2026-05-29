@@ -21,7 +21,7 @@
  * WebGPU specification.
  */
 struct WGPUSubmissionIndex {
-    uint64_t index
+    uint64_t index;
 };
 
 WGPUBool wgpuDevicePoll(WGPUDevice device, WGPUBool wait, WGPU_NULLABLE struct WGPUSubmissionIndex const *submissionIndex);
