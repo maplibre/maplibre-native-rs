@@ -18,6 +18,9 @@ pub fn set_log_thread_enabled(enable: bool) {
 }
 
 fn log_from_cpp(severity: ffi::EventSeverity, event: ffi::Event, code: i64, message: &str) {
+    #[cfg(not(feature = "log"))]
+    let _ = (severity, event, code, message);
+
     #[cfg(feature = "log")]
     match severity {
         ffi::EventSeverity::Debug => log::debug!("{event:?} (code={code}) {message}"),
@@ -87,7 +90,7 @@ impl Sub for ScreenCoordinate {
 #[derive(Debug, Clone, Copy)]
 pub struct Size {
     width: u32,
-    heigth: u32,
+    height: u32,
 }
 
 impl Size {
@@ -95,7 +98,7 @@ impl Size {
     #[must_use]
     #[allow(clippy::needless_pass_by_value)]
     pub fn new(width: Width, height: Height) -> Self {
-        Self { width: width.0, heigth: height.0 }
+        Self { width: width.0, height: height.0 }
     }
 
     /// get width
@@ -107,7 +110,32 @@ impl Size {
     /// get height
     #[must_use]
     pub fn height(self) -> u32 {
-        self.heigth
+        self.height
+    }
+}
+
+#[cxx::bridge()]
+/// FFI bindings for GeoJSON values.
+pub mod geojson {
+    #[namespace = "mln::bridge::geojson"]
+    unsafe extern "C++" {
+        include!("geojson/geojson.h");
+
+        /// A MapLibre Native GeoJSON value.
+        type GeoJson;
+
+        /// Parses a GeoJSON string into a MapLibre Native GeoJSON value.
+        fn parse(json: &str) -> Result<UniquePtr<GeoJson>>;
+        /// Copies a MapLibre Native GeoJSON value.
+        fn clone(geojson: &GeoJson) -> UniquePtr<GeoJson>;
+        /// Serializes a MapLibre Native GeoJSON value to a JSON string.
+        fn stringify(geojson: &GeoJson) -> Result<String>;
+    }
+}
+
+impl std::fmt::Debug for geojson::GeoJson {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("GeoJson").finish()
     }
 }
 
@@ -119,23 +147,41 @@ impl Size {
 pub mod sources {
     #[namespace = "mbgl::style"]
     extern "C++" {
+        include!("mbgl/style/source.hpp");
         include!("mbgl/style/sources/geojson_source.hpp");
 
         // Opaque types
+        /// Base class for all MapLibre Native style sources.
+        type Source;
         /// A GeoJSON source for MapLibre rendering.
         type GeoJSONSource;
+    }
+
+    #[namespace = "mln::bridge::geojson"]
+    extern "C++" {
+        include!("geojson/geojson.h");
+
+        /// A MapLibre Native GeoJSON value.
+        #[rust_name = "CxxGeoJson"]
+        type GeoJson = super::geojson::GeoJson;
+    }
+
+    #[namespace = "mln::bridge::style::sources"]
+    unsafe extern "C++" {
+        include!("sources/sources.h");
+
+        /// Upcasts a GeoJSON source handle to the base `Source` type.
+        fn geojson_into_source(source: UniquePtr<GeoJSONSource>) -> UniquePtr<Source>;
     }
 
     #[namespace = "mln::bridge::style::sources::geojson"]
     unsafe extern "C++" {
         include!("sources/sources.h");
 
-        /// Creates a new GeoJSON source with default options.
-        fn createWithDefaultOptions(id: &str) -> UniquePtr<GeoJSONSource>;
-        /// Sets the URL for loading GeoJSON data.
-        fn setURL(source: &UniquePtr<GeoJSONSource>, url: &str);
-        /// Sets a point for the GeoJSON source.
-        fn setPoint(source: &UniquePtr<GeoJSONSource>, latitude: f64, longitude: f64);
+        /// Creates a new GeoJSON source with the given ID.
+        fn create(id: &str) -> UniquePtr<GeoJSONSource>;
+        /// Sets the GeoJSON data for the source.
+        fn setGeoJson(source: &UniquePtr<GeoJSONSource>, geojson: &CxxGeoJson);
     }
 }
 
@@ -145,11 +191,17 @@ impl std::fmt::Debug for sources::GeoJSONSource {
     }
 }
 
+impl std::fmt::Debug for sources::Source {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Source").finish()
+    }
+}
+
 #[cxx::bridge()]
 /// FFI bindings for map layer operations.
 ///
 /// This module provides C++/Rust interoperability for various layer types.
-/// Currently supports symbol layers, with extensibility for additional layer types like fill, line, and background layers.
+/// Currently supports circle, fill, line, and symbol layers.
 pub mod layers {
     // Must have the same namespace than on the C++ side
     #[namespace = "mbgl::style"]
@@ -176,9 +228,52 @@ pub mod layers {
     }
 
     #[namespace = "mbgl::style"]
+    /// Line cap type.
+    pub enum LineCapType {
+        /// Round line cap.
+        Round,
+        /// Butt line cap.
+        Butt,
+        /// Square line cap.
+        Square,
+    }
+
+    #[namespace = "mbgl::style"]
+    /// Line join type.
+    pub enum LineJoinType {
+        /// Miter line join.
+        Miter,
+        /// Bevel line join.
+        Bevel,
+        /// Round line join.
+        Round,
+        /// Internal MapLibre Native line join type.
+        FakeRound,
+        /// Internal MapLibre Native line join type.
+        FlipBevel,
+    }
+
+    #[namespace = "mbgl::style"]
     extern "C++" {
+        include!("mbgl/style/layer.hpp");
+        include!("mbgl/style/layers/circle_layer.hpp");
+        include!("mbgl/style/layers/fill_layer.hpp");
+        include!("mbgl/style/layers/line_layer.hpp");
         include!("mbgl/style/layers/symbol_layer.hpp");
         include!("mbgl/style/types.hpp");
+
+        /// Base class for all MapLibre Native style layers.
+        type Layer;
+        /// A circle layer for rendering point data.
+        type CircleLayer;
+        /// A fill layer for rendering polygon data.
+        type FillLayer;
+        /// A line layer for rendering line data.
+        type LineLayer;
+        /// Line cap type.
+        type LineCapType;
+        /// Line join type.
+        type LineJoinType;
         // Opaque types
         /// A symbol layer for rendering labels and icons on the map.
         type SymbolLayer;
@@ -187,9 +282,89 @@ pub mod layers {
         type SymbolAnchorType;
     }
 
+    #[namespace = "mbgl::webgpu"]
+    extern "C++" {
+        #[cfg(feature = "wgpu")]
+        type Texture2D;
+    }
+
+    #[namespace = ""]
+    extern "C++" {
+        #[cfg(feature = "wgpu")]
+        type WGPUDevice = binding_generator::WGPUDeviceWrapper;
+        #[cfg(feature = "wgpu")]
+        type WGPUQueue = binding_generator::WGPUQueueWrapper;
+        #[cfg(feature = "wgpu")]
+        type WGPUTexture = binding_generator::WGPUTextureWrapper;
+    }
+
+    #[namespace = "mbgl"]
+    extern "C++" {
+        include!("mbgl/util/color.hpp");
+
+        /// A MapLibre Native premultiplied RGBA color.
+        type Color = crate::style::Color;
+    }
+
     #[namespace = "mln::bridge::style::layers"]
     unsafe extern "C++" {
         include!("layers/layers.h");
+
+        /// Upcasts a circle layer handle to the base `Layer` type.
+        #[must_use]
+        fn circle_into_layer(layer: UniquePtr<CircleLayer>) -> UniquePtr<Layer>;
+        /// Upcasts a fill layer handle to the base `Layer` type.
+        #[must_use]
+        fn fill_into_layer(layer: UniquePtr<FillLayer>) -> UniquePtr<Layer>;
+        /// Upcasts a line layer handle to the base `Layer` type.
+        #[must_use]
+        fn line_into_layer(layer: UniquePtr<LineLayer>) -> UniquePtr<Layer>;
+        /// Upcasts a symbol layer handle to the base `Layer` type.
+        #[must_use]
+        fn symbol_into_layer(layer: UniquePtr<SymbolLayer>) -> UniquePtr<Layer>;
+
+        /// Creates a new circle layer.
+        #[must_use]
+        pub(crate) fn create_circle_layer(
+            layer_id: &str,
+            source_id: &str,
+        ) -> UniquePtr<CircleLayer>;
+        /// Sets the circle color.
+        fn setCircleColor(layer: &UniquePtr<CircleLayer>, color: &Color);
+        /// Sets the circle opacity.
+        fn setCircleOpacity(layer: &UniquePtr<CircleLayer>, opacity: f32);
+        /// Sets the circle radius in pixels.
+        fn setCircleRadius(layer: &UniquePtr<CircleLayer>, radius: f32);
+        /// Sets the circle stroke color.
+        fn setCircleStrokeColor(layer: &UniquePtr<CircleLayer>, color: &Color);
+        /// Sets the circle stroke opacity.
+        fn setCircleStrokeOpacity(layer: &UniquePtr<CircleLayer>, opacity: f32);
+        /// Sets the circle stroke width in pixels.
+        fn setCircleStrokeWidth(layer: &UniquePtr<CircleLayer>, width: f32);
+
+        /// Creates a new fill layer.
+        #[must_use]
+        pub(crate) fn create_fill_layer(layer_id: &str, source_id: &str) -> UniquePtr<FillLayer>;
+        /// Sets the fill color.
+        fn setFillColor(layer: &UniquePtr<FillLayer>, color: &Color);
+        /// Sets the fill opacity.
+        fn setFillOpacity(layer: &UniquePtr<FillLayer>, opacity: f32);
+        /// Sets the fill outline color.
+        fn setFillOutlineColor(layer: &UniquePtr<FillLayer>, color: &Color);
+
+        /// Creates a new line layer.
+        #[must_use]
+        pub(crate) fn create_line_layer(layer_id: &str, source_id: &str) -> UniquePtr<LineLayer>;
+        /// Sets the line color.
+        fn setLineColor(layer: &UniquePtr<LineLayer>, color: &Color);
+        /// Sets the line cap.
+        fn setLineCap(layer: &UniquePtr<LineLayer>, cap: LineCapType);
+        /// Sets the line join.
+        fn setLineJoin(layer: &UniquePtr<LineLayer>, join: LineJoinType);
+        /// Sets the line opacity.
+        fn setLineOpacity(layer: &UniquePtr<LineLayer>, opacity: f32);
+        /// Sets the line width in pixels.
+        fn setLineWidth(layer: &UniquePtr<LineLayer>, width: f32);
 
         /// Creates a new symbol layer.
         #[must_use]
@@ -201,6 +376,54 @@ pub mod layers {
         fn setIconImage(layer: &UniquePtr<SymbolLayer>, image_id: &str);
         /// Sets the anchor point for layer icons.
         fn setIconAnchor(layer: &UniquePtr<SymbolLayer>, anchor: SymbolAnchorType);
+    }
+}
+
+impl std::fmt::Debug for layers::CircleLayer {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CircleLayer").finish()
+    }
+}
+
+impl std::fmt::Debug for layers::FillLayer {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("FillLayer").finish()
+    }
+}
+
+impl std::fmt::Debug for layers::LineLayer {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("LineLayer").finish()
+    }
+}
+
+impl std::fmt::Debug for layers::Layer {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Layer").finish()
+    }
+}
+
+impl std::fmt::Debug for layers::LineCapType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match *self {
+            Self::Round => f.write_str("Round"),
+            Self::Butt => f.write_str("Butt"),
+            Self::Square => f.write_str("Square"),
+            _ => f.write_str("LineCapType"),
+        }
+    }
+}
+
+impl std::fmt::Debug for layers::LineJoinType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match *self {
+            Self::Miter => f.write_str("Miter"),
+            Self::Bevel => f.write_str("Bevel"),
+            Self::Round => f.write_str("Round"),
+            Self::FakeRound => f.write_str("FakeRound"),
+            Self::FlipBevel => f.write_str("FlipBevel"),
+            _ => f.write_str("LineJoinType"),
+        }
     }
 }
 
@@ -637,12 +860,12 @@ pub mod ffi {
 
     #[namespace = "mbgl::style"]
     extern "C++" {
-        /// GeoJSON source opaque type.
-        #[rust_name = "CxxGeoJSONSource"]
-        type GeoJSONSource = super::sources::GeoJSONSource;
-        /// Symbol layer opaque type.
-        #[rust_name = "CxxSymbolLayer"]
-        type SymbolLayer = super::layers::SymbolLayer;
+        /// Base source opaque type.
+        #[rust_name = "CxxSource"]
+        type Source = super::sources::Source;
+        /// Base layer opaque type.
+        #[rust_name = "CxxLayer"]
+        type Layer = super::layers::Layer;
     }
 
     #[namespace = "mbgl::webgpu"]
@@ -672,7 +895,10 @@ pub mod ffi {
         type MapObserver; // Created custom map observer
         /// Map renderer for rendering map content.
         type MapRenderer;
-
+        /// In-flight render request.
+        type RenderRequest;
+        /// Ticks the current thread's MapLibre Native run loop once.
+        fn currentThreadRunLoopTick();
         /// Creates a new map renderer instance.
         #[allow(clippy::too_many_arguments)]
         fn MapRenderer_new(
@@ -692,8 +918,23 @@ pub mod ffi {
         fn bufferLength(self: &BridgeImage) -> usize;
         /// Renders a single frame.
         fn render_once(self: Pin<&mut MapRenderer>);
-        /// Renders continuously.
-        fn render(self: Pin<&mut MapRenderer>) -> UniquePtr<CxxString>;
+        /// Submits a render request without waiting for completion.
+        fn submitRender(
+            self: Pin<&mut MapRenderer>,
+            lat: f64,
+            lon: f64,
+            zoom: f64,
+            bearing: f64,
+            pitch: f64,
+        ) -> UniquePtr<RenderRequest>;
+        /// Returns whether a render request has completed.
+        fn isReady(self: &RenderRequest) -> bool;
+        /// Returns whether a completed render request failed.
+        fn hasError(self: &RenderRequest) -> bool;
+        /// Returns the native error message for a failed render request.
+        fn errorMessage(self: &RenderRequest) -> String;
+        /// Takes the rendered image bytes from a completed render request.
+        fn takeImage(self: Pin<&mut RenderRequest>) -> UniquePtr<CxxString>;
         /// Sets debug visualization flags.
         fn setDebugFlags(self: Pin<&mut MapRenderer>, flags: MapDebugOptions);
         /// Sets the camera position and orientation.
@@ -719,6 +960,8 @@ pub mod ffi {
         );
         /// Loads a style from a URL.
         fn style_load_from_url(self: Pin<&mut MapRenderer>, url: &str);
+        /// Loads a style from a JSON string.
+        fn style_load_from_json(self: Pin<&mut MapRenderer>, json: &str);
         /// Sets the renderer size.
         fn setSize(self: Pin<&mut MapRenderer>, size: &Size);
         /// Gets the map observer.
@@ -729,17 +972,26 @@ pub mod ffi {
             id: &str,
             data: &[u8],
             size: Size,
-            single_distance_field: bool,
-        );
+            signed_distance_field: bool,
+        ) -> Result<()>;
         /// Removes an image from the style.
         fn style_remove_image(self: Pin<&mut MapRenderer>, id: &str);
-        /// Adds a GeoJSON source to the style.
-        fn style_add_geojson_source(
+        /// Adds a source to the style.
+        fn style_add_source(
             self: Pin<&mut MapRenderer>,
-            source: UniquePtr<CxxGeoJSONSource>,
-        );
-        /// Adds a symbol layer to the style.
-        fn style_add_symbol_layer(self: Pin<&mut MapRenderer>, layer: UniquePtr<CxxSymbolLayer>);
+            source: UniquePtr<CxxSource>,
+        ) -> Result<()>;
+        /// Removes a source from the style by ID.
+        fn style_remove_source(self: Pin<&mut MapRenderer>, id: &str);
+        /// Adds a layer to the style, optionally before an existing layer
+        /// (pass an empty `before_id` to append to the end of the style).
+        fn style_add_layer(
+            self: Pin<&mut MapRenderer>,
+            layer: UniquePtr<CxxLayer>,
+            before_id: &str,
+        ) -> Result<()>;
+        /// Removes a layer from the style by ID.
+        fn style_remove_layer(self: Pin<&mut MapRenderer>, id: &str);
 
         #[cfg(feature = "wgpu")]
         fn setDeviceAndQueue(self: Pin<&mut MapRenderer>, device: WGPUDevice, queue: WGPUQueue);
@@ -803,7 +1055,7 @@ mod test {
     use crate::{ScreenCoordinate, X, Y};
 
     #[test]
-    fn screen_corrdinate_diff() {
+    fn screen_coordinate_diff() {
         let s1 = ScreenCoordinate::new(X(5.), Y(-1.));
         let s2 = ScreenCoordinate::new(X(3.), Y(-10.));
 

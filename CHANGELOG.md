@@ -7,11 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.1](https://github.com/maplibre/maplibre-native-rs/compare/v0.6.0...v0.6.1) - 2026-05-26
+
+### Fixed
+
+- *(renderer)* expose map_observer() for all renderer modes ([#198](https://github.com/maplibre/maplibre-native-rs/pull/198))
+
+## [0.6.0](https://github.com/maplibre/maplibre-native-rs/compare/v0.5.0...v0.6.0) - 2026-05-23
+
+### Other
+
+- *(renderer)* [**breaking**] drop RunLoopMode in favor of thread-local run loops ([#190](https://github.com/maplibre/maplibre-native-rs/pull/190))
+
+## [0.5.0](https://github.com/maplibre/maplibre-native-rs/compare/v0.4.6...v0.5.0) - 2026-05-19
+
+### Added
+
+- *(style)* add GeoJSON and basic Fill/Line/Circle layer support ([#183](https://github.com/maplibre/maplibre-native-rs/pull/183))
+
+## [0.4.6](https://github.com/maplibre/maplibre-native-rs/compare/v0.4.5...v0.4.6) - 2026-05-18
+
+### Fixed
+
+- *(build)* stop rebuilding maplibre-native on every cargo build ([#181](https://github.com/maplibre/maplibre-native-rs/pull/181))
+
 ## [0.4.5](https://github.com/maplibre/maplibre-native-rs/compare/v0.4.4...v0.4.5) - 2026-04-21
 
 ### Added
 
-- *(static)* move the `set_map_size` function from continuous only to also be avaliable in static mode ([#161](https://github.com/maplibre/maplibre-native-rs/pull/161))
+- *(static)* move the `set_map_size` function from continuous only to also be available in static mode ([#161](https://github.com/maplibre/maplibre-native-rs/pull/161))
 
 ## [0.4.4](https://github.com/maplibre/maplibre-native-rs/compare/v0.4.3...v0.4.4) - 2026-04-21
 
@@ -72,7 +96,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- *(renderer)* refactored parts of the public API to be nicer to work with and less error prawn ([#66](https://github.com/maplibre/maplibre-native-rs/pull/66))
+- *(renderer)* refactored parts of the public API to be nicer to work with and less error prone ([#66](https://github.com/maplibre/maplibre-native-rs/pull/66))
 - *(renderer)* logging via `log` from maplibre-native ([#71](https://github.com/maplibre/maplibre-native-rs/pull/71))
 
 ### Other

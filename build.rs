@@ -2,9 +2,9 @@
 //! Set `MLN_CORE_LIBRARY_PATH` and `MLN_CORE_LIBRARY_HEADERS_PATH` environment variables to use a local version of maplibre
 //!
 //! If you don't use the AMALGAM library define the env variable `MLN_CORE_LIBRARY_NO_AMALGAM` (value does not matter).
-//! In this case all dependend libraries get linked manually
+//! In this case all dependent libraries get linked manually
 //!
-//! IMPORTANT: The library path must point to the amalgan library which contains all the dependent libraries if `MLN_CORE_LIBRARY_NO_AMALGAM` is not set!
+//! IMPORTANT: The library path must point to the amalgam library which contains all the dependent libraries if `MLN_CORE_LIBRARY_NO_AMALGAM` is not set!
 //!
 //! Required libraries:
 //! Fedora:
@@ -24,26 +24,8 @@ use std::{env, fs};
 const MLN_REPOSITORY_URL: &str = "https://github.com/Murmele/maplibre-native.git";
 const MLN_COMMIT: &str = "a41aff6a54e01bcd7047561a2e24c0e0de8e4aa3";
 
-// Files of the bridge
-const BRIDGE_FILES: &[&str] = &[
-    "src/renderer/bridge.rs",
-    "src/cpp/bridge.cpp",
-    "src/cpp/util.cpp",
-    "src/cpp/resource_options.h",
-    "src/cpp/resource_options.cpp",
-    "src/cpp/tile_server_options.h",
-    "src/cpp/tile_server_options.cpp",
-    "src/cpp/map_renderer.h",
-    "src/cpp/renderer_observer.h",
-    "src/cpp/map_observer.h",
-    "src/cpp/rust_file_source.h",
-    "src/cpp/rust_file_source.cpp",
-    "src/cpp/rust_log_observer.h",
-    "src/cpp/sources/sources.h",
-    "src/cpp/sources/sources.cpp",
-    "src/cpp/layers/layers.h",
-    "src/cpp/layers/layers.cpp",
-];
+const BRIDGE_RS: &str = "src/bridge.rs";
+const BRIDGE_CPP_DIR: &str = "src/cpp";
 
 const BRIDGE_INCLUDE_DIRS: &[&str] = &[/*"include", */ "src/cpp"];
 
@@ -218,7 +200,7 @@ fn resolve_mln_core() -> (PathBuf, Vec<PathBuf>) {
 
     println!("cargo:rerun-if-env-changed=MLN_CORE_LIBRARY_PATH");
     println!("cargo:rerun-if-env-changed=MLN_CORE_LIBRARY_HEADERS_PATH");
-    let (library_file, headers) =match (env::var_os("MLN_CORE_LIBRARY_PATH"), env::var_os("MLN_CORE_LIBRARY_HEADERS_PATH")) {
+    let (library_file, headers) = match (env::var_os("MLN_CORE_LIBRARY_PATH"), env::var_os("MLN_CORE_LIBRARY_HEADERS_PATH")) {
       (Some(library_path),Some(headers_path)) => {
         println!("cargo:warning=Local library and headers will be used");
         let _ = headers_path.clone().into_string().inspect(|s| println!("cargo:rerun-if-changed={s}"));
@@ -270,7 +252,7 @@ fn build_bridge(lib_name: &str, include_dirs: &[PathBuf], api: GraphicsRendering
     let root = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
     let bridge_include_dirs: Vec<PathBuf> =
         BRIDGE_INCLUDE_DIRS.iter().map(|p| root.join(p)).collect();
-    let mut build = cxx_build::bridge("src/renderer/bridge.rs");
+    let mut build = cxx_build::bridge(BRIDGE_RS);
     build
         .includes(&bridge_include_dirs)
         .includes(include_dirs)
@@ -283,13 +265,21 @@ fn build_bridge(lib_name: &str, include_dirs: &[PathBuf], api: GraphicsRendering
         build.flag_if_supported("-DMLN_WEBGPU_IMPL_WGPU=1");
     }
 
-    for f in BRIDGE_FILES {
-        println!("cargo:rerun-if-changed={f}");
-        #[allow(clippy::case_sensitive_file_extension_comparisons)]
-        if f.ends_with(".cpp") {
-            build.file(f);
-        }
-    }
+    // Watch the Rust side of the cxx bridge.
+    println!("cargo:rerun-if-changed={BRIDGE_RS}");
+    // Watch the C++ bridge source tree.
+    println!("cargo:rerun-if-changed={BRIDGE_CPP_DIR}");
+
+    // Compile C++ bridge sources.
+    let mut cpp_files = walkdir::WalkDir::new(root.join(BRIDGE_CPP_DIR))
+        .into_iter()
+        .filter_map(Result::ok)
+        .filter(|e| e.file_type().is_file())
+        .map(walkdir::DirEntry::into_path)
+        .filter(|p| p.extension().and_then(|e| e.to_str()) == Some("cpp"))
+        .collect::<Vec<_>>();
+    cpp_files.sort();
+    build.files(cpp_files);
 
     // Texture FFI bridge is only required for the WebGPU backend.
     if matches!(api, GraphicsRenderingAPI::WGPU) {
@@ -338,14 +328,29 @@ fn clone_repository<P: AsRef<Path>>(
     repository_url: &str,
     commit: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    fs::create_dir_all(&clone_dir)?;
-    let clone_status = Command::new("git")
-        .current_dir(clone_dir)
-        .args(["clone", "--depth", "1", "--revision", commit, repository_url, folder_name])
-        .status()?;
-    if !clone_status.success() {
-        return Err(format!("Failed to clone maplibre-native repository: {clone_status}").into());
-    }
+    // fs::create_dir_all(&clone_dir)?;
+    // let clone_status = Command::new("git")
+    //     .current_dir(clone_dir)
+    //     .args(["clone", "--depth", "1", "--revision", commit, repository_url, folder_name])
+    //     .status()?;
+    // if !clone_status.success() {
+    //     return Err(format!("Failed to clone maplibre-native repository: {clone_status}").into());
+    // }
+
+    // `git clone --revision` only exists in git >= 2.49 (March 2025); use
+    // init + fetch + checkout so older git works too.
+    fs::create_dir_all(&clone_dir.as_ref().join(folder_name))?;
+    let git = |args: &[&str]| -> Result<(), Box<dyn std::error::Error>> {
+        let status = Command::new("git").current_dir(&clone_dir).args(args).status()?;
+        if !status.success() {
+            return Err(format!("git {} failed: {status}", args.join(" ")).into());
+        }
+        Ok(())
+    };
+    git(&["init", "--quiet"])?;
+    git(&["remote", "add", "origin", repository_url])?;
+    git(&["fetch", "--depth", "1", "origin", commit])?;
+    git(&["checkout", "--quiet", "FETCH_HEAD"])?;
     Ok(())
 }
 
@@ -363,7 +368,7 @@ fn submodule_update<P: AsRef<Path>>(repository: P) -> Result<(), Box<dyn std::er
 }
 
 fn build_local(
-    respository_dir: PathBuf,
+    respository_dir: &Path,
     name: &str,
     amalgam_lib: bool,
     target_os: &str,
@@ -547,12 +552,7 @@ fn build_mln() {
             PathBuf::from(local_repository.clone()).parent().unwrap().to_path_buf()
         };
 
-        match build_local(
-            respository_dir.clone(),
-            MAPLIBRE_NATIVE_DIR_NAME,
-            amalgam_lib,
-            &target_os,
-        ) {
+        match build_local(&respository_dir, MAPLIBRE_NATIVE_DIR_NAME, amalgam_lib, &target_os) {
             Err(e) => {
                 if respository_dir.join(MAPLIBRE_NATIVE_DIR_NAME).exists()
                     && local_repository.is_empty()

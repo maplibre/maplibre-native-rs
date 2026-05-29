@@ -20,7 +20,7 @@ jobs:
           persist-credentials: false
           submodules: true
       - name: Install just
-        uses: taiki-e/install-action@ec28e287910af896fd98e04056d31fa68607e7ad # v2.77.4
+        uses: taiki-e/install-action@d9be7d8cda89035c9c843f78bd44d4f72d8403d4 # v2.79.7
         with:
           tool: just
 

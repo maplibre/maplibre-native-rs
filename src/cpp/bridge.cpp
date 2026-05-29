@@ -1,6 +1,6 @@
 #include "map_renderer.h"
 #include "rust_log_observer.h"
-#include "maplibre_native/src/renderer/bridge.rs.h"
+#include "maplibre_native/src/bridge.rs.h"
 #include <mbgl/util/logging.hpp>
 
 namespace mln {

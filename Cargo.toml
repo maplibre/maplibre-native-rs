@@ -1,6 +1,6 @@
 [package]
 name = "maplibre_native"
-version = "0.4.5"
+version = "0.6.1"
 description = "Rust bindings to the MapLibre Native map rendering engine"
 authors = ["Yuri Astrakhan <YuriAstrakhan@gmail.com>", "MapLibre contributors"]
 repository = "https://github.com/maplibre/maplibre-native-rs"
@@ -24,14 +24,17 @@ metal = []
 opengl = []
 vulkan = []
 wgpu = ["dep:wgpu", "dep:binding-generator"]
+geojson = ["dep:geojson", "dep:serde_json"]
 log = ["dep:log"]
 pool = ["dep:tokio"]
 
 [dependencies]
 binding-generator = { path = "binding-generator", optional = true }
 cxx.workspace = true
+geojson = { workspace = true, optional = true }
 image.workspace = true
 log = { workspace = true, optional = true }
+serde_json = { workspace = true, optional = true }
 thiserror.workspace = true
 tokio = { workspace = true, features = ["sync"], optional = true }
 url.workspace = true
@@ -51,6 +54,7 @@ walkdir.workspace = true
 env_logger.workspace = true
 futures.workspace = true
 insta = { workspace = true, features = ["json", "redactions"] }
+serde_json.workspace = true
 tokio = { workspace = true, features = ["macros", "sync", "rt-multi-thread"] }
 
 ##########################################################
@@ -78,10 +82,12 @@ downloader = "0.2"
 env_logger = "0.11"
 flate2 = "1.1"
 futures = "0.3"
+geojson = "1.0.0"
 image = "0.25"
 insta = "1.43"
 log = "0.4"
-maplibre_native = { path = ".", version = "0.4.5" }
+maplibre_native = { path = ".", version = "0.6.1" }
+serde_json = "1.0"
 tar = "0.4.44"
 thiserror = "2.0.16"
 tokio = { version = "1", features = [], default-features = false }

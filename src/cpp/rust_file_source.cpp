@@ -1,5 +1,5 @@
 #include "rust_file_source.h"
-#include "maplibre_native/src/renderer/bridge.rs.h"
+#include "maplibre_native/src/bridge.rs.h"
 
 #include <mbgl/storage/file_source.hpp>
 #include <mbgl/storage/file_source_manager.hpp>

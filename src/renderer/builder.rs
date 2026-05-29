@@ -1,12 +1,17 @@
 //! Image renderer configuration and builder
 
-use crate::renderer::bridge::ffi;
+use crate::bridge::ffi;
 use crate::renderer::{Continuous, ImageRenderer, MapMode, Static, Tile};
 use crate::ResourceOptions;
 use std::marker::PhantomData;
 use std::num::NonZeroU32;
 
 /// Builder for configuring [`ImageRenderer`] instances
+///
+/// Each thread that constructs an [`ImageRenderer`] lazily creates one MapLibre
+/// Native run loop. Renderers created on the same thread share that loop, while
+/// renderers created on different threads use independent loops. A renderer must
+/// be constructed and used on the same thread.
 ///
 /// # Examples
 ///
@@ -23,11 +28,10 @@ use std::num::NonZeroU32;
 pub struct ImageRendererBuilder {
     /// Image width in pixels
     width: NonZeroU32,
-    /// Image height in pixelsHash
+    /// Image height in pixels
     height: NonZeroU32,
     /// Pixel ratio for high-DPI displays
     pixel_ratio: f32,
-
     resource_options: Option<ResourceOptions>,
 }
 
@@ -113,6 +117,6 @@ impl<S> ImageRenderer<S> {
             resource_options.as_ref(),
         );
 
-        Self { instance: map, style_specified: false, _marker: PhantomData }
+        Self { instance: map, style_specified: false, _marker: PhantomData, _not_send: PhantomData }
     }
 }
