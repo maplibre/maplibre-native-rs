@@ -1,3 +1,5 @@
+#if defined(MLN_WEBGPU_IMPL_FFI)
+
 #include "texture.h"
 #include <memory>
 
@@ -10,3 +12,5 @@ namespace mln::bridge::texture {
         return texture;
     }
 }
+
+#endif // #if defined(MLN_WEBGPU_IMPL_FFI)
