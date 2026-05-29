@@ -339,7 +339,7 @@ fn clone_repository<P: AsRef<Path>>(
 
     // `git clone --revision` only exists in git >= 2.49 (March 2025); use
     // init + fetch + checkout so older git works too.
-    fs::create_dir_all(&clone_dir.as_ref().join(folder_name))?;
+    fs::create_dir_all(clone_dir.as_ref().join(folder_name))?;
     let git = |args: &[&str]| -> Result<(), Box<dyn std::error::Error>> {
         let status = Command::new("git").current_dir(&clone_dir).args(args).status()?;
         if !status.success() {
