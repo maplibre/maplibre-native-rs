@@ -1,0 +1,29 @@
+[
+  {
+    "label": "Slint Example",
+    "adapter": "CodeLLDB",
+    "request": "launch",
+
+    "program": "$ZED_WORKTREE_ROOT/examples/slint/target/debug/slint_maplibre_native",
+    "args": [],
+    "cwd": "$ZED_WORKTREE_ROOT/examples/slint",
+    "build": {
+      "label": "Run",
+      "command": "cargo",
+      "args": ["build"],
+      "env": {},
+      "cwd": "$ZED_WORKTREE_ROOT/examples/slint",
+      "use_new_terminal": false,
+      "allow_concurrent_runs": false,
+      "reveal": "always",
+      "reveal_target": "dock",
+      "hide": "never",
+      "shell": "system",
+      "show_summary": false,
+      "show_command": false,
+      "save": "none",
+      "hooks": [],
+    },
+    "sourceLanguages": ["rust"],
+  },
+]
