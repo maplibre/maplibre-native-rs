@@ -19,6 +19,8 @@
 #include <mbgl/storage/resource_options.hpp>
 #if defined(MLN_WEBGPU_IMPL_FFI)
 #include <mbgl/webgpu/texture2d.hpp>
+#include <mbgl/webgpu/renderer_backend.hpp>
+#include <mbgl/webgpu/headless_backend.hpp>
 #endif
 #include <memory>
 #include <vector>
@@ -54,8 +56,8 @@ public:
 
     #if defined(MLN_WEBGPU_IMPL_FFI)
     std::shared_ptr<mbgl::webgpu::Texture2D> takeTexture() {
-        // TODO: don't like the static pointer cast
-        auto ptr = std::static_pointer_cast<mbgl::webgpu::Texture2D>(this->frontend->takeTexture());
+        auto backend = static_cast<mbgl::webgpu::HeadlessBackend*>(this->frontend->getBackend());
+        auto ptr = std::static_pointer_cast<mbgl::webgpu::Texture2D>(backend->takeTexture());
         assert(ptr);
         return ptr;
     }
@@ -149,8 +151,8 @@ public:
     // Set the wgpu device and queue required for rendering when using the wgpu ffi backend
     #if defined(MLN_WEBGPU_IMPL_FFI)
     void setDeviceAndQueue(WGPUDevice device, WGPUQueue queue) {
-        frontend->getBackend()->setDevice(device);
-        frontend->getBackend()->setQueue(queue);
+        static_cast<mbgl::webgpu::RendererBackend*>(frontend->getBackend())->setDevice(device);
+        static_cast<mbgl::webgpu::RendererBackend*>(frontend->getBackend())->setQueue(queue);
     }
     #endif
 public:

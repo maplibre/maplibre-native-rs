@@ -22,7 +22,7 @@ use std::{env, fs};
 
 // Used when building locally
 const MLN_REPOSITORY_URL: &str = "https://github.com/Murmele/maplibre-native.git";
-const MLN_COMMIT: &str = "6d4ff7ce1c4a6b0425233e3528582f6cab167e6f";
+const MLN_COMMIT: &str = "a41aff6a54e01bcd7047561a2e24c0e0de8e4aa3";
 
 // Files of the bridge
 const BRIDGE_FILES: &[&str] = &[
@@ -280,6 +280,7 @@ fn build_bridge(lib_name: &str, include_dirs: &[PathBuf], api: GraphicsRendering
 
     if matches!(api, GraphicsRenderingAPI::WGPU) {
         build.flag_if_supported("-DMLN_WEBGPU_IMPL_FFI=1");
+        build.flag_if_supported("-DMLN_WEBGPU_IMPL_WGPU=1");
     }
 
     for f in BRIDGE_FILES {
