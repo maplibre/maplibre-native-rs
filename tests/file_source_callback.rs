@@ -66,13 +66,13 @@ fn file_source_callback_serves_inline_style() {
     renderer.set_map_size(Size { width: 64, height: 64 });
 
     let image = renderer
-        .render_static(&CameraUpdate {
-            center: Some(LatLng { lat: 0.0, lng: 0.0 }),
-            zoom: Some(0.0),
-            bearing: Some(0.0),
-            pitch: Some(0.0),
-            ..Default::default()
-        })
+        .render_static(
+            &CameraUpdate::new()
+                .center(LatLng { lat: 0.0, lng: 0.0 })
+                .zoom(0.0)
+                .bearing(0.0)
+                .pitch(0.0),
+        )
         .expect("render should succeed");
 
     // Dimensions: 64x64 logical * 1.0 ratio = 64x64 physical.

@@ -217,13 +217,13 @@ impl Renderer {
     fn render(&mut self) -> Image {
         match self {
             Renderer::Static { map, lat, lon, zoom, bearing, pitch } => map
-                .render_static(&CameraUpdate {
-                    center: Some(LatLng { lat: *lat, lng: *lon }),
-                    zoom: Some(*zoom),
-                    bearing: Some(*bearing),
-                    pitch: Some(*pitch),
-                    ..Default::default()
-                })
+                .render_static(
+                    &CameraUpdate::new()
+                        .center(LatLng { lat: *lat, lng: *lon })
+                        .zoom(*zoom)
+                        .bearing(*bearing)
+                        .pitch(*pitch),
+                )
                 .expect("could not render image"),
             Renderer::Tiled { map, x, y, z } => {
                 map.render_tile(*z, *x, *y).expect("could not render image")

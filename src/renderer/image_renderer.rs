@@ -28,11 +28,9 @@ use std::path::Path;
 ///     .build_static_renderer();
 ///
 /// renderer.load_style_from_url(&"https://demotiles.maplibre.org/style.json".parse().unwrap());
-/// let camera = CameraUpdate {
-///     center: Some(LatLng { lat: 0.0, lng: 0.0 }),
-///     zoom: Some(0.0),
-///     ..Default::default()
-/// };
+/// let camera = CameraUpdate::new()
+///     .center(LatLng { lat: 0.0, lng: 0.0 })
+///     .zoom(0.0);
 /// let image: Image = renderer.render_static(&camera).unwrap();
 ///
 /// // Access the underlying ImageBuffer for all operations
@@ -298,13 +296,9 @@ impl ImageRenderer<Tile> {
         y: u32,
     ) -> Result<RenderRequest<'_, Tile>, RenderingError> {
         let center = tile_coords_to_latlng(f64::from(zoom), x, y);
-        self.submit_with_camera(&CameraUpdate {
-            center: Some(center),
-            zoom: Some(f64::from(zoom)),
-            bearing: Some(0.0),
-            pitch: Some(0.0),
-            ..Default::default()
-        })
+        self.submit_with_camera(
+            &CameraUpdate::new().center(center).zoom(f64::from(zoom)).bearing(0.0).pitch(0.0),
+        )
     }
 }
 

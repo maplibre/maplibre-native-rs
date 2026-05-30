@@ -15,81 +15,93 @@ impl EdgeInsets {
 /// as changing only the zoom or only the viewport padding.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct CameraUpdate {
-    /// Geographic coordinate at the center of the viewport.
-    pub center: Option<LatLng>,
-    /// Altitude of the center coordinate.
-    pub center_altitude: Option<f64>,
-    /// Insets from the viewport edges.
-    pub padding: Option<EdgeInsets>,
-    /// Screen coordinate to keep fixed while changing camera values.
-    pub anchor: Option<ScreenCoordinate>,
-    /// Zoom level.
-    pub zoom: Option<f64>,
-    /// Bearing in degrees clockwise from north.
-    pub bearing: Option<f64>,
-    /// Pitch in degrees.
-    pub pitch: Option<f64>,
-    /// Roll in degrees.
-    pub roll: Option<f64>,
-    /// Field of view in degrees.
-    pub fov: Option<f64>,
+    options: FfiCameraOptions,
 }
 
 impl CameraUpdate {
+    /// Creates an empty camera update.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Sets the geographic coordinate at the center of the viewport.
+    #[must_use]
+    pub fn center(mut self, center: LatLng) -> Self {
+        self.options.has_center = true;
+        self.options.center = center;
+        self
+    }
+
+    /// Sets the altitude of the center coordinate.
+    #[must_use]
+    pub fn center_altitude(mut self, center_altitude: f64) -> Self {
+        self.options.has_center_altitude = true;
+        self.options.center_altitude = center_altitude;
+        self
+    }
+
+    /// Sets the insets from the viewport edges.
+    #[must_use]
+    pub fn padding(mut self, padding: EdgeInsets) -> Self {
+        self.options.has_padding = true;
+        self.options.padding = padding;
+        self
+    }
+
+    /// Sets the screen coordinate to keep fixed while changing camera values.
+    #[must_use]
+    pub fn anchor(mut self, anchor: ScreenCoordinate) -> Self {
+        self.options.has_anchor = true;
+        self.options.anchor = anchor;
+        self
+    }
+
+    /// Sets the zoom level.
+    #[must_use]
+    pub fn zoom(mut self, zoom: f64) -> Self {
+        self.options.has_zoom = true;
+        self.options.zoom = zoom;
+        self
+    }
+
+    /// Sets the bearing in degrees clockwise from north.
+    #[must_use]
+    pub fn bearing(mut self, bearing: f64) -> Self {
+        self.options.has_bearing = true;
+        self.options.bearing = bearing;
+        self
+    }
+
+    /// Sets the pitch in degrees.
+    #[must_use]
+    pub fn pitch(mut self, pitch: f64) -> Self {
+        self.options.has_pitch = true;
+        self.options.pitch = pitch;
+        self
+    }
+
+    /// Sets the roll in degrees.
+    #[must_use]
+    pub fn roll(mut self, roll: f64) -> Self {
+        self.options.has_roll = true;
+        self.options.roll = roll;
+        self
+    }
+
+    /// Sets the field of view in degrees.
+    #[must_use]
+    pub fn fov(mut self, fov: f64) -> Self {
+        self.options.has_fov = true;
+        self.options.fov = fov;
+        self
+    }
+
     pub(crate) fn from_camera_options(options: FfiCameraOptions) -> Self {
-        Self {
-            center: options.has_center.then_some(options.center),
-            center_altitude: options.has_center_altitude.then_some(options.center_altitude),
-            padding: options.has_padding.then_some(options.padding),
-            anchor: options.has_anchor.then_some(options.anchor),
-            zoom: options.has_zoom.then_some(options.zoom),
-            bearing: options.has_bearing.then_some(options.bearing),
-            pitch: options.has_pitch.then_some(options.pitch),
-            roll: options.has_roll.then_some(options.roll),
-            fov: options.has_fov.then_some(options.fov),
-        }
+        Self { options }
     }
 
     pub(crate) fn to_camera_options(&self) -> FfiCameraOptions {
-        let mut options = FfiCameraOptions::default();
-
-        if let Some(center) = self.center {
-            options.has_center = true;
-            options.center = center;
-        }
-        if let Some(center_altitude) = self.center_altitude {
-            options.has_center_altitude = true;
-            options.center_altitude = center_altitude;
-        }
-        if let Some(padding) = self.padding {
-            options.has_padding = true;
-            options.padding = padding;
-        }
-        if let Some(anchor) = self.anchor {
-            options.has_anchor = true;
-            options.anchor = anchor;
-        }
-        if let Some(zoom) = self.zoom {
-            options.has_zoom = true;
-            options.zoom = zoom;
-        }
-        if let Some(bearing) = self.bearing {
-            options.has_bearing = true;
-            options.bearing = bearing;
-        }
-        if let Some(pitch) = self.pitch {
-            options.has_pitch = true;
-            options.pitch = pitch;
-        }
-        if let Some(roll) = self.roll {
-            options.has_roll = true;
-            options.roll = roll;
-        }
-        if let Some(fov) = self.fov {
-            options.has_fov = true;
-            options.fov = fov;
-        }
-
-        options
+        self.options
     }
 }

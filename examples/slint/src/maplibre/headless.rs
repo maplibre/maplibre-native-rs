@@ -71,13 +71,13 @@ pub fn create_map(size: Size) -> Rc<RefCell<MapLibre>> {
 
     // setting the camera is important, otherwise maplibre does nothing
     // (no logs are coming and no map gets generated).
-    renderer.update_camera(&CameraUpdate {
-        center: Some(LatLng { lat: 0.0, lng: 0.0 }),
-        zoom: Some(0.0),
-        bearing: Some(0.0),
-        pitch: Some(0.0),
-        ..Default::default()
-    });
+    renderer.update_camera(
+        &CameraUpdate::new()
+            .center(LatLng { lat: 0.0, lng: 0.0 })
+            .zoom(0.0)
+            .bearing(0.0)
+            .pitch(0.0),
+    );
     renderer.load_style_from_url(&"https://demotiles.maplibre.org/style.json".parse().unwrap());
 
     let map = Rc::new(RefCell::new(MapLibre::new(renderer)));

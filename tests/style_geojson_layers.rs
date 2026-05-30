@@ -16,13 +16,7 @@ fn fixture_path(name: &str) -> PathBuf {
 }
 
 fn camera(zoom: f64) -> CameraUpdate {
-    CameraUpdate {
-        center: Some(LatLng { lat: 0.0, lng: 0.0 }),
-        zoom: Some(zoom),
-        bearing: Some(0.0),
-        pitch: Some(0.0),
-        ..Default::default()
-    }
+    CameraUpdate::new().center(LatLng { lat: 0.0, lng: 0.0 }).zoom(zoom).bearing(0.0).pitch(0.0)
 }
 
 fn renderer() -> ImageRenderer<Static> {

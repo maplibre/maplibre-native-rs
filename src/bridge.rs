@@ -739,7 +739,7 @@ pub mod ffi {
     }
 
     /// FFI representation of partial camera options.
-    #[derive(Debug, Clone, Copy, Default)]
+    #[derive(Debug, Clone, Copy, PartialEq, Default)]
     pub struct FfiCameraOptions {
         pub has_center: bool,
         pub center: LatLng,

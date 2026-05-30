@@ -13,13 +13,7 @@ use std::{
 const RENDER_TIMEOUT: Duration = Duration::from_secs(5);
 
 fn test_camera() -> CameraUpdate {
-    CameraUpdate {
-        center: Some(LatLng { lat: 0.0, lng: 0.0 }),
-        zoom: Some(0.0),
-        bearing: Some(0.0),
-        pitch: Some(0.0),
-        ..Default::default()
-    }
+    CameraUpdate::new().center(LatLng { lat: 0.0, lng: 0.0 }).zoom(0.0).bearing(0.0).pitch(0.0)
 }
 
 fn fixture_path(name: &str) -> PathBuf {
