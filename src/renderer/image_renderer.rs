@@ -385,9 +385,9 @@ pub enum RenderingError {
 
 #[cfg(test)]
 mod tests {
-    use std::num::NonZeroU32;
     use super::tile_coords_to_latlng;
     use crate::ImageRendererBuilder;
+    use std::num::NonZeroU32;
 
     #[test]
     fn converts_tile_zero_to_geographic_center() {

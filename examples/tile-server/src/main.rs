@@ -1,7 +1,7 @@
 //! Tile rendering server example.
 //!
 //! Serves rendered tiles from a MapLibre style over HTTP. It shows one simple
-//! way to use [`ImageRenderer`](maplibre_native::ImageRenderer) from an async,
+//! way to use [`ImageRenderer`] from an async,
 //! multi-threaded server.
 //!
 //! Run with `cargo run -p tile-server`, then open <http://127.0.0.1:3000>.
