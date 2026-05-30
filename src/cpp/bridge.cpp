@@ -1,4 +1,3 @@
-#include "map_renderer.h"
 #include "rust_log_observer.h"
 #include "maplibre_native/src/bridge.rs.h"
 #include <mbgl/util/logging.hpp>
@@ -17,7 +16,6 @@ bool RustLogObserver::onRecord(mbgl::EventSeverity severity, mbgl::Event event, 
     log_from_cpp(severity, event, code, msg);
     return true;
 }
-
 
 } // namespace bridge
 } // namespace mln

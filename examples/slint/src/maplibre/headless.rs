@@ -1,12 +1,8 @@
 use crate::Size;
-use maplibre_native::Continuous;
-use maplibre_native::ImageRenderer;
-use maplibre_native::ImageRendererBuilder;
-use maplibre_native::MapLoadError;
-use maplibre_native::ResourceOptions;
-use maplibre_native::ScreenCoordinate;
-use maplibre_native::tile_server_options::TileServerOptions;
-use maplibre_native::{Latitude, Longitude};
+use maplibre_native::{
+    CameraUpdate, Continuous, ImageRenderer, ImageRendererBuilder, LatLng, MapLoadError,
+    ResourceOptions, ScreenCoordinate, tile_server_options::TileServerOptions,
+};
 use std::cell::RefCell;
 use std::num::NonZeroU32;
 use std::path::Path;
@@ -75,7 +71,13 @@ pub fn create_map(size: Size) -> Rc<RefCell<MapLibre>> {
 
     // setting the camera is important, otherwise maplibre does nothing
     // (no logs are coming and no map gets generated).
-    renderer.set_camera(Latitude(0.0), Longitude(0.0), 0.0, 0.0, 0.0);
+    renderer.update_camera(
+        &CameraUpdate::new()
+            .center(LatLng { lat: 0.0, lng: 0.0 })
+            .zoom(0.0)
+            .bearing(0.0)
+            .pitch(0.0),
+    );
     renderer.load_style_from_url(&"https://demotiles.maplibre.org/style.json".parse().unwrap());
 
     let map = Rc::new(RefCell::new(MapLibre::new(renderer)));

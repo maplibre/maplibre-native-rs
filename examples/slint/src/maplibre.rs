@@ -7,8 +7,8 @@ pub use headless::MapLibre;
 pub use headless::create_map;
 use image::ImageReader;
 use maplibre_native::{
-    CircleLayer, Color, FillLayer, GeoJson, GeoJsonSource, Height, LineLayer, ScreenCoordinate,
-    Style, SymbolAnchor, SymbolLayer, Width, X, Y,
+    CircleLayer, Color, FillLayer, GeoJson, GeoJsonSource, LineLayer, ScreenCoordinate, Style,
+    SymbolAnchor, SymbolLayer,
 };
 use std::cell::RefCell;
 use std::path::Path;
@@ -33,7 +33,7 @@ pub fn init(ui: &MainWindow, map: &Rc<RefCell<MapLibre>>) {
         let map = Rc::downgrade(map);
         move |size| {
             let size =
-                maplibre_native::Size::new(Width(size.width as u32), Height(size.height as u32));
+                maplibre_native::Size { width: size.width as u32, height: size.height as u32 };
             map.upgrade().unwrap().borrow_mut().renderer().set_map_size(size);
         }
     });
@@ -50,8 +50,8 @@ pub fn init(ui: &MainWindow, map: &Rc<RefCell<MapLibre>>) {
                 let size = image.size();
                 let img = slint::SharedPixelBuffer::<slint::Rgba8Pixel>::clone_from_slice(
                     image.buffer(),
-                    size.width(),
-                    size.height(),
+                    size.width,
+                    size.height,
                 );
                 ui_handle
                     .upgrade()
@@ -68,14 +68,14 @@ pub fn init(ui: &MainWindow, map: &Rc<RefCell<MapLibre>>) {
             map.upgrade()
                 .unwrap()
                 .borrow_mut()
-                .set_position(ScreenCoordinate::new(X(x.into()), Y(y.into())));
+                .set_position(ScreenCoordinate { x: x.into(), y: y.into() });
         }
     });
 
     ui.global::<MapAdapter>().on_mouse_move({
         let map = Rc::downgrade(map);
         move |x: f32, y: f32, _z: bool| {
-            let p = ScreenCoordinate::new(X(x.into()), Y(y.into()));
+            let p = ScreenCoordinate { x: x.into(), y: y.into() };
             let map = map.upgrade().unwrap();
             let mut map = map.borrow_mut();
             let delta = p - map.position();
@@ -88,7 +88,7 @@ pub fn init(ui: &MainWindow, map: &Rc<RefCell<MapLibre>>) {
         let map = Rc::downgrade(map);
         move |x: f32, y: f32, delta: f32| {
             const STEP: f64 = 1.2;
-            let pos = ScreenCoordinate::new(X(x.into()), Y(y.into()));
+            let pos = ScreenCoordinate { x: x.into(), y: y.into() };
             let scale = if delta > 0. { STEP } else { 1.0 / STEP };
             map.upgrade().unwrap().borrow_mut().renderer().scale_by(scale, pos);
         }
