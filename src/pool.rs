@@ -66,9 +66,17 @@ impl SingleThreadedRenderPool {
             while let Ok(request) = rx.recv() {
                 // Load style if it is different from current
                 if current_style.as_ref() != Some(&request.style_path) {
-                    if let Err(e) = renderer.load_style_from_path(&request.style_path) {
-                        let _ =
-                            request.response.send(Err(SingleThreadedRenderPoolError::IOError(e)));
+                    let load = match renderer.load_style_from_path(&request.style_path) {
+                        Ok(req) => req,
+                        Err(e) => {
+                            let _ = request
+                                .response
+                                .send(Err(SingleThreadedRenderPoolError::IOError(e)));
+                            continue;
+                        }
+                    };
+                    if let Err(e) = load.wait() {
+                        let _ = request.response.send(Err(e.into()));
                         continue;
                     }
                     current_style = Some(request.style_path.clone());
@@ -123,6 +131,10 @@ pub enum SingleThreadedRenderPoolError {
     /// An I/O error occurred during rendering operations.
     #[error(transparent)]
     IOError(#[from] std::io::Error),
+
+    /// Failed to load the requested style.
+    #[error("style load failed: {0}")]
+    MapLoadError(#[from] crate::MapLoadError),
 
     /// A rendering error occurred during map rendering.
     #[error(transparent)]

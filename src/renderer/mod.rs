@@ -16,7 +16,7 @@ pub use crate::bridge::{
 pub use builder::ImageRendererBuilder;
 pub use file_source::{register_file_source_callback, FileSourceRequestCallback, FsResponse};
 pub use image_renderer::{
-    Continuous, Image, ImageRenderer, RenderRequest, RenderingError, Static, Tile,
+    Continuous, Image, ImageRenderer, RenderRequest, RenderingError, Static, StyleLoadRequest, Tile,
 };
 pub use map_observer::MapObserver;
 pub use resource_options::ResourceOptions;

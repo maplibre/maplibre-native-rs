@@ -281,6 +281,13 @@ pub mod layers {
     unsafe extern "C++" {
         include!("layers/layers.h");
 
+        /// Returns the layer's ID (the style-spec `"id"` field).
+        #[cfg(feature = "json")]
+        fn layer_id(layer: &UniquePtr<Layer>) -> String;
+        /// Returns the layer's type name (e.g. `"circle"`, `"fill"`).
+        #[cfg(feature = "json")]
+        fn layer_type(layer: &UniquePtr<Layer>) -> String;
+
         /// Upcasts a circle layer handle to the base `Layer` type.
         #[must_use]
         fn circle_into_layer(layer: UniquePtr<CircleLayer>) -> UniquePtr<Layer>;
@@ -293,6 +300,19 @@ pub mod layers {
         /// Upcasts a symbol layer handle to the base `Layer` type.
         #[must_use]
         fn symbol_into_layer(layer: UniquePtr<SymbolLayer>) -> UniquePtr<Layer>;
+
+        /// Downcasts a base layer handle to a circle layer. Returns null on type mismatch.
+        #[cfg(feature = "json")]
+        fn try_into_circle(layer: UniquePtr<Layer>) -> UniquePtr<CircleLayer>;
+        /// Downcasts a base layer handle to a fill layer. Returns null on type mismatch.
+        #[cfg(feature = "json")]
+        fn try_into_fill(layer: UniquePtr<Layer>) -> UniquePtr<FillLayer>;
+        /// Downcasts a base layer handle to a line layer. Returns null on type mismatch.
+        #[cfg(feature = "json")]
+        fn try_into_line(layer: UniquePtr<Layer>) -> UniquePtr<LineLayer>;
+        /// Downcasts a base layer handle to a symbol layer. Returns null on type mismatch.
+        #[cfg(feature = "json")]
+        fn try_into_symbol(layer: UniquePtr<Layer>) -> UniquePtr<SymbolLayer>;
 
         /// Creates a new circle layer.
         #[must_use]
@@ -347,6 +367,66 @@ pub mod layers {
         fn setIconImage(layer: &UniquePtr<SymbolLayer>, image_id: &str);
         /// Sets the anchor point for layer icons.
         fn setIconAnchor(layer: &UniquePtr<SymbolLayer>, anchor: SymbolAnchorType);
+    }
+}
+
+#[cfg(feature = "json")]
+#[cxx::bridge(namespace = "mln::bridge")]
+/// FFI bindings for the style-spec value adapter.
+///
+/// Rust builds a C++ `StyleValue` tree, and MapLibre Native's conversion layer
+/// reads it through `ConversionTraits<const StyleValue*>`.
+pub mod style_value {
+    #[namespace = "mbgl::style"]
+    extern "C++" {
+        include!("mbgl/style/layer.hpp");
+
+        #[rust_name = "StyleLayer"]
+        type Layer = crate::bridge::layers::Layer;
+    }
+
+    unsafe extern "C++" {
+        include!("style_value.h");
+
+        /// Opaque C++ JSON-like value used as input to MapLibre's conversion layer.
+        type StyleValue;
+
+        /// Constructs a null `StyleValue`.
+        #[must_use]
+        fn make_null() -> UniquePtr<StyleValue>;
+        /// Constructs a boolean `StyleValue`.
+        #[must_use]
+        fn make_bool(b: bool) -> UniquePtr<StyleValue>;
+        /// Constructs a numeric `StyleValue`.
+        #[must_use]
+        fn make_number(n: f64) -> UniquePtr<StyleValue>;
+        /// Constructs a string `StyleValue`.
+        #[must_use]
+        fn make_string(s: &str) -> UniquePtr<StyleValue>;
+        /// Constructs an empty array `StyleValue`.
+        #[must_use]
+        fn make_array() -> UniquePtr<StyleValue>;
+        /// Appends a child to an array `StyleValue`.
+        fn array_push(arr: Pin<&mut StyleValue>, child: UniquePtr<StyleValue>);
+        /// Constructs an empty object `StyleValue`.
+        #[must_use]
+        fn make_object() -> UniquePtr<StyleValue>;
+        /// Inserts a child under `key` in an object `StyleValue`.
+        fn object_insert(obj: Pin<&mut StyleValue>, key: &str, child: UniquePtr<StyleValue>);
+
+        /// Parses a style-spec layer object from a `StyleValue` tree.
+        /// On failure, `error_message` is populated and the returned pointer is null.
+        fn layer_from_value(
+            value: &StyleValue,
+            error_message: &mut String,
+        ) -> UniquePtr<StyleLayer>;
+    }
+}
+
+#[cfg(feature = "json")]
+impl std::fmt::Debug for style_value::StyleValue {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("StyleValue").finish()
     }
 }
 
@@ -516,6 +596,8 @@ impl Display for map_observer::MapLoadError {
         write!(f, "{s}")
     }
 }
+
+impl std::error::Error for map_observer::MapLoadError {}
 
 #[allow(clippy::borrow_as_ptr)]
 #[cxx::bridge(namespace = "mln::bridge")]

@@ -19,11 +19,13 @@ repo = "maplibre/maplibre-native"
 release = "core-9b6325a14e2cf1cc29ab28c1855ad376f1ba4903"
 
 [features]
-default = ["log", "pool"]
+default = ["log", "pool", "json", "geojson"]
 metal = []
 opengl = []
 vulkan = []
-geojson = ["dep:geojson", "dep:serde_json"]
+# Enables parsing style-spec layer JSON via `AnyLayer::from_json_str`/`from_json_value`.
+json = ["dep:serde_json"]
+geojson = ["dep:geojson"]
 log = ["dep:log"]
 pool = ["dep:tokio"]
 

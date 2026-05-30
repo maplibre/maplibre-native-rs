@@ -1,10 +1,12 @@
 //! Image renderer configuration and builder
 
 use crate::bridge::ffi;
+use crate::renderer::map_observer::MapObserverCallbacks;
 use crate::renderer::{Continuous, ImageRenderer, MapMode, Static, Tile};
 use crate::ResourceOptions;
 use std::marker::PhantomData;
 use std::num::NonZeroU32;
+use std::rc::Rc;
 
 /// Builder for configuring [`ImageRenderer`] instances
 ///
@@ -109,7 +111,7 @@ impl<S> ImageRenderer<S> {
     /// Creates a new renderer instance
     fn new(map_mode: MapMode, opts: ImageRendererBuilder) -> Self {
         let resource_options = opts.resource_options.unwrap_or_default();
-        let map = ffi::MapRenderer_new(
+        let mut map = ffi::MapRenderer_new(
             map_mode,
             opts.width.get(),
             opts.height.get(),
@@ -117,6 +119,17 @@ impl<S> ImageRenderer<S> {
             resource_options.as_ref(),
         );
 
-        Self { instance: map, style_specified: false, _marker: PhantomData, _not_send: PhantomData }
+        // Wire up the observer dispatchers once; `map_observer()` afterwards is
+        // a pure view that only swaps the stored callbacks.
+        let observer_callbacks = Rc::new(MapObserverCallbacks::default());
+        observer_callbacks.install(&map.pin_mut().observer());
+
+        Self {
+            instance: map,
+            observer_callbacks,
+            style_specified: false,
+            _marker: PhantomData,
+            _not_send: PhantomData,
+        }
     }
 }

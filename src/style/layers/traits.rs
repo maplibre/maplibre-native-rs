@@ -1,4 +1,5 @@
 use crate::bridge::{ffi, layers};
+use crate::style::{AnyLayer, OpaqueLayer};
 use crate::style::{CircleLayer, FillLayer, LineLayer, SymbolLayer};
 
 use sealed::IntoLayer;
@@ -12,7 +13,7 @@ mod sealed {
     }
 }
 
-/// A style layer type that can be added to a [`Style`](crate::Style).
+/// A style layer type that can be added to a [`StyleRef`](crate::StyleRef).
 ///
 /// This trait is sealed; only layer types provided by this crate can implement
 /// it.
@@ -65,3 +66,27 @@ impl IntoLayer for SymbolLayer {
 }
 
 impl Layer for SymbolLayer {}
+
+impl IntoLayer for OpaqueLayer {
+    fn layer_id(&self) -> &str {
+        self.layer_id()
+    }
+
+    fn into_layer(self) -> cxx::UniquePtr<ffi::CxxLayer> {
+        self.into_inner()
+    }
+}
+
+impl Layer for OpaqueLayer {}
+
+impl IntoLayer for AnyLayer {
+    fn layer_id(&self) -> &str {
+        self.layer_id()
+    }
+
+    fn into_layer(self) -> cxx::UniquePtr<ffi::CxxLayer> {
+        self.into_layer_ptr()
+    }
+}
+
+impl Layer for AnyLayer {}

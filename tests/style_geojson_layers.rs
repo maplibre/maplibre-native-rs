@@ -2,30 +2,14 @@
 
 use std::num::NonZeroU32;
 use std::path::PathBuf;
-use std::time::{Duration, Instant};
 
 use maplibre_native::{
     CircleLayer, Color, FillLayer, GeoJson, GeoJsonSource, Image, ImageRenderer,
-    ImageRendererBuilder, LineCap, LineJoin, LineLayer, Static, Style,
+    ImageRendererBuilder, LineCap, LineJoin, LineLayer, Static,
 };
-
-const RENDER_TIMEOUT: Duration = Duration::from_secs(5);
 
 fn fixture_path(name: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests").join("fixtures").join(name)
-}
-
-fn renderer() -> ImageRenderer<Static> {
-    let mut renderer = ImageRendererBuilder::new()
-        .with_size(NonZeroU32::new(128).unwrap(), NonZeroU32::new(128).unwrap())
-        .with_pixel_ratio(1.0)
-        .build_static_renderer();
-
-    renderer.load_style_from_path(fixture_path("test-style.json")).expect("test style should load");
-    let background =
-        renderer.render_static(0.0, 0.0, 0.0, 0.0, 0.0).expect("background style should render");
-    assert_eq!(background.as_image().width(), 128);
-    renderer
 }
 
 fn overlay_geojson() -> GeoJson {
@@ -75,22 +59,28 @@ fn has_non_background_pixel(image: &image::RgbaImage) -> bool {
     })
 }
 
-fn render_until<F>(renderer: &mut ImageRenderer<Static>, predicate: F) -> Image
-where
-    F: Fn(&Image) -> bool,
-{
-    let started = Instant::now();
-    loop {
-        let frame =
-            renderer.render_static(0.0, 0.0, 1.0, 0.0, 0.0).expect("GeoJSON layers should render");
-        if predicate(&frame) {
-            break frame;
-        }
-        assert!(
-            started.elapsed() < RENDER_TIMEOUT,
-            "GeoJSON layers did not draw expected pixels within {RENDER_TIMEOUT:?}",
-        );
-    }
+fn renderer() -> ImageRenderer<Static> {
+    let mut renderer = ImageRendererBuilder::new()
+        .with_size(NonZeroU32::new(128).unwrap(), NonZeroU32::new(128).unwrap())
+        .with_pixel_ratio(1.0)
+        .build_static_renderer();
+
+    renderer
+        .load_style_from_path(fixture_path("test-style.json"))
+        .expect("test style path should be valid")
+        .wait()
+        .expect("style should load");
+    renderer
+}
+
+fn render_geojson(renderer: &mut ImageRenderer<Static>) -> Image {
+    let image =
+        renderer.render_static(0.0, 0.0, 1.0, 0.0, 0.0).expect("GeoJSON layers should render");
+    assert!(
+        has_non_background_pixel(image.as_image()),
+        "GeoJSON layers did not draw any non-background pixels",
+    );
+    image
 }
 
 #[test]
@@ -101,7 +91,7 @@ fn geojson_source_renders_circle_line_and_fill_layers() {
     let geojson = overlay_geojson();
     source.set_geojson(&geojson);
 
-    let mut style = Style::get_ref(&mut renderer);
+    let mut style = renderer.style();
     let source_id = style.add_source(source).expect("GeoJSON source should be added");
 
     let mut fill = FillLayer::new("geojson-test-fill", &source_id);
@@ -124,7 +114,7 @@ fn geojson_source_renders_circle_line_and_fill_layers() {
     circle.set_circle_stroke_width(2.0);
     style.add_layer(circle).expect("circle layer should be added");
 
-    let image = render_until(&mut renderer, |image| has_non_background_pixel(image.as_image()));
+    let image = render_geojson(&mut renderer);
 
     assert_eq!(image.as_image().width(), 128);
     assert_eq!(image.as_image().height(), 128);
@@ -133,7 +123,7 @@ fn geojson_source_renders_circle_line_and_fill_layers() {
 #[test]
 fn layer_management_methods_smoke_test() {
     let mut renderer = renderer();
-    let mut style = Style::get_ref(&mut renderer);
+    let mut style = renderer.style();
 
     style.remove_layer("missing-layer");
     style.remove_source("missing-source");
@@ -183,7 +173,7 @@ fn layer_management_methods_smoke_test() {
     let removable_layer = style.add_layer(circle).expect("circle layer should be re-added");
     assert_eq!(removable_layer.as_str(), "removable-layer");
 
-    let image = render_until(&mut renderer, |image| has_non_background_pixel(image.as_image()));
+    let image = render_geojson(&mut renderer);
     assert_eq!(image.as_image().width(), 128);
     assert_eq!(image.as_image().height(), 128);
 }

@@ -8,7 +8,7 @@ pub use headless::create_map;
 use image::ImageReader;
 use maplibre_native::{
     CircleLayer, Color, FillLayer, GeoJson, GeoJsonSource, Height, LineLayer, ScreenCoordinate,
-    Style, SymbolAnchor, SymbolLayer, Width, X, Y,
+    SymbolAnchor, SymbolLayer, Width, X, Y,
 };
 use std::cell::RefCell;
 use std::path::Path;
@@ -97,7 +97,7 @@ pub fn init(ui: &MainWindow, map: &Rc<RefCell<MapLibre>>) {
 
 fn style(map: &Rc<RefCell<MapLibre>>) {
     let mut map_borrow = map.borrow_mut();
-    let mut style = Style::get_ref(map_borrow.renderer());
+    let mut style = map_borrow.renderer().style();
 
     let image = ImageReader::open(
         Path::new(env!("CARGO_MANIFEST_DIR")).join("ui").join("icons").join("Marker.png"),

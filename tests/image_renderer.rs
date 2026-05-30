@@ -1,9 +1,13 @@
 //! Integration tests for image renderer request and run loop behavior.
 
-use maplibre_native::{ImageRendererBuilder, RunLoopHandle};
+use maplibre_native::{
+    ImageRenderer, ImageRendererBuilder, MapLoadError, RunLoopHandle, Static, Tile,
+};
 use std::{
+    cell::Cell,
     num::NonZeroU32,
     path::PathBuf,
+    rc::Rc,
     thread,
     time::{Duration, Instant},
 };
@@ -14,14 +18,29 @@ fn fixture_path(name: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests").join("fixtures").join(name)
 }
 
+fn static_renderer_with_size(size: u32) -> ImageRenderer<Static> {
+    ImageRendererBuilder::new()
+        .with_size(NonZeroU32::new(size).unwrap(), NonZeroU32::new(size).unwrap())
+        .with_pixel_ratio(1.0)
+        .build_static_renderer()
+}
+
+fn static_renderer() -> ImageRenderer<Static> {
+    static_renderer_with_size(128)
+}
+
+fn tile_renderer() -> ImageRenderer<Tile> {
+    ImageRendererBuilder::new()
+        .with_size(NonZeroU32::new(128).unwrap(), NonZeroU32::new(128).unwrap())
+        .with_pixel_ratio(1.0)
+        .build_tile_renderer()
+}
+
 fn tick_until_ready(mut ready: impl FnMut() -> bool) {
     let run_loop = RunLoopHandle::current();
     let deadline = Instant::now() + RENDER_TIMEOUT;
     while !ready() {
-        assert!(
-            Instant::now() < deadline,
-            "render request did not complete within {RENDER_TIMEOUT:?}"
-        );
+        assert!(Instant::now() < deadline, "request did not complete within {RENDER_TIMEOUT:?}");
         run_loop.tick();
     }
 }
@@ -30,14 +49,11 @@ fn tick_until_ready(mut ready: impl FnMut() -> bool) {
 fn thread_run_loop_supports_worker_threads() {
     let handles = (0..2).map(|_| {
         thread::spawn(|| {
-            let mut renderer = ImageRendererBuilder::new()
-                .with_size(NonZeroU32::new(128).unwrap(), NonZeroU32::new(128).unwrap())
-                .with_pixel_ratio(1.0)
-                .build_static_renderer();
+            let mut renderer = static_renderer();
 
             renderer
                 .load_style_from_path(fixture_path("test-style.json"))
-                .expect("test style should load");
+                .expect("test style path should be valid");
             let image = renderer
                 .render_static(0.0, 0.0, 0.0, 0.0, 0.0)
                 .expect("thread run loop should render");
@@ -54,17 +70,15 @@ fn thread_run_loop_supports_worker_threads() {
 
 #[test]
 fn multiple_renderers_render_on_single_thread() {
-    let mut first = ImageRendererBuilder::new()
-        .with_size(NonZeroU32::new(128).unwrap(), NonZeroU32::new(128).unwrap())
-        .with_pixel_ratio(1.0)
-        .build_static_renderer();
-    let mut second = ImageRendererBuilder::new()
-        .with_size(NonZeroU32::new(128).unwrap(), NonZeroU32::new(128).unwrap())
-        .with_pixel_ratio(1.0)
-        .build_static_renderer();
+    let mut first = static_renderer();
+    let mut second = static_renderer();
 
-    first.load_style_from_path(fixture_path("test-style.json")).expect("test style should load");
-    second.load_style_from_path(fixture_path("test-style.json")).expect("test style should load");
+    first
+        .load_style_from_path(fixture_path("test-style.json"))
+        .expect("test style path should be valid");
+    second
+        .load_style_from_path(fixture_path("test-style.json"))
+        .expect("test style path should be valid");
 
     let first_request =
         first.submit_render_static(0.0, 0.0, 0.0, 0.0, 0.0).expect("first render should submit");
@@ -84,13 +98,10 @@ fn multiple_renderers_render_on_single_thread() {
 }
 
 #[test]
-fn load_style_from_json_renders() {
-    let mut renderer = ImageRendererBuilder::new()
-        .with_size(NonZeroU32::new(128).unwrap(), NonZeroU32::new(128).unwrap())
-        .with_pixel_ratio(1.0)
-        .build_static_renderer();
+fn load_style_from_json_str_renders() {
+    let mut renderer = static_renderer();
 
-    renderer.load_style_from_json(include_str!("fixtures/test-style.json"));
+    renderer.load_style_from_json_str(include_str!("fixtures/test-style.json"));
 
     let request = renderer
         .submit_render_static(0.0, 0.0, 0.0, 0.0, 0.0)
@@ -102,14 +113,38 @@ fn load_style_from_json_renders() {
     assert_eq!(image.as_image().height(), 128);
 }
 
+#[cfg(feature = "json")]
+#[test]
+fn load_style_from_json_value_loads() {
+    let mut renderer = static_renderer();
+    let value: serde_json::Value =
+        serde_json::from_str(include_str!("fixtures/test-style.json")).expect("valid JSON style");
+
+    renderer
+        .load_style_from_json_value(&value)
+        .expect("style JSON should serialize")
+        .wait()
+        .expect("JSON style should load");
+}
+
+#[test]
+fn style_load_request_polls_to_completion() {
+    let mut renderer = static_renderer();
+
+    let request = renderer
+        .load_style_from_path(fixture_path("test-style.json"))
+        .expect("test style path should be valid");
+    tick_until_ready(|| request.is_ready());
+    request.finish().expect("style should load");
+}
+
 #[test]
 fn tile_render_request_renders() {
-    let mut renderer = ImageRendererBuilder::new()
-        .with_size(NonZeroU32::new(128).unwrap(), NonZeroU32::new(128).unwrap())
-        .with_pixel_ratio(1.0)
-        .build_tile_renderer();
+    let mut renderer = tile_renderer();
 
-    renderer.load_style_from_path(fixture_path("test-style.json")).expect("test style should load");
+    renderer
+        .load_style_from_path(fixture_path("test-style.json"))
+        .expect("test style path should be valid");
 
     let request = renderer.submit_render_tile(0, 0, 0).expect("tile render should submit");
 
@@ -121,16 +156,19 @@ fn tile_render_request_renders() {
 }
 
 #[test]
-fn dropping_render_request_before_renderer_is_safe() {
-    let mut renderer = ImageRendererBuilder::new()
-        .with_size(NonZeroU32::new(128).unwrap(), NonZeroU32::new(128).unwrap())
-        .with_pixel_ratio(1.0)
-        .build_static_renderer();
+fn style_load_request_reports_failure() {
+    let mut renderer = static_renderer_with_size(64);
 
-    renderer.load_style_from_path(fixture_path("test-style.json")).expect("test style should load");
+    let did_fail = Rc::new(Cell::new(false));
+    renderer.map_observer().set_did_fail_loading_map_callback({
+        let did_fail = Rc::clone(&did_fail);
+        move |_error, _what| did_fail.set(true)
+    });
 
-    let request =
-        renderer.submit_render_static(0.0, 0.0, 0.0, 0.0, 0.0).expect("render should submit");
-    drop(request);
-    drop(renderer);
+    // A top-level JSON array is valid JSON but not a valid style document
+    // (the style root must be an object), so MapLibre Native reports a load
+    // failure through the observer rather than succeeding.
+    let result = renderer.load_style_from_json_str("[]").wait();
+    assert!(matches!(result, Err(MapLoadError::StyleParseError)), "unexpected result: {result:?}");
+    assert!(did_fail.get(), "user style load failure callback should still be called");
 }

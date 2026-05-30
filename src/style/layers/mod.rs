@@ -1,3 +1,4 @@
+mod any;
 mod circle;
 mod fill;
 mod id;
@@ -5,6 +6,7 @@ mod line;
 mod symbol;
 mod traits;
 
+pub use any::{AnyLayer, OpaqueLayer};
 pub use circle::CircleLayer;
 pub use fill::FillLayer;
 pub use id::LayerId;

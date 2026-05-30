@@ -191,6 +191,7 @@ impl Args {
                     println!("Warning: nonzero pitch is ignored in tile-mode");
                 }
                 let mut map = map.build_tile_renderer();
+                // `render_tile` (called later) waits for the style to load.
                 if let Ok(url) = url::Url::parse(&self.style) {
                     map.load_style_from_url(&url);
                 } else {
