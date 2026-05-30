@@ -385,7 +385,9 @@ pub enum RenderingError {
 
 #[cfg(test)]
 mod tests {
+    use std::num::NonZeroU32;
     use super::tile_coords_to_latlng;
+    use crate::ImageRendererBuilder;
 
     #[test]
     fn converts_tile_zero_to_geographic_center() {
@@ -399,5 +401,18 @@ mod tests {
         let center = tile_coords_to_latlng(1.0, 1, 1);
         assert!((-90.0..=90.0).contains(&center.lat));
         assert!((-180.0..=180.0).contains(&center.lng));
+    }
+
+    #[test]
+    fn load_style_from_path_rejects_non_files() {
+        let size = NonZeroU32::new(64).unwrap();
+        let mut renderer =
+            ImageRendererBuilder::new().with_size(size, size).build_static_renderer();
+
+        // A missing file and an empty path are both reported as `NotFound`.
+        let missing = renderer.load_style_from_path("does-not-exist.json").unwrap_err();
+        assert_eq!(missing.kind(), std::io::ErrorKind::NotFound);
+        let empty = renderer.load_style_from_path("").unwrap_err();
+        assert_eq!(empty.kind(), std::io::ErrorKind::NotFound);
     }
 }
