@@ -4,7 +4,9 @@
 use std::num::NonZeroU32;
 use std::path::PathBuf;
 
-use maplibre_native::{AnyLayer, GeoJson, GeoJsonSource, ImageRendererBuilder, StyleError};
+use maplibre_native::{
+    AnyLayer, CameraUpdate, GeoJson, GeoJsonSource, ImageRendererBuilder, LatLng, StyleError,
+};
 
 fn fixture_path(name: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests").join("fixtures").join(name)
@@ -102,7 +104,9 @@ fn add_layer_from_json_renders() {
     assert!(matches!(layer, AnyLayer::Fill(_)), "expected fill variant");
     style.add_layer(layer).expect("layer added");
 
-    let image = renderer.render_static(0.0, 0.0, 1.0, 0.0, 0.0).expect("render");
+    let camera =
+        CameraUpdate::new().center(LatLng { lat: 0.0, lng: 0.0 }).zoom(1.0).bearing(0.0).pitch(0.0);
+    let image = renderer.render_static(&camera).expect("render");
 
     let buf = image.as_image();
     assert_eq!(buf.width(), 128);

@@ -1,7 +1,7 @@
 use image::DynamicImage;
 
 use crate::bridge::ffi;
-use crate::{Height, ImageId, ImageRenderer, Layer, LayerId, Source, SourceId, StyleError, Width};
+use crate::{ImageId, ImageRenderer, Layer, LayerId, Source, SourceId, StyleError};
 
 /// A mutable reference to the renderer's current map style.
 #[derive(Debug)]
@@ -34,7 +34,7 @@ impl<'a, S> StyleRef<'a, S> {
         self.image_renderer.instance.pin_mut().style_add_image(
             id,
             image.as_bytes(),
-            ffi::Size::new(Width(image.width()), Height(image.height())),
+            ffi::Size { width: image.width(), height: image.height() },
             signed_distance_field,
         )?;
         Ok(ImageId::new(id.to_owned()))

@@ -1,7 +1,8 @@
 //! Integration tests for image renderer request and run loop behavior.
 
 use maplibre_native::{
-    ImageRenderer, ImageRendererBuilder, MapLoadError, RunLoopHandle, Static, Tile,
+    CameraUpdate, EdgeInsets, ImageRenderer, ImageRendererBuilder, LatLng, LatLngBounds,
+    MapLoadError, RunLoopHandle, Static, Tile,
 };
 use std::{
     cell::Cell,
@@ -13,6 +14,10 @@ use std::{
 };
 
 const RENDER_TIMEOUT: Duration = Duration::from_secs(5);
+
+fn test_camera() -> CameraUpdate {
+    CameraUpdate::new().center(LatLng { lat: 0.0, lng: 0.0 }).zoom(0.0).bearing(0.0).pitch(0.0)
+}
 
 fn fixture_path(name: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests").join("fixtures").join(name)
@@ -54,9 +59,8 @@ fn thread_run_loop_supports_worker_threads() {
             renderer
                 .load_style_from_path(fixture_path("test-style.json"))
                 .expect("test style path should be valid");
-            let image = renderer
-                .render_static(0.0, 0.0, 0.0, 0.0, 0.0)
-                .expect("thread run loop should render");
+            let image =
+                renderer.render_static(&test_camera()).expect("thread run loop should render");
 
             assert_eq!(image.as_image().width(), 128);
             assert_eq!(image.as_image().height(), 128);
@@ -81,9 +85,9 @@ fn multiple_renderers_render_on_single_thread() {
         .expect("test style path should be valid");
 
     let first_request =
-        first.submit_render_static(0.0, 0.0, 0.0, 0.0, 0.0).expect("first render should submit");
+        first.submit_render_static(&test_camera()).expect("first render should submit");
     let second_request =
-        second.submit_render_static(0.0, 0.0, 0.0, 0.0, 0.0).expect("second render should submit");
+        second.submit_render_static(&test_camera()).expect("second render should submit");
 
     // Both requests are driven from the same thread-local run loop.
     tick_until_ready(|| first_request.is_ready() && second_request.is_ready());
@@ -103,9 +107,8 @@ fn load_style_from_json_str_renders() {
 
     renderer.load_style_from_json_str(include_str!("fixtures/test-style.json"));
 
-    let request = renderer
-        .submit_render_static(0.0, 0.0, 0.0, 0.0, 0.0)
-        .expect("JSON style render should submit");
+    let request =
+        renderer.submit_render_static(&test_camera()).expect("JSON style render should submit");
     tick_until_ready(|| request.is_ready());
 
     let image = request.finish().expect("JSON style should render");
@@ -156,6 +159,27 @@ fn tile_render_request_renders() {
 }
 
 #[test]
+fn camera_for_bounds_renders() {
+    let mut renderer = static_renderer();
+
+    renderer
+        .load_style_from_path(fixture_path("test-style.json"))
+        .expect("test style path should be valid");
+
+    let bounds = LatLngBounds {
+        southwest: LatLng { lat: -10.0, lng: -10.0 },
+        northeast: LatLng { lat: 10.0, lng: 10.0 },
+    };
+    let camera = renderer.camera_for_bounds(bounds, Some(EdgeInsets::all(8.0)), 0.0, 0.0);
+    let request = renderer.submit_render_static(&camera).expect("bounds-fit render should submit");
+    tick_until_ready(|| request.is_ready());
+
+    let image = request.finish().expect("bounds-fit renderer should render");
+    assert_eq!(image.as_image().width(), 128);
+    assert_eq!(image.as_image().height(), 128);
+}
+
+#[test]
 fn style_load_request_reports_failure() {
     let mut renderer = static_renderer_with_size(64);
 
@@ -171,4 +195,17 @@ fn style_load_request_reports_failure() {
     let result = renderer.load_style_from_json_str("[]").wait();
     assert!(matches!(result, Err(MapLoadError::StyleParseError)), "unexpected result: {result:?}");
     assert!(did_fail.get(), "user style load failure callback should still be called");
+}
+
+#[test]
+fn dropping_render_request_before_renderer_is_safe() {
+    let mut renderer = static_renderer();
+
+    renderer
+        .load_style_from_path(fixture_path("test-style.json"))
+        .expect("test style path should be valid");
+
+    let request = renderer.submit_render_static(&test_camera()).expect("render should submit");
+    drop(request);
+    drop(renderer);
 }

@@ -2,14 +2,35 @@
 
 use std::num::NonZeroU32;
 use std::path::PathBuf;
+use std::time::{Duration, Instant};
 
 use maplibre_native::{
-    CircleLayer, Color, FillLayer, GeoJson, GeoJsonSource, Image, ImageRenderer,
-    ImageRendererBuilder, LineCap, LineJoin, LineLayer, Static,
+    CameraUpdate, CircleLayer, Color, FillLayer, GeoJson, GeoJsonSource, Image, ImageRenderer,
+    ImageRendererBuilder, LatLng, LineCap, LineJoin, LineLayer, Static,
 };
+
+const RENDER_TIMEOUT: Duration = Duration::from_secs(5);
 
 fn fixture_path(name: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests").join("fixtures").join(name)
+}
+
+fn camera(zoom: f64) -> CameraUpdate {
+    CameraUpdate::new().center(LatLng { lat: 0.0, lng: 0.0 }).zoom(zoom).bearing(0.0).pitch(0.0)
+}
+
+fn renderer() -> ImageRenderer<Static> {
+    let mut renderer = ImageRendererBuilder::new()
+        .with_size(NonZeroU32::new(128).unwrap(), NonZeroU32::new(128).unwrap())
+        .with_pixel_ratio(1.0)
+        .build_static_renderer();
+
+    renderer
+        .load_style_from_path(fixture_path("test-style.json"))
+        .expect("test style path should be valid")
+        .wait()
+        .expect("style should load");
+    renderer
 }
 
 fn overlay_geojson() -> GeoJson {
@@ -59,28 +80,21 @@ fn has_non_background_pixel(image: &image::RgbaImage) -> bool {
     })
 }
 
-fn renderer() -> ImageRenderer<Static> {
-    let mut renderer = ImageRendererBuilder::new()
-        .with_size(NonZeroU32::new(128).unwrap(), NonZeroU32::new(128).unwrap())
-        .with_pixel_ratio(1.0)
-        .build_static_renderer();
-
-    renderer
-        .load_style_from_path(fixture_path("test-style.json"))
-        .expect("test style path should be valid")
-        .wait()
-        .expect("style should load");
-    renderer
-}
-
-fn render_geojson(renderer: &mut ImageRenderer<Static>) -> Image {
-    let image =
-        renderer.render_static(0.0, 0.0, 1.0, 0.0, 0.0).expect("GeoJSON layers should render");
-    assert!(
-        has_non_background_pixel(image.as_image()),
-        "GeoJSON layers did not draw any non-background pixels",
-    );
-    image
+fn render_until<F>(renderer: &mut ImageRenderer<Static>, predicate: F) -> Image
+where
+    F: Fn(&Image) -> bool,
+{
+    let started = Instant::now();
+    loop {
+        let frame = renderer.render_static(&camera(1.0)).expect("GeoJSON layers should render");
+        if predicate(&frame) {
+            break frame;
+        }
+        assert!(
+            started.elapsed() < RENDER_TIMEOUT,
+            "GeoJSON layers did not draw expected pixels within {RENDER_TIMEOUT:?}",
+        );
+    }
 }
 
 #[test]
@@ -114,7 +128,7 @@ fn geojson_source_renders_circle_line_and_fill_layers() {
     circle.set_circle_stroke_width(2.0);
     style.add_layer(circle).expect("circle layer should be added");
 
-    let image = render_geojson(&mut renderer);
+    let image = render_until(&mut renderer, |image| has_non_background_pixel(image.as_image()));
 
     assert_eq!(image.as_image().width(), 128);
     assert_eq!(image.as_image().height(), 128);
@@ -173,7 +187,7 @@ fn layer_management_methods_smoke_test() {
     let removable_layer = style.add_layer(circle).expect("circle layer should be re-added");
     assert_eq!(removable_layer.as_str(), "removable-layer");
 
-    let image = render_geojson(&mut renderer);
+    let image = render_until(&mut renderer, |image| has_non_background_pixel(image.as_image()));
     assert_eq!(image.as_image().width(), 128);
     assert_eq!(image.as_image().height(), 128);
 }

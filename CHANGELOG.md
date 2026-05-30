@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.1](https://github.com/maplibre/maplibre-native-rs/compare/v0.6.0...v0.6.1) - 2026-05-26
+
+### Fixed
+
+- *(renderer)* expose map_observer() for all renderer modes ([#198](https://github.com/maplibre/maplibre-native-rs/pull/198))
+
 ## [0.6.0](https://github.com/maplibre/maplibre-native-rs/compare/v0.5.0...v0.6.0) - 2026-05-23
 
 ### Other
