@@ -25,6 +25,9 @@
       L.tileLayer("/{z}/{x}/{y}", {
         attribution: "MapLibre Native",
         maxZoom: 18,
+        minZoom: 1,
+        tileSize: 512,
+        zoomOffset: -1,
       }).addTo(map);
     </script>
   </body>

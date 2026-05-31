@@ -43,6 +43,9 @@ constexpr size_t BYTES_PER_PIXEL = 4; // rgba
 
 struct BridgeImage;
 class RenderRequest;
+struct FfiCameraOptions;
+struct LatLngBounds;
+struct EdgeInsets;
 
 inline mbgl::util::RunLoop& threadRunLoop() {
     // MapLibre Native's RunLoop is thread-affine. Keep one private loop per
@@ -164,7 +167,12 @@ public:
         frontend->renderOnce(*map);
     }
 
-    std::unique_ptr<RenderRequest> submitRender(double lat, double lon, double zoom, double bearing, double pitch);
+    std::unique_ptr<RenderRequest> submitRender();
+
+    FfiCameraOptions cameraForLatLngBounds(const LatLngBounds& bounds,
+                                           const EdgeInsets& padding,
+                                           double bearing,
+                                           double pitch);
 
     std::unique_ptr<std::string> readStillImageBytes() {
         return encodeImage(frontend->readStillImage());
@@ -181,11 +189,7 @@ public:
         map->setDebug(debugFlags);
     }
 
-    void setCamera(double lat, double lon, double zoom, double bearing, double pitch) {
-        mbgl::CameraOptions cameraOptions;
-        cameraOptions.withCenter(mbgl::LatLng{lat, lon}).withZoom(zoom).withBearing(bearing).withPitch(pitch);
-        map->jumpTo(cameraOptions);
-    }
+    void jumpTo(const FfiCameraOptions& cameraOptions);
 
     void moveBy(const mbgl::ScreenCoordinate& delta) {
         map->moveBy(delta);
@@ -278,14 +282,7 @@ private:
     bool taken = false;
 };
 
-inline std::unique_ptr<RenderRequest> MapRenderer::submitRender(
-        double lat,
-        double lon,
-        double zoom,
-        double bearing,
-        double pitch) {
-    setCamera(lat, lon, zoom, bearing, pitch);
-
+inline std::unique_ptr<RenderRequest> MapRenderer::submitRender() {
     auto request = std::make_unique<RenderRequest>();
     auto state = request->getState();
 

@@ -13,7 +13,8 @@ use std::time::Instant;
 use clap::Parser;
 use env_logger::Env;
 use maplibre_native::{
-    Image, ImageRenderer, ImageRendererBuilder, MapDebugOptions, ResourceOptions, Static, Tile,
+    CameraUpdate, Image, ImageRenderer, ImageRendererBuilder, LatLng, MapDebugOptions,
+    ResourceOptions, Static, Tile,
 };
 
 /// Command-line tool to render a map via [`mapLibre-native`](https://github.com/maplibre/maplibre-native)
@@ -216,7 +217,13 @@ impl Renderer {
     fn render(&mut self) -> Image {
         match self {
             Renderer::Static { map, lat, lon, zoom, bearing, pitch } => map
-                .render_static(*lat, *lon, *zoom, *bearing, *pitch)
+                .render_static(
+                    &CameraUpdate::new()
+                        .center(LatLng { lat: *lat, lng: *lon })
+                        .zoom(*zoom)
+                        .bearing(*bearing)
+                        .pitch(*pitch),
+                )
                 .expect("could not render image"),
             Renderer::Tiled { map, x, y, z } => {
                 map.render_tile(*z, *x, *y).expect("could not render image")
