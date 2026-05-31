@@ -73,6 +73,7 @@ license = "MIT OR Apache-2.0"
 
 [workspace.dependencies]
 axum = "0.8"
+binding-generator = { path = "binding-generator"}
 clap = { version = "4.5.27", features = ["derive", "env", "unstable-markdown"] }
 cmake = "0.1"
 cxx = "1.0"
@@ -93,7 +94,6 @@ tokio = { version = "1", features = [], default-features = false }
 url = "2.5.7"
 walkdir = "2.5.0"
 wgpu = { version = "29.0.0" }
-binding-generator = { path = "binding-generator"}
 
 [workspace.lints.rust]
 missing_debug_implementations = "warn"
