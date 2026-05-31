@@ -1,7 +1,7 @@
+use sealed::IntoSource;
+
 use crate::bridge::{ffi, sources};
 use crate::style::GeoJsonSource;
-
-use sealed::IntoSource;
 
 mod sealed {
     use crate::bridge::ffi;

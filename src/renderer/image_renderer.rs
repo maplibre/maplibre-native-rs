@@ -1,18 +1,21 @@
-use super::MapObserver;
-use crate::bridge::ffi;
-use crate::bridge::ffi::BridgeImage;
-use crate::renderer::map_observer::MapObserverCallbacks;
-use crate::renderer::{MapDebugOptions, MapLoadError};
-use crate::RunLoopHandle;
-use crate::{CameraUpdate, EdgeInsets, LatLng, LatLngBounds, ScreenCoordinate, Size, StyleRef};
-use cxx::UniquePtr;
-use image::{ImageBuffer, Rgba};
-use std::cell::Cell;
+use std::cell::RefCell;
 use std::f64::consts::PI;
 use std::fmt::Debug;
 use std::marker::PhantomData;
 use std::path::Path;
 use std::rc::Rc;
+
+use cxx::UniquePtr;
+use image::{ImageBuffer, Rgba};
+
+use super::MapObserver;
+use crate::bridge::ffi;
+use crate::bridge::ffi::BridgeImage;
+use crate::renderer::map_observer::MapObserverCallbacks;
+use crate::renderer::{MapDebugOptions, MapLoadError, MapLoadErrorKind};
+use crate::{
+    CameraUpdate, EdgeInsets, LatLng, LatLngBounds, RunLoopHandle, ScreenCoordinate, Size, StyleRef,
+};
 
 /// A rendered map image.
 ///
@@ -135,8 +138,8 @@ impl<S> RenderRequest<'_, S> {
         Image::from_raw(bytes).ok_or(RenderingError::InvalidImageData)
     }
 
-    /// Blocks on the current thread by ticking the run loop until ready, then
-    /// calls [`finish`](Self::finish).
+    /// Blocks on the current thread until ready, then calls
+    /// [`finish`](Self::finish).
     ///
     /// # Errors
     ///
@@ -144,24 +147,24 @@ impl<S> RenderRequest<'_, S> {
     pub fn wait(self) -> Result<Image, RenderingError> {
         let run_loop = RunLoopHandle::current();
         while !self.is_ready() {
-            run_loop.tick();
+            // Blocks until the loop processes an event, rather than busy-polling.
+            run_loop.wait_for_event();
         }
         self.finish()
     }
 }
 
-#[derive(Clone, Copy)]
 enum StyleLoadState {
     Pending,
     Loaded,
-    Failed(MapLoadError),
+    Failed(StyleLoadError),
 }
 
 /// In-flight style load request.
 ///
 /// Keep the request only when you need to wait for completion or observe the load result.
 pub struct StyleLoadRequest<'a, S> {
-    state: Rc<Cell<StyleLoadState>>,
+    state: Rc<RefCell<StyleLoadState>>,
     _renderer: PhantomData<&'a mut ImageRenderer<S>>,
     // Makes this type !Send and !Sync: the underlying run loop is thread-affine.
     _not_send: PhantomData<*mut ()>,
@@ -174,14 +177,14 @@ impl<S> Debug for StyleLoadRequest<'_, S> {
 }
 
 impl<S> StyleLoadRequest<'_, S> {
-    fn new(state: Rc<Cell<StyleLoadState>>) -> Self {
+    fn new(state: Rc<RefCell<StyleLoadState>>) -> Self {
         Self { state, _renderer: PhantomData, _not_send: PhantomData }
     }
 
     /// Returns whether the style load has completed (successfully or not).
     #[must_use]
     pub fn is_ready(&self) -> bool {
-        !matches!(self.state.get(), StyleLoadState::Pending)
+        !matches!(*self.state.borrow(), StyleLoadState::Pending)
     }
 
     /// Consumes the request and returns the load result.
@@ -192,29 +195,49 @@ impl<S> StyleLoadRequest<'_, S> {
     ///
     /// # Errors
     ///
-    /// Returns the [`MapLoadError`] reported by MapLibre Native if the style
+    /// Returns the [`StyleLoadError`] reported by MapLibre Native if the style
     /// failed to load.
-    pub fn finish(self) -> Result<(), MapLoadError> {
-        match self.state.replace(StyleLoadState::Pending) {
+    pub fn finish(self) -> Result<(), StyleLoadError> {
+        // Move the terminal state out so a stored `StyleLoadError` can be
+        // returned by value.
+        match std::mem::replace(&mut *self.state.borrow_mut(), StyleLoadState::Pending) {
             StyleLoadState::Loaded => Ok(()),
             StyleLoadState::Failed(e) => Err(e),
             StyleLoadState::Pending => panic!("style load request is not ready"),
         }
     }
 
-    /// Blocks on the current thread by ticking the run loop until ready, then
-    /// calls [`finish`](Self::finish).
+    /// Blocks on the current thread until ready, then calls
+    /// [`finish`](Self::finish).
     ///
     /// # Errors
     ///
-    /// Returns the [`MapLoadError`] reported by MapLibre Native if the style
+    /// Returns the [`StyleLoadError`] reported by MapLibre Native if the style
     /// failed to load.
-    pub fn wait(self) -> Result<(), MapLoadError> {
+    pub fn wait(self) -> Result<(), StyleLoadError> {
         let run_loop = RunLoopHandle::current();
         while !self.is_ready() {
-            run_loop.tick();
+            // Blocks until the loop processes an event, rather than busy-polling.
+            run_loop.wait_for_event();
         }
         self.finish()
+    }
+}
+
+/// Error returned when a style fails to load.
+#[derive(Debug, Clone, thiserror::Error)]
+#[error("{kind}: {message}")]
+#[non_exhaustive]
+pub struct StyleLoadError {
+    /// The MapLibre Native error kind.
+    pub kind: MapLoadErrorKind,
+    /// The detailed error message reported by MapLibre Native.
+    pub message: String,
+}
+
+impl StyleLoadError {
+    fn new(error: MapLoadError) -> Self {
+        Self { kind: error.kind, message: error.message }
     }
 }
 
@@ -296,28 +319,39 @@ impl<S> ImageRenderer<S> {
         Ok(StyleLoadRequest::new(state))
     }
 
-    fn begin_style_load(&mut self) -> Rc<Cell<StyleLoadState>> {
+    fn begin_style_load(&mut self) -> Rc<RefCell<StyleLoadState>> {
         self.style_specified = true;
-        let state = Rc::new(Cell::new(StyleLoadState::Pending));
+        let state = Rc::new(RefCell::new(StyleLoadState::Pending));
+        // MapLibre Native core reports style-load failures through
+        // `onDidFailLoadingMap` from `Map::Impl::onStyleError`; treat it as the
+        // failure counterpart to `onDidFinishLoadingStyle` for this request.
         self.map_observer().set_style_load_request_callbacks(
             {
                 let weak = Rc::downgrade(&state);
                 move || {
                     if let Some(s) = weak.upgrade() {
-                        s.set(StyleLoadState::Loaded);
+                        let mut state = s.borrow_mut();
+                        if matches!(*state, StyleLoadState::Pending) {
+                            *state = StyleLoadState::Loaded;
+                        }
                     }
+                    // Wakes Darwin's CoreFoundation-backed run loop. This is a
+                    // no-op on the libuv-backed default run loop.
+                    RunLoopHandle::current().stop();
                 }
             },
             {
                 let weak = Rc::downgrade(&state);
-                // TODO: the `what` string carries the underlying parse/validation/
-                // network message. `StyleLoadState`/`MapLoadError` only keep the
-                // error kind, so that detail is dropped. Surfacing it would require
-                // a richer error type (e.g. `{ kind, message }`).
-                move |error, _what| {
+                move |error| {
                     if let Some(s) = weak.upgrade() {
-                        s.set(StyleLoadState::Failed(error));
+                        let mut state = s.borrow_mut();
+                        if matches!(*state, StyleLoadState::Pending) {
+                            *state = StyleLoadState::Failed(StyleLoadError::new(error));
+                        }
                     }
+                    // Wakes Darwin's CoreFoundation-backed run loop. This is a
+                    // no-op on the libuv-backed default run loop.
+                    RunLoopHandle::current().stop();
                 }
             },
         );
@@ -511,9 +545,10 @@ pub enum RenderingError {
 
 #[cfg(test)]
 mod tests {
+    use std::num::NonZeroU32;
+
     use super::tile_coords_to_latlng;
     use crate::ImageRendererBuilder;
-    use std::num::NonZeroU32;
 
     #[test]
     fn converts_tile_zero_to_geographic_center() {

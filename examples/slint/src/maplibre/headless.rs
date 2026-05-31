@@ -1,12 +1,15 @@
-use crate::Size;
-use maplibre_native::{
-    CameraUpdate, Continuous, ImageRenderer, ImageRendererBuilder, LatLng, MapLoadError,
-    ResourceOptions, ScreenCoordinate, tile_server_options::TileServerOptions,
-};
 use std::cell::RefCell;
 use std::num::NonZeroU32;
 use std::path::Path;
 use std::rc::Rc;
+
+use maplibre_native::tile_server_options::TileServerOptions;
+use maplibre_native::{
+    CameraUpdate, Continuous, ImageRenderer, ImageRendererBuilder, LatLng, MapLoadError,
+    ResourceOptions, ScreenCoordinate,
+};
+
+use crate::Size;
 
 #[derive(Default)]
 struct Flags {
@@ -32,7 +35,7 @@ impl MapLibre {
     }
 
     pub fn style_loading_error(&self) -> Option<MapLoadError> {
-        self.flags.borrow().loading_style_error
+        self.flags.borrow().loading_style_error.clone()
     }
 
     pub fn updated(&mut self) -> bool {
@@ -113,8 +116,8 @@ pub fn create_map(size: Size) -> Rc<RefCell<MapLibre>> {
     });
     map_observer.set_did_fail_loading_map_callback({
         let flags = Rc::downgrade(&map.borrow().flags);
-        move |error, what| {
-            println!("Failed to load map: {what}");
+        move |error| {
+            println!("Failed to load map: {}", error.message);
             flags.upgrade().inspect(|v| {
                 let mut borrow = v.borrow_mut();
                 borrow.style_loaded = false;

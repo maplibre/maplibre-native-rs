@@ -1,11 +1,12 @@
+use std::fmt::Display;
+use std::ops::Sub;
+
 use crate::renderer::callbacks::{
     camera_did_change_callback, failing_loading_map_callback, finish_rendering_frame_callback,
     void_callback, CameraDidChangeCallback, FailingLoadingMapCallback,
     FinishRenderingFrameCallback, VoidCallback,
 };
 use crate::renderer::file_source::{fs_request_callback, FileSourceRequestCallback};
-use std::fmt::Display;
-use std::ops::Sub;
 
 // https://maplibre.org/maplibre-native/docs/book/design/ten-thousand-foot-view.html
 
@@ -947,8 +948,14 @@ pub mod ffi {
         /// In-flight render request.
         type RenderRequest;
 
-        /// Ticks the current thread's MapLibre Native run loop once.
+        /// Ticks the current thread's MapLibre Native run loop once (non-blocking).
         fn currentThreadRunLoopTick();
+        /// Blocks the calling thread, advancing the run loop until it is woken by
+        /// pending work (a render or style-load completion), without busy-polling.
+        fn currentThreadRunLoopWait();
+        /// Wakes a thread blocked in `currentThreadRunLoopWait`. Only needed on the
+        /// CoreFoundation (non-libuv) run loop; a no-op on the libuv backend.
+        fn currentThreadRunLoopStop();
         /// Creates a new map renderer instance.
         #[allow(clippy::too_many_arguments)]
         fn MapRenderer_new(

@@ -5,7 +5,6 @@ use cxx::UniquePtr;
 #[cfg(feature = "json")]
 use crate::bridge::style_value;
 use crate::bridge::{ffi, layers};
-
 #[cfg(feature = "json")]
 use crate::style::{value::build_style_value, StyleError};
 use crate::style::{CircleLayer, FillLayer, LineLayer, SymbolLayer};

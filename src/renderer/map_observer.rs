@@ -4,15 +4,61 @@ use std::cell::RefCell;
 use std::fmt::Debug;
 use std::rc::Rc;
 
-use crate::bridge::ffi;
-use crate::bridge::map_observer;
+use cxx::SharedPtr;
+
+use crate::bridge::{ffi, map_observer};
 use crate::renderer::callbacks::{
     CameraDidChangeCallback, FailingLoadingMapCallback, FinishRenderingFrameCallback, VoidCallback,
 };
-use cxx::SharedPtr;
 
 type VoidCallbackFn = Rc<dyn Fn() + 'static>;
-type FailLoadingMapCallbackFn = Rc<dyn Fn(map_observer::MapLoadError, &str) + 'static>;
+type FailLoadingMapCallbackFn = Rc<dyn Fn(MapLoadError) + 'static>;
+
+/// Error kind reported while loading a map or style.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
+#[non_exhaustive]
+pub enum MapLoadErrorKind {
+    /// Style parsing error.
+    #[error("failed parsing style")]
+    StyleParse,
+    /// Style loading error.
+    #[error("failed loading style")]
+    StyleLoad,
+    /// Resource not found.
+    #[error("style not found")]
+    NotFound,
+    /// Unknown error.
+    #[error("unknown error")]
+    Unknown,
+}
+
+impl From<map_observer::MapLoadError> for MapLoadErrorKind {
+    fn from(error: map_observer::MapLoadError) -> Self {
+        match error {
+            map_observer::MapLoadError::StyleParseError => Self::StyleParse,
+            map_observer::MapLoadError::StyleLoadError => Self::StyleLoad,
+            map_observer::MapLoadError::NotFoundError => Self::NotFound,
+            _ => Self::Unknown,
+        }
+    }
+}
+
+/// Error reported while loading a map or style.
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+#[error("{kind}: {message}")]
+#[non_exhaustive]
+pub struct MapLoadError {
+    /// The MapLibre Native error kind.
+    pub kind: MapLoadErrorKind,
+    /// The detailed message reported by MapLibre Native.
+    pub message: String,
+}
+
+impl MapLoadError {
+    pub(crate) fn new(kind: map_observer::MapLoadError, message: impl Into<String>) -> Self {
+        Self { kind: MapLoadErrorKind::from(kind), message: message.into() }
+    }
+}
 
 #[derive(Default)]
 pub(crate) struct MapObserverCallbacks {
@@ -47,13 +93,14 @@ impl MapObserverCallbacks {
         observer.setFailLoadingMapCallback(Box::new(FailingLoadingMapCallback::new({
             let callbacks = Rc::clone(self);
             move |error, what| {
+                let error = MapLoadError::new(error, what);
                 let callback = callbacks.style_load_request_failed.borrow().clone();
                 if let Some(callback) = callback {
-                    callback(error, what);
+                    callback(error.clone());
                 }
                 let callback = callbacks.did_fail_loading_map.borrow().clone();
                 if let Some(callback) = callback {
-                    callback(error, what);
+                    callback(error);
                 }
             }
         })));
@@ -82,7 +129,7 @@ impl MapObserver {
 
     pub(crate) fn set_style_load_request_callbacks<
         F: Fn() + 'static,
-        G: Fn(map_observer::MapLoadError, &str) + 'static,
+        G: Fn(MapLoadError) + 'static,
     >(
         &self,
         finished: F,
@@ -108,10 +155,7 @@ impl MapObserver {
     }
 
     /// Set callback to react on failing loading map
-    pub fn set_did_fail_loading_map_callback<F: Fn(map_observer::MapLoadError, &str) + 'static>(
-        &self,
-        callback: F,
-    ) {
+    pub fn set_did_fail_loading_map_callback<F: Fn(MapLoadError) + 'static>(&self, callback: F) {
         *self.callbacks.did_fail_loading_map.borrow_mut() = Some(Rc::new(callback));
     }
 

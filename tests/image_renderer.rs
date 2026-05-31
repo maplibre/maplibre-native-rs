@@ -1,16 +1,15 @@
 //! Integration tests for image renderer request and run loop behavior.
 
+use std::cell::Cell;
+use std::num::NonZeroU32;
+use std::path::PathBuf;
+use std::rc::Rc;
+use std::thread;
+use std::time::{Duration, Instant};
+
 use maplibre_native::{
     CameraUpdate, EdgeInsets, ImageRenderer, ImageRendererBuilder, LatLng, LatLngBounds,
-    MapLoadError, RunLoopHandle, Static, Tile,
-};
-use std::{
-    cell::Cell,
-    num::NonZeroU32,
-    path::PathBuf,
-    rc::Rc,
-    thread,
-    time::{Duration, Instant},
+    MapLoadErrorKind, RunLoopHandle, Static, Tile,
 };
 
 const RENDER_TIMEOUT: Duration = Duration::from_secs(5);
@@ -186,14 +185,16 @@ fn style_load_request_reports_failure() {
     let did_fail = Rc::new(Cell::new(false));
     renderer.map_observer().set_did_fail_loading_map_callback({
         let did_fail = Rc::clone(&did_fail);
-        move |_error, _what| did_fail.set(true)
+        move |_error| did_fail.set(true)
     });
 
     // A top-level JSON array is valid JSON but not a valid style document
     // (the style root must be an object), so MapLibre Native reports a load
     // failure through the observer rather than succeeding.
     let result = renderer.load_style_from_json_str("[]").wait();
-    assert!(matches!(result, Err(MapLoadError::StyleParseError)), "unexpected result: {result:?}");
+    let error = result.expect_err("invalid style should fail to load");
+    assert_eq!(error.kind, MapLoadErrorKind::StyleParse);
+    assert!(!error.message.is_empty(), "style load error should include a message");
     assert!(did_fail.get(), "user style load failure callback should still be called");
 }
 

@@ -57,6 +57,52 @@ fn from_json_str_reports_json_parse_error() {
 }
 
 #[test]
+fn add_opaque_layer_from_json_renders() {
+    let mut renderer = ImageRendererBuilder::new()
+        .with_size(NonZeroU32::new(128).unwrap(), NonZeroU32::new(128).unwrap())
+        .with_pixel_ratio(1.0)
+        .build_static_renderer();
+    renderer
+        .load_style_from_path(fixture_path("test-style.json"))
+        .expect("test style path is valid")
+        .wait()
+        .expect("style loaded");
+
+    // `background` has no typed wrapper, so it parses to `AnyLayer::Opaque`. This
+    // exercises the OpaqueLayer `add_layer` + render path — the reason OpaqueLayer
+    // exists — which the typed-layer tests above don't cover.
+    let layer = AnyLayer::from_json_str(
+        r##"{
+            "id": "opaque-bg",
+            "type": "background",
+            "paint": { "background-color": "#0000ff" }
+        }"##,
+    )
+    .expect("parse should succeed");
+    assert!(matches!(layer, AnyLayer::Opaque(_)), "expected opaque variant");
+    assert_eq!(layer.type_str(), "background");
+
+    let mut style = renderer.style();
+    style.add_layer(layer).expect("opaque layer added");
+
+    let camera =
+        CameraUpdate::new().center(LatLng { lat: 0.0, lng: 0.0 }).zoom(0.0).bearing(0.0).pitch(0.0);
+    let image = renderer.render_static(&camera).expect("render");
+
+    let buf = image.as_image();
+    assert_eq!(buf.width(), 128);
+    assert_eq!(buf.height(), 128);
+    // The added background paints solid `#0000ff` over the whole viewport, so
+    // every opaque pixel should be predominantly blue. This proves the opaque
+    // layer was actually converted, added, and rendered.
+    let saw_blue = buf.pixels().any(|p| {
+        let [r, g, b, a] = p.0;
+        a >= 250 && i32::from(b) > i32::from(r) + 20 && i32::from(b) > i32::from(g) + 20
+    });
+    assert!(saw_blue, "added opaque background layer did not render");
+}
+
+#[test]
 fn add_layer_from_json_renders() {
     let mut renderer = ImageRendererBuilder::new()
         .with_size(NonZeroU32::new(128).unwrap(), NonZeroU32::new(128).unwrap())

@@ -1,12 +1,13 @@
 //! Image renderer configuration and builder
 
+use std::marker::PhantomData;
+use std::num::NonZeroU32;
+use std::rc::Rc;
+
 use crate::bridge::ffi;
 use crate::renderer::map_observer::MapObserverCallbacks;
 use crate::renderer::{Continuous, ImageRenderer, MapMode, Static, Tile};
 use crate::ResourceOptions;
-use std::marker::PhantomData;
-use std::num::NonZeroU32;
-use std::rc::Rc;
 
 /// Builder for configuring [`ImageRenderer`] instances
 ///

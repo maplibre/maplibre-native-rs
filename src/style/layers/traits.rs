@@ -1,8 +1,7 @@
-use crate::bridge::{ffi, layers};
-use crate::style::{AnyLayer, OpaqueLayer};
-use crate::style::{CircleLayer, FillLayer, LineLayer, SymbolLayer};
-
 use sealed::IntoLayer;
+
+use crate::bridge::{ffi, layers};
+use crate::style::{AnyLayer, CircleLayer, FillLayer, LineLayer, OpaqueLayer, SymbolLayer};
 
 mod sealed {
     use crate::bridge::ffi;

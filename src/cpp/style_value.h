@@ -160,11 +160,11 @@ public:
     case Kind::Number: {
       const double d = value->number();
       if (std::isfinite(d) && d == std::trunc(d)) {
-        if (d >= 0.0 && d <= static_cast<double>(UINT64_MAX)) {
+        if (d >= 0.0 && d < 18446744073709551616.0 /* 2^64 */) {
           return {static_cast<std::uint64_t>(d)};
         }
-        if (d >= static_cast<double>(INT64_MIN) &&
-            d <= static_cast<double>(INT64_MAX)) {
+        if (d >= -9223372036854775808.0 /* -2^63 */ &&
+            d < 9223372036854775808.0 /* 2^63 */) {
           return {static_cast<std::int64_t>(d)};
         }
       }
