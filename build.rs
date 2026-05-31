@@ -429,17 +429,12 @@ fn build_local(
             config.configure_arg("-DMLN_WITH_VULKAN=ON");
         }
         GraphicsRenderingAPI::WGPU => {
-            let webgpu_h_include_dir = fs::canonicalize(
-                PathBuf::from("binding-generator").join("dep").join("webgpu-headers"),
-            )
-            .unwrap();
-
             config.configure_arg("-DMLN_WITH_WEBGPU=ON");
             config.configure_arg("-DMLN_WEBGPU_IMPL_FFI=ON");
             config.configure_arg("-DMLN_WEBGPU_IMPL_WGPU=ON");
             config.configure_arg(format!(
                 "-DMLN_WEBGPU_IMPL_WEBGPU_HEADER_DIR={}",
-                webgpu_h_include_dir.as_path().as_os_str().to_str().unwrap()
+                binding_generator::WEBGPU_HEADER_INCLUDE_DIR
             ));
         }
     }

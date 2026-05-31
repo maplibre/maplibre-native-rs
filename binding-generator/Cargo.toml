@@ -11,3 +11,5 @@ wgpu = { workspace = true }
 
 [build-dependencies]
 bindgen = "0.72.0"
+downloader.workspace = true
+sha256 = "1.6"

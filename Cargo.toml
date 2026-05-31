@@ -23,13 +23,13 @@ default = ["log", "pool"]
 metal = []
 opengl = []
 vulkan = []
-wgpu = ["dep:wgpu", "dep:binding-generator"]
+wgpu = ["dep:wgpu"]
 geojson = ["dep:geojson", "dep:serde_json"]
 log = ["dep:log"]
 pool = ["dep:tokio"]
 
 [dependencies]
-binding-generator = { path = "binding-generator", optional = true }
+binding-generator.workspace = true
 cxx.workspace = true
 geojson = { workspace = true, optional = true }
 image.workspace = true
@@ -49,6 +49,7 @@ flate2.workspace = true
 tar.workspace = true
 toml = "0.8"
 walkdir.workspace = true
+binding-generator.workspace = true
 
 [dev-dependencies]
 env_logger.workspace = true
@@ -94,6 +95,7 @@ tokio = { version = "1", features = [], default-features = false }
 url = "2.5.7"
 walkdir = "2.5.0"
 wgpu = { version = "29.0.0" }
+binding-generator = { path = "binding-generator"}
 
 [workspace.lints.rust]
 missing_debug_implementations = "warn"

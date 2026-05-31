@@ -20,6 +20,8 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex, OnceLock};
 use wgpu::SamplerDescriptor;
 
+pub const WEBGPU_HEADER_INCLUDE_DIR: &str = env!("BINDING_GENERATOR_WEBGPU_HEADER_INCLUDE_DIR");
+
 mod conv;
 
 fn mapped_buffer_views() -> &'static Mutex<HashMap<usize, Vec<wgpu::BufferViewMut>>> {

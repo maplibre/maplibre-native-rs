@@ -1,3 +1,0 @@
-[submodule "binding-generator/dep/webgpu-headers"]
-	path = binding-generator/dep/webgpu-headers
-	url = https://github.com/webgpu-native/webgpu-headers
