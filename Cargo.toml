@@ -19,7 +19,7 @@ repo = "maplibre/maplibre-native"
 release = "core-9b6325a14e2cf1cc29ab28c1855ad376f1ba4903"
 
 [features]
-default = ["log", "pool", "json", "geojson"]
+default = ["log", "json", "geojson"]
 metal = []
 opengl = []
 vulkan = []
@@ -27,7 +27,6 @@ vulkan = []
 json = ["dep:serde_json"]
 geojson = ["dep:geojson"]
 log = ["dep:log"]
-pool = ["dep:tokio"]
 
 [dependencies]
 cxx.workspace = true
@@ -36,7 +35,6 @@ image.workspace = true
 log = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }
 thiserror.workspace = true
-tokio = { workspace = true, features = ["sync"], optional = true }
 url.workspace = true
 
 [build-dependencies]
