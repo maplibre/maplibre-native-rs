@@ -69,8 +69,16 @@ impl GraphicsRenderingAPI {
             }
         }
         selected_backend.unwrap_or_else(|| {
-            println!("cargo::warning=No backend was selected. WGPU used as default. This default may change in future releases");
-            Self::WGPU
+            let target_os = env::var("CARGO_CFG_TARGET_OS").expect("CARGO_CFG_TARGET_OS not set");
+            let is_macos = target_os == "ios" || target_os == "macos";
+            let default_choice = if is_macos {
+                Self::Metal
+            } else {
+                Self::Vulkan
+            };
+
+            println!("cargo:warning=Using only '{default_choice}', but this default selection may change in future releases.");
+            default_choice
         })
     }
 }
