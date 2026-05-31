@@ -13,9 +13,8 @@ use std::rc::Rc;
 mod headless;
 pub use headless::MapLibre;
 pub use headless::create_map;
-use maplibre_native::{X, Y};
-    CircleLayer, Color, FillLayer, GeoJson, GeoJsonSource, LineLayer, ScreenCoordinate, Style,
-    SymbolAnchor, SymbolLayer,
+use maplibre_native::{CircleLayer, Color, FillLayer, GeoJson, GeoJsonSource, LineLayer, ScreenCoordinate, Style,
+    SymbolAnchor, SymbolLayer};
 use std::cell::RefCell;
 use std::path::Path;
 
