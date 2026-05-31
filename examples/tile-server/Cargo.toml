@@ -6,6 +6,9 @@ edition.workspace = true
 
 [dependencies]
 axum.workspace = true
+clap.workspace = true
 image.workspace = true
-maplibre_native = { workspace = true, features = ["pool"] }
-tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+maplibre_native.workspace = true
+thiserror.workspace = true
+tokio = { workspace = true, features = ["macros", "rt-multi-thread", "sync"] }
+url.workspace = true
