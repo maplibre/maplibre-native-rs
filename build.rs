@@ -409,9 +409,6 @@ fn build_local(
     submodule_update(&maplibre_native_dir)?;
 
     let mut config = cmake::Config::new(maplibre_native_dir.clone());
-    let webgpu_h_include_dir =
-        fs::canonicalize(PathBuf::from("binding-generator").join("dep").join("webgpu-headers"))
-            .unwrap();
     config.build_target(TARGET_NAME);
     let api = GraphicsRenderingAPI::from_selected_features();
 
@@ -432,6 +429,11 @@ fn build_local(
             config.configure_arg("-DMLN_WITH_VULKAN=ON");
         }
         GraphicsRenderingAPI::WGPU => {
+            let webgpu_h_include_dir = fs::canonicalize(
+                PathBuf::from("binding-generator").join("dep").join("webgpu-headers"),
+            )
+            .unwrap();
+
             config.configure_arg("-DMLN_WITH_WEBGPU=ON");
             config.configure_arg("-DMLN_WEBGPU_IMPL_FFI=ON");
             config.configure_arg("-DMLN_WEBGPU_IMPL_WGPU=ON");
