@@ -6,6 +6,7 @@
 #include <mbgl/style/image.hpp>
 #include <mbgl/style/layer.hpp>
 #include <mbgl/map/map.hpp>
+#include <mbgl/map/map_observer.hpp>
 #include <mbgl/map/map_options.hpp>
 #include <mbgl/style/style.hpp>
 #include <mbgl/style/source.hpp>
@@ -22,9 +23,6 @@
 #include <mbgl/webgpu/headless_backend.hpp>
 #endif
 
-#if !defined(__APPLE__) || defined(MLN_DARWIN_USE_LIBUV)
-#include <uv.h>
-#endif
 
 #include <cstdint>
 #include <cassert>
@@ -34,8 +32,16 @@
 #include <stdexcept>
 #include "rust/cxx.h"
 #include "rust_log_observer.h"
-#include <mbgl/map/map_observer.hpp>
 #include "map_observer.h"
+
+#if (!defined(__APPLE__) || defined(MLN_DARWIN_USE_LIBUV)) && __has_include(<uv.h>)
+#include <uv.h>
+#elif !defined(__APPLE__) || defined(MLN_DARWIN_USE_LIBUV)
+struct uv_loop_s;
+using uv_loop_t = uv_loop_s;
+enum uv_run_mode { UV_RUN_DEFAULT = 0, UV_RUN_ONCE, UV_RUN_NOWAIT };
+extern "C" int uv_run(uv_loop_t*, uv_run_mode);
+#endif
 
 namespace mln {
 namespace bridge {

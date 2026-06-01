@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
   workflow_dispatch:
 
 defaults:
@@ -32,7 +32,7 @@ jobs:
       - run: echo "MLN_CORE_LIBRARY_USE_AMALGAM=0" >> $GITHUB_ENV
       - run: rustup update stable && rustup default stable && rustup component add rustfmt && rustup component add clippy
       - uses: taiki-e/install-action@e49978b799e49ff429d162b7a30601a569ab6538 # v2.81.1
-        with: { tool: 'just' }
+        with: { tool: "just" }
       - run: just env-info install-dependencies 'vulkan'
       - run: just ci-lint
 
@@ -117,7 +117,7 @@ jobs:
       - if: github.event_name != 'release' && github.event_name != 'workflow_dispatch'
         uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
       - uses: taiki-e/install-action@e49978b799e49ff429d162b7a30601a569ab6538 # v2.81.1
-        with: { tool: 'just' }
+        with: { tool: "just" }
       - run: echo "MLN_PRECOMPILE=${{ matrix.precompiled }}" >> $GITHUB_ENV
       - run: echo "MLN_CORE_LIBRARY_USE_AMALGAM=${{ matrix.amalgam }}" >> $GITHUB_ENV
       - run: just env-info install-dependencies '${{ matrix.backend }}'
@@ -173,7 +173,7 @@ jobs:
       - if: github.event_name != 'release' && github.event_name != 'workflow_dispatch'
         uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
       - uses: taiki-e/install-action@e49978b799e49ff429d162b7a30601a569ab6538 # v2.81.1
-        with: { tool: 'just' }
+        with: { tool: "just" }
       - run: echo "MLN_PRECOMPILE=${{ matrix.precompiled }}" >> $GITHUB_ENV
       - run: echo "MLN_CORE_LIBRARY_USE_AMALGAM=${{ matrix.amalgam }}" >> $GITHUB_ENV
       - run: just env-info install-dependencies '${{ matrix.backend }}'
@@ -190,15 +190,15 @@ jobs:
           toolchain: ${{ steps.msrv.outputs.value }}
       - name: Run CI tests (MSRV, Linux OpenGL via Xvfb)
         if: startsWith(matrix.runs-on, 'ubuntu') && matrix.backend == 'opengl'
-        run: xvfb-run -a --server-args="-screen 0 1280x1024x24" just ci_mode=0 ci-test-msrv ${{ matrix.backend }}  # Ignore warnings in MSRV
+        run: xvfb-run -a --server-args="-screen 0 1280x1024x24" just ci_mode=0 ci-test-msrv ${{ matrix.backend }} # Ignore warnings in MSRV
       - name: Run CI tests (MSRV)
         if: ${{ !(startsWith(matrix.runs-on, 'ubuntu') && matrix.backend == 'opengl') }}
-        run: just ci_mode=0 ci-test-msrv ${{ matrix.backend }}  # Ignore warnings in MSRV
+        run: just ci_mode=0 ci-test-msrv ${{ matrix.backend }} # Ignore warnings in MSRV
 
   # This final step is needed to mark the whole workflow as successful
   # Don't change its name - it is used by the merge protection rules
   ci-passed:
-    needs: [ lint, test, test-msrv, slint-example ]
+    needs: [lint, test, test-msrv, slint-example]
     if: always()
     runs-on: ubuntu-latest
     permissions: {}
@@ -210,7 +210,7 @@ jobs:
 
   # Release unpublished packages or create a PR with changes
   release-plz:
-    needs: [ ci-passed ]
+    needs: [ci-passed]
     if: |
       always()
       && needs.ci-passed.result == 'success'
@@ -229,6 +229,7 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
+          fetch-depth: 0
           persist-credentials: false
           submodules: true
       - uses: dtolnay/rust-toolchain@stable
