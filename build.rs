@@ -434,7 +434,7 @@ fn build_local(
             config.configure_arg("-DMLN_WEBGPU_IMPL_WGPU=ON");
             config.configure_arg(format!(
                 "-DMLN_WEBGPU_IMPL_WEBGPU_HEADER_DIR={}",
-                binding_generator::WEBGPU_HEADER_INCLUDE_DIR
+                webgpu_shim::WEBGPU_HEADER_INCLUDE_DIR
             ));
         }
     }

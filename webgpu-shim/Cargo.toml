@@ -1,7 +1,8 @@
 [package]
-name = "binding-generator"
+name = "webgpu-shim"
 version = "0.1.0"
 edition = "2024"
+description = "Webgpu shim based on wgpu"
 
 [features]
 
