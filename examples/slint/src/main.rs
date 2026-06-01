@@ -21,9 +21,10 @@ fn main() {
         .select()
         .unwrap();
     let ui = MainWindow::new().unwrap();
-    let map =
-        maplibre::create_map(Size { width: DEFAULT_WIDTH as f32, height: DEFAULT_HEIGHT as f32 });
-    // println!("Size: {:?}", size);
+    let map = maplibre::create_map(maplibre_native::Size {
+        width: DEFAULT_WIDTH,
+        height: DEFAULT_HEIGHT,
+    });
     map.borrow_mut()
         .renderer()
         .load_style_from_url(&"https://tiles.openfreemap.org/styles/liberty".parse().unwrap());

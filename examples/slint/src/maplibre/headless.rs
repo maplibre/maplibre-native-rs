@@ -1,7 +1,6 @@
-use crate::Size;
 use maplibre_native::{
     CameraUpdate, Continuous, ImageRenderer, ImageRendererBuilder, LatLng, MapLoadError,
-    ResourceOptions, ScreenCoordinate, tile_server_options::TileServerOptions,
+    ResourceOptions, ScreenCoordinate, Size, tile_server_options::TileServerOptions,
 };
 use std::cell::RefCell;
 use std::num::NonZeroU32;
@@ -20,11 +19,11 @@ pub struct MapLibre {
     flags: Rc<RefCell<Flags>>,
     renderer: ImageRenderer<Continuous>,
     last_pos: ScreenCoordinate,
-    map_size: MapSize,
+    map_size: Size,
 }
 
 impl MapLibre {
-    pub fn new(renderer: ImageRenderer<Continuous>, map_size: MapSize) -> Self {
+    pub fn new(renderer: ImageRenderer<Continuous>, map_size: Size) -> Self {
         Self { renderer, flags: Rc::default(), last_pos: ScreenCoordinate::default(), map_size }
     }
 
@@ -56,7 +55,7 @@ impl MapLibre {
         self.last_pos
     }
 
-    pub fn set_map_size(&mut self, size: MapSize) {
+    pub fn set_map_size(&mut self, size: Size) {
         self.map_size = size;
         self.renderer.set_map_size(size);
     }
@@ -64,29 +63,29 @@ impl MapLibre {
     // Inverse the map rotation logic from MapLibre's `Map::rotateBy` to convert a control+wheel delta into a synthetic drag gesture.
     pub fn rotate_by(&mut self, delta: f32) {
         let first = self.position();
-        let mut center = ScreenCoordinate::new(
-            X(f64::from(self.map_size.width()) / 2.0),
-            Y(f64::from(self.map_size.height()) / 2.0),
-        );
+        let mut center = ScreenCoordinate {
+            x: f64::from(self.map_size.width) / 2.0,
+            y: f64::from(self.map_size.height) / 2.0,
+        };
 
         let offset = first - center;
-        let distance = offset.x().hypot(offset.y());
+        let distance = offset.x.hypot(offset.y);
 
         if distance < 200.0 {
             let height_offset = -200.0;
-            let rotate_bearing = offset.y().atan2(offset.x());
-            center = ScreenCoordinate::new(
-                X(first.x() + rotate_bearing.cos() * height_offset),
-                Y(first.y() + rotate_bearing.sin() * height_offset),
-            );
+            let rotate_bearing = offset.y.atan2(offset.x);
+            center = ScreenCoordinate {
+                x: first.x + rotate_bearing.cos() * height_offset,
+                y: first.y + rotate_bearing.sin() * height_offset,
+            };
         }
 
         let relative = first - center;
         let angle = f64::from(delta).to_radians();
-        let second = ScreenCoordinate::new(
-            X(center.x() + relative.x() * angle.cos() - relative.y() * angle.sin()),
-            Y(center.y() + relative.x() * angle.sin() + relative.y() * angle.cos()),
-        );
+        let second = ScreenCoordinate {
+            x: center.x + relative.x * angle.cos() - relative.y * angle.sin(),
+            y: center.y + relative.x * angle.sin() + relative.y * angle.cos(),
+        };
 
         self.renderer.rotate_by(first, second);
     }
@@ -99,12 +98,9 @@ pub fn create_map(size: Size) -> Rc<RefCell<MapLibre>> {
         .with_cache_path(Path::new(env!("CARGO_MANIFEST_DIR")).join("maplibre_database.sqlite"));
 
     let mut renderer = ImageRendererBuilder::new();
-    let mut map_size = MapSize::new(maplibre_native::Width(0), maplibre_native::Height(0));
-    if size.width > 0. && size.height > 0. {
-        map_size = MapSize::new(
-            maplibre_native::Width(size.width as u32),
-            maplibre_native::Height(size.height as u32),
-        );
+    let mut map_size = Size { width: 0, height: 0 };
+    if size.width > 0 && size.height > 0 {
+        map_size = size;
         renderer = renderer.with_size(
             NonZeroU32::new(size.width as u32).unwrap(),
             NonZeroU32::new(size.height as u32).unwrap(),

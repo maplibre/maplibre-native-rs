@@ -1,20 +1,15 @@
 use crate::MainWindow;
 use crate::MapAdapter;
-use maplibre_native::Height;
-use maplibre_native::ScreenCoordinate;
-use maplibre_native::Width;
-use maplibre_native::Color;
-use maplibre_native::Style;
-use maplibre_native::{CircleLayer, FillLayer, LineLayer, SymbolAnchor};
-use maplibre_native::{GeoJson, GeoJsonSource, SymbolLayer};
 use image::ImageReader;
+use maplibre_native::{
+    CircleLayer, Color, FillLayer, GeoJson, GeoJsonSource, LineLayer, ScreenCoordinate, Style,
+    SymbolAnchor, SymbolLayer,
+};
 use slint::ComponentHandle;
 use std::rc::Rc;
 mod headless;
 pub use headless::MapLibre;
 pub use headless::create_map;
-use maplibre_native::{CircleLayer, Color, FillLayer, GeoJson, GeoJsonSource, LineLayer, ScreenCoordinate, Style,
-    SymbolAnchor, SymbolLayer};
 use std::cell::RefCell;
 use std::path::Path;
 
@@ -58,7 +53,8 @@ pub fn init(ui: &MainWindow, map: &Rc<RefCell<MapLibre>>) {
         let map = Rc::downgrade(map);
         move |size| {
             if size.width > 0. && size.height > 0. {
-                maplibre_native::Size { width: size.width as u32, height: size.height as u32 };
+                let size =
+                    maplibre_native::Size { width: size.width as u32, height: size.height as u32 };
                 map.upgrade().unwrap().borrow_mut().set_map_size(size);
             }
         }
