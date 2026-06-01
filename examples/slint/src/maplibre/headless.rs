@@ -6,10 +6,8 @@ use std::rc::Rc;
 use maplibre_native::tile_server_options::TileServerOptions;
 use maplibre_native::{
     CameraUpdate, Continuous, ImageRenderer, ImageRendererBuilder, LatLng, MapLoadError,
-    ResourceOptions, ScreenCoordinate,
+    ResourceOptions, ScreenCoordinate, Size,
 };
-
-use crate::Size;
 
 #[derive(Default)]
 struct Flags {

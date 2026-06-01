@@ -1,21 +1,15 @@
-
-use slint::ComponentHandle;
-
 use crate::{MainWindow, MapAdapter};
-use std::cell::RefCell;
-use std::path::Path;
-
-pub use headless::{MapLibre, create_map};
 use image::ImageReader;
 use maplibre_native::{
     CircleLayer, Color, FillLayer, GeoJson, GeoJsonSource, LineLayer, ScreenCoordinate,
     SymbolAnchor, SymbolLayer,
 };
-use slint::ComponentHandle;
+use std::cell::RefCell;
+use std::path::Path;
 use std::rc::Rc;
 mod headless;
-pub use headless::MapLibre;
-pub use headless::create_map;
+pub use headless::{MapLibre, create_map};
+use slint::ComponentHandle;
 
 pub fn init(ui: &MainWindow, map: &Rc<RefCell<MapLibre>>) {
     loop {
