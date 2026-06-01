@@ -9,6 +9,8 @@
 #include <mbgl/style/types.hpp>
 #include <memory>
 #include <string>
+#include <string_view>
+#include <utility>
 
 namespace mln::bridge::style::layers {
     std::unique_ptr<mbgl::style::Layer> circle_into_layer(std::unique_ptr<mbgl::style::CircleLayer> layer) {
@@ -25,6 +27,43 @@ namespace mln::bridge::style::layers {
 
     std::unique_ptr<mbgl::style::Layer> symbol_into_layer(std::unique_ptr<mbgl::style::SymbolLayer> layer) {
         return layer;
+    }
+
+    rust::String layer_id(const std::unique_ptr<mbgl::style::Layer>& layer) {
+        return rust::String(layer->getID());
+    }
+
+    rust::String layer_type(const std::unique_ptr<mbgl::style::Layer>& layer) {
+        return rust::String(layer->getTypeInfo()->type);
+    }
+
+    namespace {
+
+    template <typename Derived>
+    std::unique_ptr<Derived> try_downcast(std::unique_ptr<mbgl::style::Layer> layer, std::string_view type_name) {
+        if (!layer || std::string_view(layer->getTypeInfo()->type) != type_name) {
+            return nullptr;
+        }
+        auto* raw = static_cast<Derived*>(layer.release());
+        return std::unique_ptr<Derived>(raw);
+    }
+
+    } // namespace
+
+    std::unique_ptr<mbgl::style::CircleLayer> try_into_circle(std::unique_ptr<mbgl::style::Layer> layer) {
+        return try_downcast<mbgl::style::CircleLayer>(std::move(layer), "circle");
+    }
+
+    std::unique_ptr<mbgl::style::FillLayer> try_into_fill(std::unique_ptr<mbgl::style::Layer> layer) {
+        return try_downcast<mbgl::style::FillLayer>(std::move(layer), "fill");
+    }
+
+    std::unique_ptr<mbgl::style::LineLayer> try_into_line(std::unique_ptr<mbgl::style::Layer> layer) {
+        return try_downcast<mbgl::style::LineLayer>(std::move(layer), "line");
+    }
+
+    std::unique_ptr<mbgl::style::SymbolLayer> try_into_symbol(std::unique_ptr<mbgl::style::Layer> layer) {
+        return try_downcast<mbgl::style::SymbolLayer>(std::move(layer), "symbol");
     }
 
     std::unique_ptr<mbgl::style::CircleLayer> create_circle_layer(rust::Str layer_id, rust::Str source_id) {

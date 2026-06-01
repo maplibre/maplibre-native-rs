@@ -22,6 +22,10 @@
 #include <mbgl/webgpu/headless_backend.hpp>
 #endif
 
+#if !defined(__APPLE__) || defined(MLN_DARWIN_USE_LIBUV)
+#include <uv.h>
+#endif
+
 #include <cstdint>
 #include <cassert>
 #include <memory>
@@ -62,6 +66,32 @@ inline void currentThreadRunLoopTick() {
     // Tick can be driven through a Rust handle without constructing a renderer first.
     bindThreadRunLoop();
     threadRunLoop().runOnce();
+}
+
+// Blocks the calling thread, advancing the run loop until it is woken by pending
+// work (e.g. a render or style-load completion), without busy-polling. The exact
+// primitive differs by run-loop backend (see below).
+inline void currentThreadRunLoopWait() {
+#if defined(__APPLE__) && !defined(MLN_DARWIN_USE_LIBUV)
+    // Darwin's RunLoop is CoreFoundation-based, not libuv-based: run until a
+    // completion callback calls currentThreadRunLoopStop(). (May process more
+    // than one event before stopping.)
+    bindThreadRunLoop();
+    threadRunLoop().run();
+#else
+    // libuv backend: UV_RUN_ONCE blocks until at least one event is processed,
+    // then returns. (mbgl's RunLoop::runOnce() is UV_RUN_NOWAIT, which would
+    // busy-spin in a wait loop; UV_RUN_DEFAULT would instead wait for *all*
+    // handles to drain, which hangs while network handles stay active.)
+    bindThreadRunLoop();
+    uv_run(static_cast<uv_loop_t*>(mbgl::util::RunLoop::getLoopHandle()), UV_RUN_ONCE);
+#endif
+}
+
+inline void currentThreadRunLoopStop() {
+#if defined(__APPLE__) && !defined(MLN_DARWIN_USE_LIBUV)
+    threadRunLoop().stop();
+#endif
 }
 
 inline std::unique_ptr<std::string> encodeImage(mbgl::PremultipliedImage image) {
@@ -238,7 +268,7 @@ public:
         // while the borrowed renderer is still alive, so MapLibre Native returns to
         // an idle state before the next submitRender.
         while (!state->ready) {
-            currentThreadRunLoopTick();
+            currentThreadRunLoopWait();
         }
     }
 
@@ -292,6 +322,10 @@ inline std::unique_ptr<RenderRequest> MapRenderer::submitRender() {
             state->image = readStillImageBytes();
         }
         state->ready = true;
+#if defined(__APPLE__) && !defined(MLN_DARWIN_USE_LIBUV)
+        // Wake a thread blocked in currentThreadRunLoopWait() (Darwin non-libuv).
+        currentThreadRunLoopStop();
+#endif
     });
 
     return request;

@@ -6,23 +6,17 @@
 //!
 //! Run with `cargo run -p tile-server`, then open <http://127.0.0.1:3000>.
 
-use std::{
-    io::Cursor,
-    sync::{
-        atomic::{AtomicUsize, Ordering},
-        Arc,
-    },
-    thread,
-};
+use std::io::Cursor;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
+use std::thread;
 
-use axum::{
-    body::Body,
-    extract::{Path, State},
-    http::{header, StatusCode},
-    response::{Html, Response},
-    routing::get,
-    Router,
-};
+use axum::body::Body;
+use axum::extract::{Path, State};
+use axum::http::{header, StatusCode};
+use axum::response::{Html, Response};
+use axum::routing::get;
+use axum::Router;
 use clap::Parser;
 use maplibre_native::{ImageRenderer, ImageRendererBuilder, RenderingError, Tile};
 use tokio::sync::{mpsc, oneshot};

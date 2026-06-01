@@ -6,7 +6,7 @@ use std::time::{Duration, Instant};
 
 use maplibre_native::{
     CameraUpdate, CircleLayer, Color, FillLayer, GeoJson, GeoJsonSource, Image, ImageRenderer,
-    ImageRendererBuilder, LatLng, LineCap, LineJoin, LineLayer, Static, Style,
+    ImageRendererBuilder, LatLng, LineCap, LineJoin, LineLayer, Static,
 };
 
 const RENDER_TIMEOUT: Duration = Duration::from_secs(5);
@@ -25,9 +25,11 @@ fn renderer() -> ImageRenderer<Static> {
         .with_pixel_ratio(1.0)
         .build_static_renderer();
 
-    renderer.load_style_from_path(fixture_path("test-style.json")).expect("test style should load");
-    let background = renderer.render_static(&camera(0.0)).expect("background style should render");
-    assert_eq!(background.as_image().width(), 128);
+    renderer
+        .load_style_from_path(fixture_path("test-style.json"))
+        .expect("test style path should be valid")
+        .wait()
+        .expect("style should load");
     renderer
 }
 
@@ -103,7 +105,7 @@ fn geojson_source_renders_circle_line_and_fill_layers() {
     let geojson = overlay_geojson();
     source.set_geojson(&geojson);
 
-    let mut style = Style::get_ref(&mut renderer);
+    let mut style = renderer.style();
     let source_id = style.add_source(source).expect("GeoJSON source should be added");
 
     let mut fill = FillLayer::new("geojson-test-fill", &source_id);
@@ -135,7 +137,7 @@ fn geojson_source_renders_circle_line_and_fill_layers() {
 #[test]
 fn layer_management_methods_smoke_test() {
     let mut renderer = renderer();
-    let mut style = Style::get_ref(&mut renderer);
+    let mut style = renderer.style();
 
     style.remove_layer("missing-layer");
     style.remove_source("missing-source");

@@ -78,6 +78,11 @@ impl LineLayer {
         }
     }
 
+    #[cfg(feature = "json")]
+    pub(crate) fn from_ffi_parts(layer_id: String, layer: UniquePtr<layers::LineLayer>) -> Self {
+        Self { layer_id, layer }
+    }
+
     pub(crate) fn layer_id(&self) -> &str {
         &self.layer_id
     }
