@@ -1,7 +1,7 @@
+use sealed::IntoSource;
+
 use crate::bridge::{ffi, sources};
 use crate::style::GeoJsonSource;
-
-use sealed::IntoSource;
 
 mod sealed {
     use crate::bridge::ffi;
@@ -12,7 +12,7 @@ mod sealed {
     }
 }
 
-/// A style source type that can be added to a [`Style`](crate::Style).
+/// A style source type that can be added to a [`StyleRef`](crate::StyleRef).
 ///
 /// This trait is sealed; only source types provided by this crate can implement
 /// it.

@@ -33,14 +33,6 @@ impl CameraUpdate {
         self
     }
 
-    /// Sets the altitude of the center coordinate.
-    #[must_use]
-    pub fn center_altitude(mut self, center_altitude: f64) -> Self {
-        self.options.has_center_altitude = true;
-        self.options.center_altitude = center_altitude;
-        self
-    }
-
     /// Sets the insets from the viewport edges.
     #[must_use]
     pub fn padding(mut self, padding: EdgeInsets) -> Self {
@@ -78,22 +70,6 @@ impl CameraUpdate {
     pub fn pitch(mut self, pitch: f64) -> Self {
         self.options.has_pitch = true;
         self.options.pitch = pitch;
-        self
-    }
-
-    /// Sets the roll in degrees.
-    #[must_use]
-    pub fn roll(mut self, roll: f64) -> Self {
-        self.options.has_roll = true;
-        self.options.roll = roll;
-        self
-    }
-
-    /// Sets the field of view in degrees.
-    #[must_use]
-    pub fn fov(mut self, fov: f64) -> Self {
-        self.options.has_fov = true;
-        self.options.fov = fov;
         self
     }
 

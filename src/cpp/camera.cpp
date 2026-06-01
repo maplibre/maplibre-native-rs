@@ -9,9 +9,6 @@ mbgl::CameraOptions toCameraOptions(const FfiCameraOptions& camera) {
     if (camera.has_center) {
         options.withCenter(mbgl::LatLng{camera.center.lat, camera.center.lng});
     }
-    if (camera.has_center_altitude) {
-        options.withCenterAltitude(camera.center_altitude);
-    }
     if (camera.has_padding) {
         options.withPadding(mbgl::EdgeInsets{
             camera.padding.top,
@@ -32,12 +29,6 @@ mbgl::CameraOptions toCameraOptions(const FfiCameraOptions& camera) {
     if (camera.has_pitch) {
         options.withPitch(camera.pitch);
     }
-    if (camera.has_roll) {
-        options.withRoll(camera.roll);
-    }
-    if (camera.has_fov) {
-        options.withFov(camera.fov);
-    }
     return options;
 }
 
@@ -46,10 +37,6 @@ FfiCameraOptions fromCameraOptions(const mbgl::CameraOptions& options) {
     if (options.center) {
         camera.has_center = true;
         camera.center = LatLng{options.center->latitude(), options.center->longitude()};
-    }
-    if (options.centerAltitude) {
-        camera.has_center_altitude = true;
-        camera.center_altitude = *options.centerAltitude;
     }
     if (options.padding) {
         camera.has_padding = true;
@@ -75,14 +62,6 @@ FfiCameraOptions fromCameraOptions(const mbgl::CameraOptions& options) {
     if (options.pitch) {
         camera.has_pitch = true;
         camera.pitch = *options.pitch;
-    }
-    if (options.roll) {
-        camera.has_roll = true;
-        camera.roll = *options.roll;
-    }
-    if (options.fov) {
-        camera.has_fov = true;
-        camera.fov = *options.fov;
     }
     return camera;
 }

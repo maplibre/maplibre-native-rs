@@ -1,4 +1,5 @@
-use std::{fmt, str::FromStr};
+use std::fmt;
+use std::str::FromStr;
 
 use cxx::UniquePtr;
 
@@ -12,10 +13,10 @@ pub enum GeoJsonError {
     #[error("GeoJSON error: {0}")]
     Native(String),
 
-    /// The `geojson` crate value could not be serialized to JSON.
-    #[cfg(feature = "geojson")]
-    #[error("failed to serialize GeoJSON: {0}")]
-    Serialize(#[from] serde_json::Error),
+    /// The supplied JSON value could not be serialized.
+    #[cfg(feature = "json")]
+    #[error("invalid JSON: {0}")]
+    Json(#[from] serde_json::Error),
 }
 
 /// A GeoJSON value prepared for MapLibre Native.
@@ -30,10 +31,27 @@ pub struct GeoJson {
 }
 
 impl GeoJson {
-    fn from_json_str(json: &str) -> Result<Self, GeoJsonError> {
+    /// Parses GeoJSON from a JSON string.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if MapLibre Native rejects the GeoJSON.
+    pub fn from_json_str(json: &str) -> Result<Self, GeoJsonError> {
         Ok(Self {
             inner: geojson::parse(json).map_err(|error| GeoJsonError::Native(error.to_string()))?,
         })
+    }
+
+    /// Parses GeoJSON from a JSON value.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the value cannot be serialized or if MapLibre Native
+    /// rejects the GeoJSON.
+    #[cfg(feature = "json")]
+    pub fn from_json_value(value: &serde_json::Value) -> Result<Self, GeoJsonError> {
+        let json = serde_json::to_string(value)?;
+        Self::from_json_str(&json)
     }
 
     /// Serializes this value to a GeoJSON string using MapLibre Native.
@@ -55,7 +73,9 @@ impl TryFrom<&::geojson::GeoJson> for GeoJson {
     type Error = GeoJsonError;
 
     fn try_from(value: &::geojson::GeoJson) -> Result<Self, Self::Error> {
-        Self::from_json_str(&serde_json::to_string(value)?)
+        // The `geojson` crate's `Display` serializes to GeoJSON text, so we
+        // don't need a direct serde_json dependency here.
+        Self::from_json_str(&value.to_string())
     }
 }
 
