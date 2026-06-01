@@ -92,15 +92,41 @@ impl std::fmt::Debug for geojson::GeoJson {
 /// This module provides C++/Rust interoperability for various source types.
 /// Currently supports GeoJSON sources, with extensibility for additional source types.
 pub mod sources {
+    /// MapLibre style-spec source type.
+    /// Rust mirror of `mbgl::style::SourceType`.
+    #[derive(Debug)]
+    #[namespace = "mbgl::style"]
+    enum SourceType {
+        /// Vector tile source.
+        Vector,
+        /// Raster tile source.
+        Raster,
+        /// Raster DEM source.
+        RasterDEM,
+        /// GeoJSON source.
+        GeoJSON,
+        /// Video source.
+        Video,
+        /// Annotations source.
+        Annotations,
+        /// Image source.
+        Image,
+        /// Custom vector source.
+        CustomVector,
+    }
+
     #[namespace = "mbgl::style"]
     extern "C++" {
         include!("mbgl/style/source.hpp");
         include!("mbgl/style/sources/geojson_source.hpp");
+        include!("mbgl/style/types.hpp");
         // Opaque types
         /// Base class for all MapLibre Native style sources.
         type Source;
         /// A GeoJSON source for MapLibre rendering.
         type GeoJSONSource;
+        /// `mbgl::style::SourceType`
+        type SourceType;
     }
 
     #[namespace = "mln::bridge::geojson"]
@@ -116,6 +142,22 @@ pub mod sources {
     unsafe extern "C++" {
         include!("sources/sources.h");
 
+        /// A non-owning handle to a style-owned source.
+        type SourceHandle;
+        /// A non-owning handle to a style-owned GeoJSON source.
+        type GeoJSONSourceHandle;
+
+        /// Returns the source ID.
+        fn sourceId(self: &SourceHandle) -> String;
+        /// Returns the MapLibre style-spec source type.
+        fn sourceType(self: &SourceHandle) -> SourceType;
+        /// Downcasts this handle to a GeoJSON source handle, if it is one.
+        fn asGeoJson(self: &SourceHandle) -> UniquePtr<GeoJSONSourceHandle>;
+        /// Returns the GeoJSON source ID.
+        fn sourceId(self: &GeoJSONSourceHandle) -> String;
+        /// Sets the GeoJSON data for this source.
+        fn setGeoJson(self: Pin<&mut GeoJSONSourceHandle>, geojson: &CxxGeoJson);
+
         /// Upcasts a GeoJSON source handle to the base `Source` type.
         fn geojson_into_source(source: UniquePtr<GeoJSONSource>) -> UniquePtr<Source>;
     }
@@ -127,8 +169,13 @@ pub mod sources {
         /// Creates a new GeoJSON source with the given ID.
         fn create(id: &str) -> UniquePtr<GeoJSONSource>;
         /// Sets the GeoJSON data for the source.
-        fn setGeoJson(source: &UniquePtr<GeoJSONSource>, geojson: &CxxGeoJson);
+        fn setGeoJson(source: Pin<&mut GeoJSONSource>, geojson: &CxxGeoJson);
     }
+
+    // Generate `UniquePtr<SourceHandle>` support. cxx emits it only in the
+    // module that uses the type in a signature, but `SourceHandle` is only
+    // returned via the `ffi` module's alias, so request it explicitly here.
+    impl UniquePtr<SourceHandle> {}
 }
 
 impl std::fmt::Debug for sources::GeoJSONSource {
@@ -934,6 +981,13 @@ pub mod ffi {
         type Layer = super::layers::Layer;
     }
 
+    #[namespace = "mln::bridge::style::sources"]
+    extern "C++" {
+        /// Source handle opaque type.
+        #[rust_name = "CxxSourceHandle"]
+        type SourceHandle = super::sources::SourceHandle;
+    }
+
     // Declarations for Rust with implementations in C++
     unsafe extern "C++" {
         include!("map_renderer.h");
@@ -1024,6 +1078,11 @@ pub mod ffi {
             self: Pin<&mut MapRenderer>,
             source: UniquePtr<CxxSource>,
         ) -> Result<()>;
+        /// Gets a mutable reference to a style source by ID.
+        fn style_get_source_mut(
+            self: Pin<&mut MapRenderer>,
+            id: &str,
+        ) -> UniquePtr<CxxSourceHandle>;
         /// Removes a source from the style by ID.
         fn style_remove_source(self: Pin<&mut MapRenderer>, id: &str);
         /// Adds a layer to the style, optionally before an existing layer

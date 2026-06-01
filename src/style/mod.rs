@@ -18,5 +18,8 @@ pub use layers::{
     AnyLayer, CircleLayer, FillLayer, Layer, LayerId, LineCap, LineJoin, LineLayer, OpaqueLayer,
     SymbolAnchor, SymbolLayer,
 };
-pub use sources::{GeoJsonSource, Source, SourceId};
+pub use sources::{
+    GeoJsonSource, GeoJsonSourceRefMut, OpaqueSourceRefMut, Source, SourceId, SourceRefMut,
+    SourceType,
+};
 pub use style_ref::StyleRef;
