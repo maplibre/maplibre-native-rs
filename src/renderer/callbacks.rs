@@ -1,8 +1,8 @@
 //! Callback types used by the renderer event API.
 
-use crate::bridge::map_observer::MapLoadError;
-use crate::bridge::map_observer::MapObserverCameraChangeMode;
 use std::fmt::Debug;
+
+use crate::bridge::map_observer::{MapLoadError, MapObserverCameraChangeMode};
 
 macro_rules! callback {
     // Simple callback without extra trait bounds.

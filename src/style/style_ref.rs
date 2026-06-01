@@ -3,21 +3,15 @@ use image::DynamicImage;
 use crate::bridge::ffi;
 use crate::{ImageId, ImageRenderer, Layer, LayerId, Source, SourceId, StyleError};
 
-/// The style of the map.
+/// A mutable reference to the renderer's current map style.
 #[derive(Debug)]
-pub struct Style<'a, S> {
+pub struct StyleRef<'a, S> {
     image_renderer: &'a mut ImageRenderer<S>,
 }
 
-impl<'a, S> Style<'a, S> {
-    /// Gets a style reference from the current map.
-    pub fn get_ref(image_renderer: &'a mut ImageRenderer<S>) -> Self {
+impl<'a, S> StyleRef<'a, S> {
+    pub(crate) fn new(image_renderer: &'a mut ImageRenderer<S>) -> Self {
         Self { image_renderer }
-    }
-
-    /// Applies the style from the URL to the map.
-    pub fn load_url(&mut self, url: impl AsRef<str>) {
-        self.image_renderer.instance.pin_mut().style_load_from_url(url.as_ref());
     }
 
     /// Adds an image to the style with the given ID and options.

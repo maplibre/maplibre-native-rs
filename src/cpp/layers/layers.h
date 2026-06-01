@@ -22,6 +22,14 @@ namespace mln::bridge::style::layers {
     std::unique_ptr<mbgl::style::Layer> line_into_layer(std::unique_ptr<mbgl::style::LineLayer> layer);
     std::unique_ptr<mbgl::style::Layer> symbol_into_layer(std::unique_ptr<mbgl::style::SymbolLayer> layer);
 
+    rust::String layer_id(const std::unique_ptr<mbgl::style::Layer>& layer);
+    rust::String layer_type(const std::unique_ptr<mbgl::style::Layer>& layer);
+
+    std::unique_ptr<mbgl::style::CircleLayer> try_into_circle(std::unique_ptr<mbgl::style::Layer> layer);
+    std::unique_ptr<mbgl::style::FillLayer> try_into_fill(std::unique_ptr<mbgl::style::Layer> layer);
+    std::unique_ptr<mbgl::style::LineLayer> try_into_line(std::unique_ptr<mbgl::style::Layer> layer);
+    std::unique_ptr<mbgl::style::SymbolLayer> try_into_symbol(std::unique_ptr<mbgl::style::Layer> layer);
+
     std::unique_ptr<mbgl::style::CircleLayer> create_circle_layer(rust::Str layer_id, rust::Str source_id);
     void setCircleColor(const std::unique_ptr<mbgl::style::CircleLayer>& layer, const mbgl::Color& color);
     void setCircleOpacity(const std::unique_ptr<mbgl::style::CircleLayer>& layer, float opacity);

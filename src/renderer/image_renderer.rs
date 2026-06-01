@@ -1,15 +1,21 @@
-use super::MapObserver;
-use crate::bridge::ffi;
-use crate::bridge::ffi::BridgeImage;
-use crate::renderer::MapDebugOptions;
-use crate::RunLoopHandle;
-use crate::{CameraUpdate, EdgeInsets, LatLng, LatLngBounds, ScreenCoordinate, Size};
-use cxx::UniquePtr;
-use image::{ImageBuffer, Rgba};
+use std::cell::RefCell;
 use std::f64::consts::PI;
 use std::fmt::Debug;
 use std::marker::PhantomData;
 use std::path::Path;
+use std::rc::Rc;
+
+use cxx::UniquePtr;
+use image::{ImageBuffer, Rgba};
+
+use super::MapObserver;
+use crate::bridge::ffi;
+use crate::bridge::ffi::BridgeImage;
+use crate::renderer::map_observer::MapObserverCallbacks;
+use crate::renderer::{MapDebugOptions, MapLoadError, MapLoadErrorKind};
+use crate::{
+    CameraUpdate, EdgeInsets, LatLng, LatLngBounds, RunLoopHandle, ScreenCoordinate, Size, StyleRef,
+};
 
 /// A rendered map image.
 ///
@@ -78,6 +84,7 @@ pub struct Continuous;
 /// Configuration options for a tile server.
 pub struct ImageRenderer<S> {
     pub(crate) instance: UniquePtr<ffi::MapRenderer>,
+    pub(crate) observer_callbacks: Rc<MapObserverCallbacks>,
     pub(crate) _marker: PhantomData<S>,
     // Makes this type !Send and !Sync: the underlying run loop is thread-affine.
     pub(crate) _not_send: PhantomData<*mut ()>,
@@ -87,14 +94,8 @@ pub struct ImageRenderer<S> {
 /// In-flight render request.
 ///
 /// Tick the current thread's run loop via [`RunLoopHandle::tick`] until
-/// [`is_ready`](Self::is_ready) returns `true`, then call
-/// [`finish`](Self::finish).
-///
-/// This is intentionally a runtime-agnostic primitive rather than a
-/// [`std::future::Future`]. No async runtime drives MapLibre Native's libuv
-/// run loop, so the caller advances it explicitly via
-/// [`RunLoopHandle::tick`]; a bare `Future` would never make progress under
-/// e.g. tokio without an explicit ticker.
+/// [`is_ready`](Self::is_ready), then call [`finish`](Self::finish), or call
+/// [`wait`](Self::wait) to block.
 #[must_use = "render requests must be finished or waited on to complete the render"]
 pub struct RenderRequest<'a, S> {
     instance: UniquePtr<ffi::RenderRequest>,
@@ -137,8 +138,8 @@ impl<S> RenderRequest<'_, S> {
         Image::from_raw(bytes).ok_or(RenderingError::InvalidImageData)
     }
 
-    /// Blocks on the current thread by ticking the run loop until ready, then
-    /// calls [`finish`](Self::finish).
+    /// Blocks on the current thread until ready, then calls
+    /// [`finish`](Self::finish).
     ///
     /// # Errors
     ///
@@ -146,9 +147,97 @@ impl<S> RenderRequest<'_, S> {
     pub fn wait(self) -> Result<Image, RenderingError> {
         let run_loop = RunLoopHandle::current();
         while !self.is_ready() {
-            run_loop.tick();
+            // Blocks until the loop processes an event, rather than busy-polling.
+            run_loop.wait_for_event();
         }
         self.finish()
+    }
+}
+
+enum StyleLoadState {
+    Pending,
+    Loaded,
+    Failed(StyleLoadError),
+}
+
+/// In-flight style load request.
+///
+/// Keep the request only when you need to wait for completion or observe the load result.
+pub struct StyleLoadRequest<'a, S> {
+    state: Rc<RefCell<StyleLoadState>>,
+    _renderer: PhantomData<&'a mut ImageRenderer<S>>,
+    // Makes this type !Send and !Sync: the underlying run loop is thread-affine.
+    _not_send: PhantomData<*mut ()>,
+}
+
+impl<S> Debug for StyleLoadRequest<'_, S> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("StyleLoadRequest").field("ready", &self.is_ready()).finish_non_exhaustive()
+    }
+}
+
+impl<S> StyleLoadRequest<'_, S> {
+    fn new(state: Rc<RefCell<StyleLoadState>>) -> Self {
+        Self { state, _renderer: PhantomData, _not_send: PhantomData }
+    }
+
+    /// Returns whether the style load has completed (successfully or not).
+    #[must_use]
+    pub fn is_ready(&self) -> bool {
+        !matches!(*self.state.borrow(), StyleLoadState::Pending)
+    }
+
+    /// Consumes the request and returns the load result.
+    ///
+    /// # Panics
+    ///
+    /// If [`is_ready`](Self::is_ready) returns `false`.
+    ///
+    /// # Errors
+    ///
+    /// Returns the [`StyleLoadError`] reported by MapLibre Native if the style
+    /// failed to load.
+    pub fn finish(self) -> Result<(), StyleLoadError> {
+        // Move the terminal state out so a stored `StyleLoadError` can be
+        // returned by value.
+        match std::mem::replace(&mut *self.state.borrow_mut(), StyleLoadState::Pending) {
+            StyleLoadState::Loaded => Ok(()),
+            StyleLoadState::Failed(e) => Err(e),
+            StyleLoadState::Pending => panic!("style load request is not ready"),
+        }
+    }
+
+    /// Blocks on the current thread until ready, then calls
+    /// [`finish`](Self::finish).
+    ///
+    /// # Errors
+    ///
+    /// Returns the [`StyleLoadError`] reported by MapLibre Native if the style
+    /// failed to load.
+    pub fn wait(self) -> Result<(), StyleLoadError> {
+        let run_loop = RunLoopHandle::current();
+        while !self.is_ready() {
+            // Blocks until the loop processes an event, rather than busy-polling.
+            run_loop.wait_for_event();
+        }
+        self.finish()
+    }
+}
+
+/// Error returned when a style fails to load.
+#[derive(Debug, Clone, thiserror::Error)]
+#[error("{kind}: {message}")]
+#[non_exhaustive]
+pub struct StyleLoadError {
+    /// The MapLibre Native error kind.
+    pub kind: MapLoadErrorKind,
+    /// The detailed error message reported by MapLibre Native.
+    pub message: String,
+}
+
+impl StyleLoadError {
+    fn new(error: MapLoadError) -> Self {
+        Self { kind: error.kind, message: error.message }
     }
 }
 
@@ -161,30 +250,57 @@ impl<S> Debug for ImageRenderer<S> {
 }
 
 impl<S> ImageRenderer<S> {
-    /// Set the style URL for the map.
-    pub fn load_style_from_url(&mut self, url: &url::Url) -> &mut Self {
-        self.style_specified = true;
-        self.instance.pin_mut().style_load_from_url(url.as_str());
-        self
-    }
-
-    /// Loads the style from a JSON string.
-    pub fn load_style_from_json(&mut self, json: impl AsRef<str>) -> &mut Self {
-        self.style_specified = true;
-        self.instance.pin_mut().style_load_from_json(json.as_ref());
-        self
-    }
-
-    /// Load the style from the specified path.
+    /// Starts loading the style from a URL.
     ///
-    /// The style will be loaded from the path, but won't be refreshed automatically if the file changes
+    /// Wait for the returned request before rendering if you need the load result
+    /// or want to add sources or layers.
+    pub fn load_style_from_url(&mut self, url: &url::Url) -> StyleLoadRequest<'_, S> {
+        let state = self.begin_style_load();
+        self.instance.pin_mut().style_load_from_url(url.as_str());
+        StyleLoadRequest::new(state)
+    }
+
+    /// Starts loading the style from a JSON string.
+    ///
+    /// Wait for the returned request before rendering if you need the load result
+    /// or want to add sources or layers.
+    pub fn load_style_from_json_str(&mut self, json: impl AsRef<str>) -> StyleLoadRequest<'_, S> {
+        let state = self.begin_style_load();
+        self.instance.pin_mut().style_load_from_json(json.as_ref());
+        StyleLoadRequest::new(state)
+    }
+
+    /// Starts loading the style from a JSON value.
+    ///
+    /// Wait for the returned request before rendering if you need the load result
+    /// or want to add sources or layers.
     ///
     /// # Errors
-    /// Returns an error if the path is not a valid file.
+    /// Returns an error if the value cannot be serialized to a JSON string.
+    #[cfg(feature = "json")]
+    pub fn load_style_from_json_value(
+        &mut self,
+        value: &serde_json::Value,
+    ) -> Result<StyleLoadRequest<'_, S>, serde_json::Error> {
+        let json = serde_json::to_string(value)?;
+        Ok(self.load_style_from_json_str(json))
+    }
+
+    /// Starts loading the style from a filesystem path.
+    ///
+    /// The style will be loaded from the path, but won't be refreshed automatically if the file changes.
+    ///
+    /// Wait for the returned request before rendering if you need the load result
+    /// or want to add sources or layers.
+    ///
+    /// # Errors
+    /// Returns an error if the path is not a valid file. MapLibre Native's own
+    /// load errors are surfaced through [`StyleLoadRequest::finish`] /
+    /// [`StyleLoadRequest::wait`].
     pub fn load_style_from_path(
         &mut self,
         path: impl AsRef<Path>,
-    ) -> Result<&mut Self, std::io::Error> {
+    ) -> Result<StyleLoadRequest<'_, S>, std::io::Error> {
         let path = path.as_ref();
         if !path.is_file() {
             return Err(std::io::Error::new(
@@ -198,9 +314,48 @@ impl<S> ImageRenderer<S> {
                 format!("Path {} is not valid UTF-8", path.display()),
             ));
         };
-        self.style_specified = true;
+        let state = self.begin_style_load();
         self.instance.pin_mut().style_load_from_url(&format!("file://{path}"));
-        Ok(self)
+        Ok(StyleLoadRequest::new(state))
+    }
+
+    fn begin_style_load(&mut self) -> Rc<RefCell<StyleLoadState>> {
+        self.style_specified = true;
+        let state = Rc::new(RefCell::new(StyleLoadState::Pending));
+        // MapLibre Native core reports style-load failures through
+        // `onDidFailLoadingMap` from `Map::Impl::onStyleError`; treat it as the
+        // failure counterpart to `onDidFinishLoadingStyle` for this request.
+        self.map_observer().set_style_load_request_callbacks(
+            {
+                let weak = Rc::downgrade(&state);
+                move || {
+                    if let Some(s) = weak.upgrade() {
+                        let mut state = s.borrow_mut();
+                        if matches!(*state, StyleLoadState::Pending) {
+                            *state = StyleLoadState::Loaded;
+                        }
+                    }
+                    // Wakes Darwin's CoreFoundation-backed run loop. This is a
+                    // no-op on the libuv-backed default run loop.
+                    RunLoopHandle::current().stop();
+                }
+            },
+            {
+                let weak = Rc::downgrade(&state);
+                move |error| {
+                    if let Some(s) = weak.upgrade() {
+                        let mut state = s.borrow_mut();
+                        if matches!(*state, StyleLoadState::Pending) {
+                            *state = StyleLoadState::Failed(StyleLoadError::new(error));
+                        }
+                    }
+                    // Wakes Darwin's CoreFoundation-backed run loop. This is a
+                    // no-op on the libuv-backed default run loop.
+                    RunLoopHandle::current().stop();
+                }
+            },
+        );
+        state
     }
 
     /// Set debug visualization flags for the map renderer.
@@ -216,7 +371,12 @@ impl<S> ImageRenderer<S> {
 
     /// Get access to the map observer to setup callbacks.
     pub fn map_observer(&mut self) -> MapObserver {
-        MapObserver::new(self.instance.pin_mut().observer())
+        MapObserver::new(self.instance.pin_mut().observer(), Rc::clone(&self.observer_callbacks))
+    }
+
+    /// Gets a mutable reference to the current map style.
+    pub fn style(&mut self) -> StyleRef<'_, S> {
+        StyleRef::new(self)
     }
 
     /// Calculates a camera update that fits geographic bounds.
@@ -385,7 +545,10 @@ pub enum RenderingError {
 
 #[cfg(test)]
 mod tests {
+    use std::num::NonZeroU32;
+
     use super::tile_coords_to_latlng;
+    use crate::ImageRendererBuilder;
 
     #[test]
     fn converts_tile_zero_to_geographic_center() {
@@ -399,5 +562,18 @@ mod tests {
         let center = tile_coords_to_latlng(1.0, 1, 1);
         assert!((-90.0..=90.0).contains(&center.lat));
         assert!((-180.0..=180.0).contains(&center.lng));
+    }
+
+    #[test]
+    fn load_style_from_path_rejects_non_files() {
+        let size = NonZeroU32::new(64).unwrap();
+        let mut renderer =
+            ImageRendererBuilder::new().with_size(size, size).build_static_renderer();
+
+        // A missing file and an empty path are both reported as `NotFound`.
+        let missing = renderer.load_style_from_path("does-not-exist.json").unwrap_err();
+        assert_eq!(missing.kind(), std::io::ErrorKind::NotFound);
+        let empty = renderer.load_style_from_path("").unwrap_err();
+        assert_eq!(empty.kind(), std::io::ErrorKind::NotFound);
     }
 }
