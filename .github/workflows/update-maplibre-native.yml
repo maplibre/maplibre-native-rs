@@ -29,7 +29,7 @@ jobs:
         id: maplibre-details
         run: |
           echo "details<<EOF" >> $GITHUB_OUTPUT
-          just show-maplibre-native
+          just maplibre-native-info >> "$GITHUB_OUTPUT"
           echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Create Pull Request
