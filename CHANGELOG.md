@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Other
 
+- *(renderer)* [**breaking**] add camera APIs and bounds-fit rendering capability ([#204](https://github.com/maplibre/maplibre-native-rs/pull/204))
+- [**breaking**] remove SingleThreadedRenderPool ([#208](https://github.com/maplibre/maplibre-native-rs/pull/208))
 - *(deps)* bump taiki-e/install-action from 2.79.7 to 2.81.1 in the all-actions-version-updates group ([#211](https://github.com/maplibre/maplibre-native-rs/pull/211))
 
 ## [0.6.1](https://github.com/maplibre/maplibre-native-rs/compare/v0.6.0...v0.6.1) - 2026-05-26
