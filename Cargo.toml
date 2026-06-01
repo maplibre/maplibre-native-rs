@@ -39,6 +39,7 @@ url.workspace = true
 wgpu = { workspace = true, optional = true }
 
 [build-dependencies]
+binding-generator.workspace = true
 cmake.workspace = true
 const_format = "0.2.35"
 cxx-build.workspace = true
@@ -47,7 +48,6 @@ flate2.workspace = true
 tar.workspace = true
 toml = "0.8"
 walkdir.workspace = true
-binding-generator.workspace = true
 
 [dev-dependencies]
 env_logger.workspace = true
@@ -73,7 +73,7 @@ license = "MIT OR Apache-2.0"
 
 [workspace.dependencies]
 axum = "0.8"
-binding-generator = { path = "binding-generator"}
+binding-generator = { path = "binding-generator" }
 clap = { version = "4.5.27", features = ["derive", "env", "unstable-markdown"] }
 cmake = "0.1"
 cxx = "1.0"
