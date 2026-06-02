@@ -30,7 +30,6 @@ geojson = ["dep:geojson"]
 log = ["dep:log"]
 
 [dependencies]
-webgpu-shim.workspace = true
 cxx.workspace = true
 geojson = { workspace = true, optional = true }
 image.workspace = true
@@ -38,10 +37,10 @@ log = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }
 thiserror.workspace = true
 url.workspace = true
+webgpu-shim.workspace = true
 wgpu = { workspace = true, optional = true }
 
 [build-dependencies]
-webgpu-shim.workspace = true
 cmake.workspace = true
 const_format = "0.2.35"
 cxx-build.workspace = true
@@ -50,6 +49,7 @@ flate2.workspace = true
 tar.workspace = true
 toml = "0.8"
 walkdir.workspace = true
+webgpu-shim.workspace = true
 
 [dev-dependencies]
 env_logger.workspace = true
@@ -65,7 +65,7 @@ tokio = { workspace = true, features = ["macros", "sync", "rt-multi-thread"] }
 ##########################################################
 
 [workspace]
-members = [".", "webgpu-shim", "examples/render", "examples/tile-server"]
+members = [".", "examples/render", "examples/tile-server", "webgpu-shim"]
 # examples/slint requires wgpu backend which is not compatible with other backends enabled
 exclude = ["examples/slint"]
 
@@ -75,7 +75,6 @@ license = "MIT OR Apache-2.0"
 
 [workspace.dependencies]
 axum = "0.8"
-webgpu-shim = { path = "webgpu-shim" }
 clap = { version = "4.5.27", features = ["derive", "env", "unstable-markdown"] }
 cmake = "0.1"
 cxx = "1.0"
@@ -95,6 +94,7 @@ thiserror = "2.0.16"
 tokio = { version = "1", features = [], default-features = false }
 url = "2.5.7"
 walkdir = "2.5.0"
+webgpu-shim = { path = "webgpu-shim" }
 wgpu = { version = "29.0.0" }
 
 [workspace.lints.rust]

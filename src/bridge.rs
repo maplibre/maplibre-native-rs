@@ -946,11 +946,11 @@ pub mod ffi {
     #[namespace = ""]
     extern "C++" {
         #[cfg(feature = "wgpu")]
-        type WGPUDevice = binding_generator::WGPUDeviceWrapper;
+        type WGPUDevice = webgpu_shim::WGPUDeviceWrapper;
         #[cfg(feature = "wgpu")]
-        type WGPUQueue = binding_generator::WGPUQueueWrapper;
+        type WGPUQueue = webgpu_shim::WGPUQueueWrapper;
         #[cfg(feature = "wgpu")]
-        type WGPUTexture = binding_generator::WGPUTextureWrapper;
+        type WGPUTexture = webgpu_shim::WGPUTextureWrapper;
     }
 
     // Declarations for Rust with implementations in C++
