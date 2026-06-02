@@ -68,7 +68,6 @@ impl SymbolLayer {
         }
     }
 
-    #[cfg(feature = "json")]
     pub(crate) fn from_ffi_parts(layer_id: String, layer: UniquePtr<layers::SymbolLayer>) -> Self {
         Self { layer_id, layer }
     }

@@ -241,10 +241,8 @@ pub mod layers {
         include!("layers/layers.h");
 
         /// Returns the layer's ID (the style-spec `"id"` field).
-        #[cfg(feature = "json")]
         fn layer_id(layer: &UniquePtr<Layer>) -> String;
         /// Returns the layer's type name (e.g. `"circle"`, `"fill"`).
-        #[cfg(feature = "json")]
         fn layer_type(layer: &UniquePtr<Layer>) -> String;
 
         /// Upcasts a circle layer handle to the base `Layer` type.
@@ -261,16 +259,12 @@ pub mod layers {
         fn symbol_into_layer(layer: UniquePtr<SymbolLayer>) -> UniquePtr<Layer>;
 
         /// Downcasts a base layer handle to a circle layer. Returns null on type mismatch.
-        #[cfg(feature = "json")]
         fn try_into_circle(layer: UniquePtr<Layer>) -> UniquePtr<CircleLayer>;
         /// Downcasts a base layer handle to a fill layer. Returns null on type mismatch.
-        #[cfg(feature = "json")]
         fn try_into_fill(layer: UniquePtr<Layer>) -> UniquePtr<FillLayer>;
         /// Downcasts a base layer handle to a line layer. Returns null on type mismatch.
-        #[cfg(feature = "json")]
         fn try_into_line(layer: UniquePtr<Layer>) -> UniquePtr<LineLayer>;
         /// Downcasts a base layer handle to a symbol layer. Returns null on type mismatch.
-        #[cfg(feature = "json")]
         fn try_into_symbol(layer: UniquePtr<Layer>) -> UniquePtr<SymbolLayer>;
 
         /// Creates a new circle layer.
@@ -1033,8 +1027,8 @@ pub mod ffi {
             layer: UniquePtr<CxxLayer>,
             before_id: &str,
         ) -> Result<()>;
-        /// Removes a layer from the style by ID.
-        fn style_remove_layer(self: Pin<&mut MapRenderer>, id: &str);
+        /// Removes a layer from the style by ID and returns it.
+        fn style_remove_layer(self: Pin<&mut MapRenderer>, id: &str) -> UniquePtr<CxxLayer>;
     }
 
     // Declarations for C++ with implementations in Rust
