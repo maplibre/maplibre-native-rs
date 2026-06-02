@@ -168,8 +168,8 @@ public:
             before_id.empty() ? std::nullopt : std::optional<std::string>{std::string(before_id)});
     }
 
-    void style_remove_layer(rust::Str id) {
-        map->getStyle().removeLayer(std::string(id));
+    std::unique_ptr<mbgl::style::Layer> style_remove_layer(rust::Str id) {
+        return map->getStyle().removeLayer(std::string(id));
     }
 
     void style_load_from_url(const rust::Str styleUrl) {

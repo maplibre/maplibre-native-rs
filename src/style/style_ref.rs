@@ -1,7 +1,9 @@
 use image::DynamicImage;
 
 use crate::bridge::ffi;
-use crate::{ImageId, ImageRenderer, Layer, LayerId, Source, SourceId, SourceRefMut, StyleError};
+use crate::{
+    AnyLayer, ImageId, ImageRenderer, Layer, LayerId, Source, SourceId, SourceRefMut, StyleError,
+};
 
 /// A mutable reference to the renderer's current map style.
 #[derive(Debug)]
@@ -109,11 +111,13 @@ impl<'a, S> StyleRef<'a, S> {
         Ok(())
     }
 
-    /// Removes a layer from the current map style by ID.
+    /// Removes a layer from the current map style by ID and returns it.
     ///
-    /// No-op if `layer_id` does not match an existing layer.
-    pub fn remove_layer(&mut self, layer_id: impl AsRef<str>) {
-        self.image_renderer.instance.pin_mut().style_remove_layer(layer_id.as_ref());
+    /// Returns `None` if `layer_id` does not match an existing layer.
+    pub fn remove_layer(&mut self, layer_id: impl AsRef<str>) -> Option<AnyLayer> {
+        AnyLayer::from_layer_ptr(
+            self.image_renderer.instance.pin_mut().style_remove_layer(layer_id.as_ref()),
+        )
     }
 
     /// Removes a source from the current map style by ID.
