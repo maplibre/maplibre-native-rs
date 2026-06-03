@@ -14,7 +14,7 @@ impl<'a, S> StyleRef<'a, S> {
         Self { image_renderer }
     }
 
-    /// Adds an image to the style with the given ID and options.
+    /// Adds an image to the style with the given ID, pixel ratio, and options.
     ///
     /// Pass `true` for `signed_distance_field` to register the image as an SDF (signed
     /// distance field) icon; pass `false` for a regular bitmap icon.
@@ -26,6 +26,7 @@ impl<'a, S> StyleRef<'a, S> {
         &mut self,
         id: impl AsRef<str>,
         image: &DynamicImage,
+        pixel_ratio: f32,
         signed_distance_field: bool,
     ) -> Result<ImageId, StyleError> {
         use image::EncodableLayout;
@@ -35,6 +36,7 @@ impl<'a, S> StyleRef<'a, S> {
             id,
             image.as_bytes(),
             ffi::Size { width: image.width(), height: image.height() },
+            pixel_ratio,
             signed_distance_field,
         )?;
         Ok(ImageId::new(id.to_owned()))

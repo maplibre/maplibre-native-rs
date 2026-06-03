@@ -1009,6 +1009,7 @@ pub mod ffi {
             id: &str,
             data: &[u8],
             size: Size,
+            pixel_ratio: f32,
             signed_distance_field: bool,
         ) -> Result<()>;
         /// Removes an image from the style.
