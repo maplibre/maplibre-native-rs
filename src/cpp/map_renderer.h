@@ -41,8 +41,12 @@ constexpr size_t BYTES_PER_PIXEL = 4; // rgba
 struct BridgeImage;
 class RenderRequest;
 struct FfiCameraOptions;
+struct LatLng;
 struct LatLngBounds;
 struct EdgeInsets;
+namespace geojson {
+class GeoJson;
+}
 
 inline mbgl::util::RunLoop& threadRunLoop() {
     // MapLibre Native's RunLoop is thread-affine. Keep one private loop per
@@ -187,6 +191,16 @@ public:
                                            const EdgeInsets& padding,
                                            double bearing,
                                            double pitch);
+
+    FfiCameraOptions cameraForLatLngs(rust::Slice<const LatLng> latLngs,
+                                      const EdgeInsets& padding,
+                                      double bearing,
+                                      double pitch);
+
+    FfiCameraOptions cameraForGeoJson(const mln::bridge::geojson::GeoJson& geojson,
+                                      const EdgeInsets& padding,
+                                      double bearing,
+                                      double pitch);
 
     std::unique_ptr<std::string> readStillImageBytes() {
         return encodeImage(frontend->readStillImage());
