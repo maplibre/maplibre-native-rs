@@ -8,8 +8,8 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use maplibre_native::{
-    CameraUpdate, EdgeInsets, ImageRenderer, ImageRendererBuilder, LatLng, LatLngBounds,
-    MapLoadErrorKind, RunLoopHandle, Static, Tile,
+    CameraUpdate, Color, EdgeInsets, FillLayer, GeoJson, GeoJsonSource, ImageRenderer,
+    ImageRendererBuilder, LatLng, LatLngBounds, MapLoadErrorKind, RunLoopHandle, Static, Tile,
 };
 
 const RENDER_TIMEOUT: Duration = Duration::from_secs(5);
@@ -176,6 +176,130 @@ fn camera_for_bounds_renders() {
     let image = request.finish().expect("bounds-fit renderer should render");
     assert_eq!(image.as_image().width(), 128);
     assert_eq!(image.as_image().height(), 128);
+}
+
+#[test]
+fn camera_for_lat_lngs_renders() {
+    let mut renderer = static_renderer();
+
+    renderer
+        .load_style_from_path(fixture_path("test-style.json"))
+        .expect("test style path should be valid");
+
+    let lat_lngs = [
+        LatLng { lat: -10.0, lng: -10.0 },
+        LatLng { lat: -10.0, lng: 10.0 },
+        LatLng { lat: 10.0, lng: 10.0 },
+        LatLng { lat: 10.0, lng: -10.0 },
+    ];
+    let camera = renderer
+        .camera_for_lat_lngs(&lat_lngs, Some(EdgeInsets::all(8.0)), 0.0, 0.0)
+        .expect("non-empty coordinates should produce a camera");
+    let request =
+        renderer.submit_render_static(&camera).expect("coordinates-fit render should submit");
+    tick_until_ready(|| request.is_ready());
+
+    let image = request.finish().expect("coordinates-fit renderer should render");
+    assert_eq!(image.as_image().width(), 128);
+    assert_eq!(image.as_image().height(), 128);
+}
+
+#[test]
+fn camera_for_lat_lngs_returns_none_for_empty_input() {
+    let mut renderer = static_renderer();
+    renderer
+        .load_style_from_path(fixture_path("test-style.json"))
+        .expect("test style path should be valid");
+
+    assert!(renderer.camera_for_lat_lngs(&[], None, 0.0, 0.0).is_none());
+}
+
+#[test]
+fn camera_for_geojson_renders() {
+    let mut renderer = static_renderer();
+
+    renderer
+        .load_style_from_path(fixture_path("test-style.json"))
+        .expect("test style path should be valid");
+
+    let geojson = r#"{
+        "type": "Polygon",
+        "coordinates": [[[-10.0, -10.0], [10.0, -10.0], [10.0, 10.0], [-10.0, 10.0], [-10.0, -10.0]]]
+    }"#
+    .parse::<GeoJson>()
+    .expect("inline GeoJSON should parse");
+
+    let camera = renderer
+        .camera_for_geojson(&geojson, Some(EdgeInsets::all(8.0)), 0.0, 0.0)
+        .expect("non-empty geometry should produce a camera");
+    let request =
+        renderer.submit_render_static(&camera).expect("geometry-fit render should submit");
+    tick_until_ready(|| request.is_ready());
+
+    let image = request.finish().expect("geometry-fit renderer should render");
+    assert_eq!(image.as_image().width(), 128);
+    assert_eq!(image.as_image().height(), 128);
+}
+
+#[test]
+fn camera_for_geojson_returns_none_for_empty_geometry() {
+    let mut renderer = static_renderer();
+    renderer
+        .load_style_from_path(fixture_path("test-style.json"))
+        .expect("test style path should be valid");
+
+    let empty = r#"{ "type": "FeatureCollection", "features": [] }"#
+        .parse::<GeoJson>()
+        .expect("inline GeoJSON should parse");
+
+    assert!(renderer.camera_for_geojson(&empty, None, 0.0, 0.0).is_none());
+}
+
+#[test]
+fn camera_for_geojson_matches_bounds() {
+    let mut renderer = static_renderer();
+    renderer
+        .load_style_from_path(fixture_path("test-style.json"))
+        .expect("test style path should be valid");
+
+    let polygon = r#"{
+        "type": "Polygon",
+        "coordinates": [[[-10.0, -10.0], [10.0, -10.0], [10.0, 10.0], [-10.0, 10.0], [-10.0, -10.0]]]
+    }"#
+    .parse::<GeoJson>()
+    .expect("inline GeoJSON should parse");
+
+    // Draw the polygon so the rendered output actually depends on the camera.
+    {
+        let mut style = renderer.style();
+        let mut source = GeoJsonSource::new("poly");
+        source.set_geojson(&polygon);
+        let source_id = style.add_source(source).expect("source should be added");
+        let mut fill = FillLayer::new("poly-fill", &source_id);
+        fill.set_fill_color(Color::rgb(1.0, 0.0, 0.0));
+        style.add_layer(fill).expect("fill layer should be added");
+    }
+
+    let render = |renderer: &mut ImageRenderer<Static>, camera: &CameraUpdate| {
+        let request = renderer.submit_render_static(camera).expect("render should submit");
+        tick_until_ready(|| request.is_ready());
+        request.finish().expect("render should succeed").as_image().clone()
+    };
+
+    let geo_camera = renderer
+        .camera_for_geojson(&polygon, Some(EdgeInsets::all(8.0)), 0.0, 0.0)
+        .expect("non-empty geometry should produce a camera");
+    let geo_image = render(&mut renderer, &geo_camera);
+
+    let bounds = LatLngBounds {
+        southwest: LatLng { lat: -10.0, lng: -10.0 },
+        northeast: LatLng { lat: 10.0, lng: 10.0 },
+    };
+    let bounds_camera = renderer.camera_for_bounds(bounds, Some(EdgeInsets::all(8.0)), 0.0, 0.0);
+    let bounds_image = render(&mut renderer, &bounds_camera);
+
+    // Fitting an axis-aligned rectangle by geometry must match fitting its bounds.
+    assert_eq!(geo_image, bounds_image);
 }
 
 #[test]
