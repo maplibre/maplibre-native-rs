@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0](https://github.com/maplibre/maplibre-native-rs/compare/v0.7.0...v0.8.0) - 2026-06-03
+
+### Added
+
+- *(renderer)* add camera_for_geojson and camera_for_lat_lngs ([#219](https://github.com/maplibre/maplibre-native-rs/pull/219))
+- *(style)* support pixel ratio for style images ([#220](https://github.com/maplibre/maplibre-native-rs/pull/220))
+- *(style)* return the removed layer from remove_layer ([#218](https://github.com/maplibre/maplibre-native-rs/pull/218))
+
+### Other
+
+- *(ci)* Fix update-maplibre-native workflow ([#216](https://github.com/maplibre/maplibre-native-rs/pull/216))
+
 ## [0.7.0](https://github.com/maplibre/maplibre-native-rs/compare/v0.6.1...v0.7.0) - 2026-06-01
 
 ### Other
