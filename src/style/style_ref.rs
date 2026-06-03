@@ -14,23 +14,6 @@ impl<'a, S> StyleRef<'a, S> {
         Self { image_renderer }
     }
 
-    /// Adds an image to the style with the given ID and options.
-    ///
-    /// Pass `true` for `signed_distance_field` to register the image as an SDF (signed
-    /// distance field) icon; pass `false` for a regular bitmap icon.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if MapLibre Native rejects the image.
-    pub fn add_image(
-        &mut self,
-        id: impl AsRef<str>,
-        image: &DynamicImage,
-        signed_distance_field: bool,
-    ) -> Result<ImageId, StyleError> {
-        self.add_image_with_pixel_ratio(id, image, 1.0, signed_distance_field)
-    }
-
     /// Adds an image to the style with the given ID, pixel ratio, and options.
     ///
     /// Pass `true` for `signed_distance_field` to register the image as an SDF (signed
@@ -39,7 +22,7 @@ impl<'a, S> StyleRef<'a, S> {
     /// # Errors
     ///
     /// Returns an error if MapLibre Native rejects the image.
-    pub fn add_image_with_pixel_ratio(
+    pub fn add_image(
         &mut self,
         id: impl AsRef<str>,
         image: &DynamicImage,
