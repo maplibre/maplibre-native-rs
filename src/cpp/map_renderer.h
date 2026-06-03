@@ -132,12 +132,12 @@ public:
     void style_add_image(rust::Str id,
                          rust::Slice<const unsigned char> data,
                          mbgl::Size size,
+                         float pixel_ratio,
                          bool signed_distance_field) {
         mbgl::PremultipliedImage image(size, data.data(), data.size());
 
-        const float pixelRatio = 1.0;
         map->getStyle().addImage(std::make_unique<mbgl::style::Image>(
-            std::string(id), std::move(image), pixelRatio, signed_distance_field));
+            std::string(id), std::move(image), pixel_ratio, signed_distance_field));
     }
 
     void style_remove_image(rust::Str id) {
