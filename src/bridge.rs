@@ -982,6 +982,13 @@ pub mod ffi {
         type SourceHandle = super::sources::SourceHandle;
     }
 
+    #[namespace = "mln::bridge::geojson"]
+    extern "C++" {
+        /// GeoJSON value opaque type.
+        #[rust_name = "FfiGeoJson"]
+        type GeoJson = super::geojson::GeoJson;
+    }
+
     // Declarations for Rust with implementations in C++
     unsafe extern "C++" {
         include!("map_renderer.h");
@@ -1033,6 +1040,22 @@ pub mod ffi {
             bearing: f64,
             pitch: f64,
         ) -> FfiCameraOptions;
+        /// Calculates camera options that fit geographic coordinates.
+        fn cameraForLatLngs(
+            self: Pin<&mut MapRenderer>,
+            lat_lngs: &[LatLng],
+            padding: &EdgeInsets,
+            bearing: f64,
+            pitch: f64,
+        ) -> FfiCameraOptions;
+        /// Calculates camera options that fit a GeoJSON value's geometry.
+        fn cameraForGeoJson(
+            self: Pin<&mut MapRenderer>,
+            geojson: &FfiGeoJson,
+            padding: &EdgeInsets,
+            bearing: f64,
+            pitch: f64,
+        ) -> FfiCameraOptions;
         /// Returns whether a render request has completed.
         fn isReady(self: &RenderRequest) -> bool;
         /// Returns whether a completed render request failed.
@@ -1063,6 +1086,7 @@ pub mod ffi {
             id: &str,
             data: &[u8],
             size: Size,
+            pixel_ratio: f32,
             signed_distance_field: bool,
         ) -> Result<()>;
         /// Removes an image from the style.
