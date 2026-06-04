@@ -23,6 +23,7 @@
 #include "rust/cxx.h"
 #include "rust_log_observer.h"
 #include "map_observer.h"
+#include "sources/sources.h"
 
 #if (!defined(__APPLE__) || defined(MLN_DARWIN_USE_LIBUV)) && __has_include(<uv.h>)
 #include <uv.h>
@@ -150,6 +151,14 @@ public:
 
     void style_add_source(std::unique_ptr<mbgl::style::Source> source) {
         map->getStyle().addSource(std::move(source));
+    }
+
+    std::unique_ptr<mln::bridge::style::sources::SourceHandle> style_get_source_mut(rust::Str id) {
+        auto* source = map->getStyle().getSource(std::string(id));
+        if (!source) {
+            return nullptr;
+        }
+        return std::make_unique<mln::bridge::style::sources::SourceHandle>(source);
     }
 
     void style_remove_source(rust::Str id) {
