@@ -395,9 +395,7 @@ fn build_local(
     // generator via CMAKE_GENERATOR. Fall back to the default (Make) otherwise.
     if target_os == "macos" || target_os == "ios" {
         config.generator("Ninja");
-    } else if target_os == "linux"
-        && env::var_os("CMAKE_GENERATOR").is_none()
-        && ninja_available()
+    } else if target_os == "linux" && env::var_os("CMAKE_GENERATOR").is_none() && ninja_available()
     {
         config.generator("Ninja");
     }
