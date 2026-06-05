@@ -19,7 +19,7 @@ pub use layers::{
     SymbolAnchor, SymbolLayer,
 };
 pub use sources::{
-    GeoJsonSource, GeoJsonSourceRefMut, OpaqueSourceRefMut, Source, SourceId, SourceRefMut,
-    SourceType,
+    AnySource, GeoJsonSource, GeoJsonSourceRefMut, OpaqueSource, OpaqueSourceRefMut, Source,
+    SourceId, SourceRefMut, SourceType,
 };
 pub use style_ref::StyleRef;

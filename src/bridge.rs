@@ -380,9 +380,12 @@ pub mod style_value {
     #[namespace = "mbgl::style"]
     extern "C++" {
         include!("mbgl/style/layer.hpp");
+        include!("mbgl/style/source.hpp");
 
         #[rust_name = "StyleLayer"]
         type Layer = crate::bridge::layers::Layer;
+        #[rust_name = "StyleSource"]
+        type Source = crate::bridge::sources::Source;
     }
 
     unsafe extern "C++" {
@@ -420,6 +423,14 @@ pub mod style_value {
             value: &StyleValue,
             error_message: &mut String,
         ) -> UniquePtr<StyleLayer>;
+
+        /// Parses a style-spec source object from a `StyleValue` tree.
+        /// On failure, `error_message` is populated and the returned pointer is null.
+        fn source_from_value(
+            id: &str,
+            value: &StyleValue,
+            error_message: &mut String,
+        ) -> UniquePtr<StyleSource>;
     }
 }
 
