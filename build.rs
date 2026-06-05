@@ -393,10 +393,9 @@ fn build_local(
     // mandatory on Apple platforms. On Linux Ninja is optional, but it parallelises
     // better than Make; use it when it is installed and the user has not pinned a
     // generator via CMAKE_GENERATOR. Fall back to the default (Make) otherwise.
-    if target_os == "macos" || target_os == "ios" {
-        config.generator("Ninja");
-    } else if target_os == "linux" && env::var_os("CMAKE_GENERATOR").is_none() && ninja_available()
-    {
+    let is_ios = target_os == "macos" || target_os == "ios";
+    let linux_with_ninja = target_os == "linux" && env::var_os("CMAKE_GENERATOR").is_none() && ninja_available();
+    if is_ios || linux_with_ninja {
         config.generator("Ninja");
     }
 
