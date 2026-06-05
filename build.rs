@@ -6,6 +6,8 @@
 //!
 //! IMPORTANT: The library path must point to the amalgan library which contains all the dependent libraries if `MLN_CORE_LIBRARY_NO_AMALGAM` is not set!
 //!
+//! Set `MLN_CMAKE_CXX_LAUNCHER` to forward a compiler launcher (e.g. `ccache`/`sccache`) to `CMAKE_CXX_COMPILER_LAUNCHER` when building from source.
+//!
 //! Required libraries:
 //! Fedora:
 //!     - `sudo dnf install libicu-devel libglslang-devel spirv-tools-devel libpng-devel libjpeg-turbo-devel libuv-devel libwebp-devel`
@@ -405,6 +407,16 @@ fn build_local(
         config.configure_arg("-DMLN_WITH_WAYLAND=OFF");
         config.configure_arg("-DMLN_WITH_X11=ON");
     }
+
+    // Forward an optional compiler launcher (sccache/ccache) so downstream CI can
+    // cache the C++ objects without patching this crate.
+    println!("cargo:rerun-if-env-changed=MLN_CMAKE_CXX_LAUNCHER");
+    if let Ok(launcher) = env::var("MLN_CMAKE_CXX_LAUNCHER") {
+        if !launcher.trim().is_empty() {
+            config.define("CMAKE_CXX_COMPILER_LAUNCHER", launcher.trim());
+        }
+    }
+
     let dest = config.build();
     println!("cargo:rustc-link-search=native={}", dest.join("build").display());
     println!(
