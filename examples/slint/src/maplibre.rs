@@ -8,7 +8,7 @@ use slint::ComponentHandle;
 use std::rc::Rc;
 mod headless;
 pub use headless::MapLibre;
-pub use headless::create_map;
+pub use headless::{DEFAULT_MAP_SIZE, create_map};
 use image::ImageReader;
 use maplibre_native::Style;
 use maplibre_native::{GeoJsonSource, Latitude, Longitude, SymbolLayer};

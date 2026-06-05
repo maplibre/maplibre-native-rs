@@ -1,4 +1,3 @@
-use crate::Size;
 use maplibre_native::Continuous;
 use maplibre_native::ImageRenderer;
 use maplibre_native::ImageRendererBuilder;
@@ -58,17 +57,19 @@ impl MapLibre {
     }
 }
 
-pub fn create_map(size: Size) -> Rc<RefCell<MapLibre>> {
+/// Initial renderer size, matching the window's preferred size.
+/// The real size is applied later via `on_map_size_changed`.
+pub const DEFAULT_MAP_SIZE: (NonZeroU32, NonZeroU32) =
+    (NonZeroU32::new(800).unwrap(), NonZeroU32::new(600).unwrap());
+
+pub fn create_map(width: NonZeroU32, height: NonZeroU32) -> Rc<RefCell<MapLibre>> {
     let resource_options = ResourceOptions::default()
         .with_tile_server_options(&TileServerOptions::default())
         // .with_api_key(api_key)
         .with_cache_path(Path::new(env!("CARGO_MANIFEST_DIR")).join("maplibre_database.sqlite"));
 
     let mut renderer = ImageRendererBuilder::new()
-        .with_size(
-            NonZeroU32::new(size.width as u32).unwrap(),
-            NonZeroU32::new(size.height as u32).unwrap(),
-        )
+        .with_size(width, height)
         .with_pixel_ratio(1.0)
         .with_resource_options(resource_options)
         .build_continuous_renderer();
