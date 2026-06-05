@@ -391,10 +391,8 @@ fn build_local(
         config.configure_arg("-DMLN_WITH_X11=ON");
     }
 
-    // We only build the `mbgl-core` target, so don't let cmake configure the GLFW
-    // demo app (and pull in its glfw3 dependency). NOTE: at the pinned MLN_COMMIT
-    // the offline/render-test/benchmark tools are added unconditionally with no
-    // opt-out flag, so GLFW is the only extra target gateable here.
+    // We only build the `mbgl-core` target
+    // This menas we don't let cmake configure the GLFW demo app (and pull in its glfw3 dependency).
     config.configure_arg("-DMLN_WITH_GLFW=OFF");
 
     let dest = config.build();
