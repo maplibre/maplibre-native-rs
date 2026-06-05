@@ -6,6 +6,8 @@
 //!
 //! IMPORTANT: The library path must point to the amalgan library which contains all the dependent libraries if `MLN_CORE_LIBRARY_NO_AMALGAM` is not set!
 //!
+//! On Linux the Ninja generator is used automatically when `ninja` is on `PATH` (unless `CMAKE_GENERATOR` is set), falling back to Make.
+//!
 //! Required libraries:
 //! Fedora:
 //!     - `sudo dnf install libicu-devel libglslang-devel spirv-tools-devel libpng-devel libjpeg-turbo-devel libuv-devel libwebp-devel`
@@ -47,6 +49,11 @@ const BRIDGE_FILES: &[&str] = &[
 ];
 
 const BRIDGE_INCLUDE_DIRS: &[&str] = &["include", "src/cpp"];
+
+/// Returns `true` if a `ninja` executable is available on `PATH`.
+fn ninja_available() -> bool {
+    Command::new("ninja").arg("--version").output().is_ok_and(|out| out.status.success())
+}
 
 /// Supported graphics rendering APIs.
 #[derive(PartialEq, Eq, Clone, Copy)]
@@ -382,8 +389,16 @@ fn build_local(
     config.build_target(TARGET_NAME);
 
     // maplibre-native's platform/darwin/darwin.cmake calls enable_language(Swift),
-    // which the default "Unix Makefiles" generator does not support. Switch to Ninja.
+    // which the default "Unix Makefiles" generator does not support, so Ninja is
+    // mandatory on Apple platforms. On Linux Ninja is optional, but it parallelises
+    // better than Make; use it when it is installed and the user has not pinned a
+    // generator via CMAKE_GENERATOR. Fall back to the default (Make) otherwise.
     if target_os == "macos" || target_os == "ios" {
+        config.generator("Ninja");
+    } else if target_os == "linux"
+        && env::var_os("CMAKE_GENERATOR").is_none()
+        && ninja_available()
+    {
         config.generator("Ninja");
     }
 
