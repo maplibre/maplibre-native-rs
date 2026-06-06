@@ -93,7 +93,6 @@ install-dependencies backend='vulkan':
       {{if backend == 'opengl' {'libgl1-mesa-dev libglu1-mesa-dev'} else if backend == 'vulkan' {'mesa-vulkan-drivers glslang-dev'} else {''} }} \
       build-essential \
       libcurl4-openssl-dev \
-      libx11-dev \
       libuv1-dev \
       libz-dev \
       libfontconfig-dev \
