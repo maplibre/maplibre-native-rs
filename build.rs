@@ -392,8 +392,9 @@ fn build_local(
     }
 
     // We only build the `mbgl-core` target
-    // This means we don't let cmake configure the GLFW demo app (and pull in its glfw3 dependency).
+    // This means we don't let cmake configure the GLFW demo app (and pull in its glfw3 and its x11 dependency).
     config.configure_arg("-DMLN_WITH_GLFW=OFF");
+    config.configure_arg("-DMLN_WITH_X11=OFF");
 
     let dest = config.build();
     println!("cargo:rustc-link-search=native={}", dest.join("build").display());
