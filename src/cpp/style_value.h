@@ -190,6 +190,8 @@ public:
     return {};
   }
 
+  // A GeoJSON source's `data` may be an inline GeoJSON object (not only a URL
+  // string), so source conversion calls this to parse it from the StyleValue tree.
   static std::optional<GeoJSON> toGeoJSON(T value, Error &error) {
     if (value == nullptr) {
       error = {"GeoJSON value must not be null"};
