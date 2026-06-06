@@ -392,7 +392,7 @@ fn build_local(
     }
 
     // We only build the `mbgl-core` target
-    // This menas we don't let cmake configure the GLFW demo app (and pull in its glfw3 dependency).
+    // This means we don't let cmake configure the GLFW demo app (and pull in its glfw3 dependency).
     config.configure_arg("-DMLN_WITH_GLFW=OFF");
 
     let dest = config.build();
