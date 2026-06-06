@@ -13,6 +13,11 @@
 namespace mln::bridge {
 namespace {
 
+// Stringify a `StyleValue` tree to JSON, for `toGeoJSON()` on inline GeoJSON
+// (source `data`, `["within"]` / `["distance"]` expressions).
+//
+// Note: open to a cleaner approach than this JSON round-trip in C++.
+
 // Escapes and quotes a string as a JSON string literal.
 void append_json_string(std::ostringstream& out, const std::string& value) {
     out << '"';
@@ -97,7 +102,6 @@ void append_json(std::ostringstream& out, const StyleValue& value) {
     }
 }
 
-// Converts a `StyleValue` tree back to JSON text
 std::string stringify_style_value(const StyleValue& value) {
     std::ostringstream json;
     // Force a locale-independent decimal point ('.') so numbers stay valid JSON.
@@ -166,8 +170,6 @@ std::unique_ptr<mbgl::style::Source> source_from_value(rust::Str id,
 
 std::optional<mbgl::GeoJSON> style_value_to_geojson(const StyleValue& value,
                                                     mbgl::style::conversion::Error& error) {
-    // Note: This goes through JSON text to keep the adapter small; it can be
-    // optimized later if source conversion becomes a hot path.
     try {
         return mapbox::geojson::parse(stringify_style_value(value));
     } catch (const std::exception& ex) {
