@@ -414,6 +414,7 @@ fn build_local(
     if let Ok(launcher) = env::var("MLN_CMAKE_CXX_LAUNCHER") {
         if !launcher.trim().is_empty() {
             config.define("CMAKE_CXX_COMPILER_LAUNCHER", launcher.trim());
+            config.define("CMAKE_C_COMPILER_LAUNCHER", launcher.trim());
         }
     }
 
