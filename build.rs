@@ -378,23 +378,25 @@ fn build_local(
         }
         GraphicsRenderingAPI::OpenGL => {
             config.configure_arg("-DMLN_WITH_OPENGL=ON");
+            #[cfg(target_os = "linux")]
+            // GLX headless backend transitively requires X11.
+            config.configure_arg("-DMLN_WITH_X11=ON");
         }
         GraphicsRenderingAPI::Vulkan => {
             config.configure_arg("-DMLN_WITH_VULKAN=ON");
+            #[cfg(target_os = "linux")]
+            // Vulkan has no X11 dependency.
+            config.configure_arg("-DMLN_WITH_X11=OFF");
         } //GraphicsRenderingAPI::WebGPU => config.configure_arg("-DMLN_WITH_WEBGPU=ON").configure_arg("-DMLN_WEBGPU_IMPL_WGPU=ON"),
     }
     if amalgam_lib {
         config.configure_arg("-DMLN_CREATE_AMALGAMATION:BOOL=ON");
     }
-    if cfg!(target_os = "linux") {
-        config.configure_arg("-DMLN_WITH_WAYLAND=OFF");
-        config.configure_arg("-DMLN_WITH_X11=ON");
-    }
+    #[cfg(target_os = "linux")]
+    config.configure_arg("-DMLN_WITH_WAYLAND=OFF");
 
-    // We only build the `mbgl-core` target
-    // This means we don't let cmake configure the GLFW demo app (and pull in its glfw3 and its x11 dependency).
+    // We only build the `mbgl-core` target, so skip configuring the GLFW demo app.
     config.configure_arg("-DMLN_WITH_GLFW=OFF");
-    config.configure_arg("-DMLN_WITH_X11=OFF");
 
     let dest = config.build();
     println!("cargo:rustc-link-search=native={}", dest.join("build").display());
@@ -549,7 +551,6 @@ fn build_mln() {
         GraphicsRenderingAPI::Vulkan => {}
         GraphicsRenderingAPI::OpenGL => {
             println!("cargo:rustc-link-lib=GL");
-            println!("cargo:rustc-link-lib=EGL");
             if cfg!(target_os = "linux") {
                 // GLX backend uses X11 symbols such as XInitThreads.
                 println!("cargo:rustc-link-lib=X11");
