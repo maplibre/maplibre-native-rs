@@ -13,12 +13,43 @@
 namespace mln::bridge {
 namespace {
 
-// Converts a `StyleValue` tree back to JSON text
-std::string stringify_style_value(const StyleValue& value) {
-    std::ostringstream json;
-    json.imbue(std::locale::classic());
-    append_json(json, value);
-    return json.str();
+// Escapes and quotes a string as a JSON string literal.
+void append_json_string(std::ostringstream& out, const std::string& value) {
+    out << '"';
+    for (unsigned char c : value) {
+        switch (c) {
+        case '"':
+            out << "\\\"";
+            break;
+        case '\\':
+            out << "\\\\";
+            break;
+        case '\b':
+            out << "\\b";
+            break;
+        case '\f':
+            out << "\\f";
+            break;
+        case '\n':
+            out << "\\n";
+            break;
+        case '\r':
+            out << "\\r";
+            break;
+        case '\t':
+            out << "\\t";
+            break;
+        default:
+            if (c < 0x20) {
+                out << "\\u" << std::hex << std::setw(4) << std::setfill('0') << static_cast<int>(c)
+                    << std::dec << std::setfill(' ');
+            } else {
+                out << static_cast<char>(c);
+            }
+            break;
+        }
+    }
+    out << '"';
 }
 
 void append_json(std::ostringstream& out, const StyleValue& value) {
@@ -66,42 +97,13 @@ void append_json(std::ostringstream& out, const StyleValue& value) {
     }
 }
 
-void append_json_string(std::ostringstream& out, const std::string& value) {
-    out << '"';
-    for (unsigned char c : value) {
-        switch (c) {
-        case '"':
-            out << "\\\"";
-            break;
-        case '\\':
-            out << "\\\\";
-            break;
-        case '\b':
-            out << "\\b";
-            break;
-        case '\f':
-            out << "\\f";
-            break;
-        case '\n':
-            out << "\\n";
-            break;
-        case '\r':
-            out << "\\r";
-            break;
-        case '\t':
-            out << "\\t";
-            break;
-        default:
-            if (c < 0x20) {
-                out << "\\u" << std::hex << std::setw(4) << std::setfill('0') << static_cast<int>(c)
-                    << std::dec << std::setfill(' ');
-            } else {
-                out << static_cast<char>(c);
-            }
-            break;
-        }
-    }
-    out << '"';
+// Converts a `StyleValue` tree back to JSON text
+std::string stringify_style_value(const StyleValue& value) {
+    std::ostringstream json;
+    // Force a locale-independent decimal point ('.') so numbers stay valid JSON.
+    json.imbue(std::locale::classic());
+    append_json(json, value);
+    return json.str();
 }
 
 } // namespace
