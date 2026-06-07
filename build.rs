@@ -365,15 +365,7 @@ fn bundle_precompiled() -> Info {
     Info { lib_name, include_dirs, cpp_root }
 }
 
-fn build_local(
-    clone_dir: &Path,
-    name: &str,
-    amalgam_lib: bool,
-    target_os: &str,
-) -> Result<Info, Box<dyn std::error::Error>> {
-    const TARGET_NAME: &str = "mbgl-core";
-    let maplibre_native_dir = clone_dir.join(name);
-
+fn checkout_maplibre_native(maplibre_native_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
     // Some CI cache restores may leave an incomplete directory tree.
     // Require files that prove this is a usable maplibre-native checkout.
     let has_required_checkout_files = maplibre_native_dir.join("CMakeLists.txt").is_file()
@@ -384,17 +376,17 @@ fn build_local(
             "cargo:warning=Removing incomplete cached maplibre-native checkout at {}",
             maplibre_native_dir.display()
         );
-        fs::remove_dir_all(&maplibre_native_dir)?;
+        fs::remove_dir_all(maplibre_native_dir)?;
     }
 
     if !maplibre_native_dir.exists() {
         println!("cargo:warning=Cloning maplibre-native.");
-        fs::create_dir_all(&maplibre_native_dir)?;
+        fs::create_dir_all(maplibre_native_dir)?;
         // `git clone --revision` only exists in git >= 2.49 (March 2025); use
         // init + fetch + checkout so older git works too.
         let git = |args: &[&str]| -> Result<(), Box<dyn std::error::Error>> {
             let status =
-                Command::new("git").current_dir(&maplibre_native_dir).args(args).status()?;
+                Command::new("git").current_dir(maplibre_native_dir).args(args).status()?;
             if !status.success() {
                 return Err(format!("git {} failed: {status}", args.join(" ")).into());
             }
@@ -406,7 +398,7 @@ fn build_local(
         git(&["checkout", "--quiet", "FETCH_HEAD"])?;
     }
     let submodule_status = Command::new("git")
-        .current_dir(maplibre_native_dir.clone())
+        .current_dir(maplibre_native_dir)
         .args(["submodule", "update", "--init", "--recursive"])
         .status()?;
     if !submodule_status.success() {
@@ -414,6 +406,19 @@ fn build_local(
             format!("Failed to initialize maplibre-native submodules: {submodule_status}").into()
         );
     }
+    Ok(())
+}
+
+fn build_local(
+    clone_dir: &Path,
+    name: &str,
+    amalgam_lib: bool,
+    target_os: &str,
+) -> Result<Info, Box<dyn std::error::Error>> {
+    const TARGET_NAME: &str = "mbgl-core";
+    let maplibre_native_dir = clone_dir.join(name);
+
+    checkout_maplibre_native(&maplibre_native_dir)?;
 
     let mut config = cmake::Config::new(maplibre_native_dir.clone());
     config.build_target(TARGET_NAME);
