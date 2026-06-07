@@ -399,8 +399,8 @@ fn build_local(
 
     // We only build the `mbgl-core` target, so skip configuring the GLFW demo app.
     config.configure_arg("-DMLN_WITH_GLFW=OFF");
-  
-      // Forward an optional compiler launcher (sccache/ccache) so downstream CI can
+
+    // Forward an optional compiler launcher (sccache/ccache) so downstream CI can
     // cache the C++ objects without patching this crate.
     println!("cargo:rerun-if-env-changed=MLN_CMAKE_CXX_LAUNCHER");
     if let Ok(launcher) = env::var("MLN_CMAKE_CXX_LAUNCHER") {
