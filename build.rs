@@ -34,18 +34,13 @@ const BRIDGE_INCLUDE_DIRS: &[&str] = &["include", "src/cpp"];
 
 /// Supported graphics rendering APIs.
 #[derive(PartialEq, Eq, Clone, Copy)]
-enum GraphicsRenderingAPI {
+enum GraphicsApi {
     /// [Apple's Metal API](https://developer.apple.com/metal/) (macOS/iOS only)
     Metal,
     /// [OpenGL API](https://www.opengl.org/)
-    OpenGL,
+    OpenGl(OpenGlContext),
     /// [Vulkan API](https://www.vulkan.org/)
     Vulkan,
-}
-
-/// Whether the OpenGL backend is selected (`MLN_WITH_OPENGL`).
-fn with_opengl() -> bool {
-    env::var("CARGO_FEATURE_OPENGL").is_ok()
 }
 
 /// Whether to use an EGL context for Linux OpenGL (`MLN_WITH_EGL`).
@@ -74,23 +69,23 @@ enum OpenGlContext {
     Wgl,
 }
 
-/// Resolves the OpenGL context for the given target OS, or `None` when the
-/// OpenGL backend is not selected.
+/// Resolves the OpenGL context for the given target OS.
 ///
 /// Linux defaults to EGL. Explicit `glx` selects GLX, and `x11` without `egl`
 /// also selects GLX for compatibility with the previous Linux OpenGL path.
-fn opengl_context(target_os: &str) -> Option<OpenGlContext> {
-    if !with_opengl() {
-        return None;
-    }
+fn opengl_context(target_os: &str) -> OpenGlContext {
     match target_os {
-        "linux" => Some(if with_glx() || (with_x11() && !with_egl()) {
-            OpenGlContext::Glx
-        } else {
-            OpenGlContext::Egl
-        }),
-        "windows" => Some(OpenGlContext::Wgl),
-        _ => None,
+        "linux" => {
+            if with_glx() || (with_x11() && !with_egl()) {
+                OpenGlContext::Glx
+            } else {
+                OpenGlContext::Egl
+            }
+        }
+        "windows" => OpenGlContext::Wgl,
+        _ => panic!(
+            "the OpenGL backend is currently supported only on Linux and Windows; use `metal` on macOS/iOS"
+        ),
     }
 }
 
@@ -99,7 +94,7 @@ fn warn_feature_combinations(target_os: &str) {
     if with_egl() && with_glx() {
         println!("cargo::warning=Features 'egl' and 'glx' are both enabled; using GLX.");
     }
-    if with_x11() && with_opengl() && with_egl() && !with_glx() {
+    if with_x11() && env::var("CARGO_FEATURE_OPENGL").is_ok() && with_egl() && !with_glx() {
         println!(
             "cargo::warning=Feature 'x11' has no effect on the EGL OpenGL context (X11 is linked but unused)."
         );
@@ -109,14 +104,14 @@ fn warn_feature_combinations(target_os: &str) {
     }
 }
 
-impl GraphicsRenderingAPI {
+impl GraphicsApi {
     /// Selects the rendering API based on enabled cargo features and platform.
     ///
     /// - If one feature is enabled, it is used.
     /// - If none are enabled, defaults to Metal on macOS/iOS, Vulkan elsewhere.
     /// - If multiple are enabled, falls back to OpenGL > Metal > Vulkan, with a warning.
     fn from_selected_features() -> Self {
-        let with_opengl = with_opengl();
+        let with_opengl = env::var("CARGO_FEATURE_OPENGL").is_ok();
         let with_metal = env::var("CARGO_FEATURE_METAL").is_ok();
         let with_vulkan = env::var("CARGO_FEATURE_VULKAN").is_ok();
 
@@ -126,7 +121,7 @@ impl GraphicsRenderingAPI {
         let selected = match (with_metal, with_vulkan, with_opengl) {
             (true, false, false) => Self::Metal,
             (false, true, false) => Self::Vulkan,
-            (false, false, true) => Self::OpenGL,
+            (false, false, true) => Self::OpenGl(opengl_context(&target_os)),
             (false, false, false) => {
                 if is_macos {
                     Self::Metal
@@ -141,7 +136,7 @@ impl GraphicsRenderingAPI {
                 println!("cargo::warning=Features 'metal', 'opengl', and 'vulkan' are mutually exclusive.");
 
                 let default_choice = if with_opengl {
-                    Self::OpenGL
+                    Self::OpenGl(opengl_context(&target_os))
                 } else if is_macos {
                     Self::Metal
                 } else {
@@ -152,28 +147,21 @@ impl GraphicsRenderingAPI {
             }
         };
 
-        if selected == Self::OpenGL {
-            assert!(
-                target_os == "linux" || target_os == "windows",
-                "the OpenGL backend is currently supported only on Linux and Windows; use `metal` on macOS/iOS"
-            );
-        }
-
         selected
     }
 }
-impl std::fmt::Display for GraphicsRenderingAPI {
+impl std::fmt::Display for GraphicsApi {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Metal => f.write_str("metal"),
-            Self::OpenGL => f.write_str("opengl"),
+            Self::OpenGl(_) => f.write_str("opengl"),
             Self::Vulkan => f.write_str("vulkan"),
         }
     }
 }
 
 fn download_static(out_dir: &Path, revision: &str) -> (PathBuf, PathBuf) {
-    let graphics_api = GraphicsRenderingAPI::from_selected_features();
+    let graphics_api = GraphicsApi::from_selected_features();
 
     let target = if cfg!(all(target_os = "linux", target_arch = "aarch64")) {
         "amalgam-linux-arm64"
@@ -328,7 +316,7 @@ fn resolve_mln_core() -> (PathBuf, Vec<PathBuf>) {
 }
 
 /// Gather include directories and build the C++ bridge using `cxx_build`.
-fn build_bridge(lib_name: &str, include_dirs: &[PathBuf]) {
+fn build_bridge(lib_name: &str, include_dirs: &[PathBuf], backend: GraphicsApi) {
     // println!("cargo:warning=Include_dirs: {:?}", include_dirs);
     let root = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
     let bridge_include_dirs: Vec<PathBuf> =
@@ -341,7 +329,7 @@ fn build_bridge(lib_name: &str, include_dirs: &[PathBuf]) {
         .warnings(true)
         .warnings_into_errors(true);
 
-    if with_opengl() {
+    if matches!(backend, GraphicsApi::OpenGl(_)) {
         build.define("MLN_RENDER_BACKEND_OPENGL", Some("1"));
     }
 
@@ -454,16 +442,17 @@ fn build_local(
         config.generator("Ninja");
     }
 
-    match GraphicsRenderingAPI::from_selected_features() {
-        GraphicsRenderingAPI::Metal => {
+    let backend = GraphicsApi::from_selected_features();
+    match backend {
+        GraphicsApi::Metal => {
             config.configure_arg("-DMLN_WITH_METAL=ON");
         }
-        GraphicsRenderingAPI::OpenGL => {
+        GraphicsApi::OpenGl(_) => {
             config.configure_arg("-DMLN_WITH_OPENGL=ON");
         }
-        GraphicsRenderingAPI::Vulkan => {
+        GraphicsApi::Vulkan => {
             config.configure_arg("-DMLN_WITH_VULKAN=ON");
-        } //GraphicsRenderingAPI::WebGPU => config.configure_arg("-DMLN_WITH_WEBGPU=ON").configure_arg("-DMLN_WEBGPU_IMPL_WGPU=ON"),
+        } //GraphicsAPI::WebGPU => config.configure_arg("-DMLN_WITH_WEBGPU=ON").configure_arg("-DMLN_WEBGPU_IMPL_WGPU=ON"),
     }
     if amalgam_lib {
         config.configure_arg("-DMLN_CREATE_AMALGAMATION:BOOL=ON");
@@ -471,12 +460,13 @@ fn build_local(
     // OpenGL context / windowing options, mapped ~1:1 to mbgl's MLN_WITH_*.
     // EGL is the default OpenGL context on Linux; GLX is selected with X11.
     // Windows OpenGL uses native WGL.
-    let context = opengl_context(target_os);
-    match context {
-        Some(OpenGlContext::Egl) => {
+    match backend {
+        GraphicsApi::OpenGl(OpenGlContext::Egl) => {
             config.configure_arg("-DMLN_WITH_EGL=ON");
         }
-        Some(OpenGlContext::Glx | OpenGlContext::Wgl) | None => {}
+        GraphicsApi::Metal
+        | GraphicsApi::OpenGl(OpenGlContext::Glx | OpenGlContext::Wgl)
+        | GraphicsApi::Vulkan => {}
     }
     // Only `mbgl-core` is built, so skip configuring the GLFW demo app.
     config.configure_arg("-DMLN_WITH_GLFW=OFF");
@@ -587,9 +577,9 @@ fn build_mln() {
         }
     };
 
-    build_bridge(&info.lib_name, &info.include_dirs);
+    let backend = GraphicsApi::from_selected_features();
+    build_bridge(&info.lib_name, &info.include_dirs, backend);
     let is_apple = target_os == "macos" || target_os == "ios";
-    let backend = GraphicsRenderingAPI::from_selected_features();
     if !amalgam_lib {
         // The dependent libs are not bundled in the core lib, so we have to link manually
         // Required for mlt-cpp. Cpp root link search was already added above
@@ -621,7 +611,7 @@ fn build_mln() {
             println!("cargo:rustc-link-lib=icui18n"); //sudo dnf install libicu-devel
         }
         // Vulkan translates GLSL to SPIR-V at runtime via glslang; OpenGL/Metal don't.
-        if backend == GraphicsRenderingAPI::Vulkan {
+        if backend == GraphicsApi::Vulkan {
             println!("cargo:rustc-link-lib=glslang"); //sudo dnf install libglslang-devel
             println!("cargo:rustc-link-lib=glslang-default-resource-limits"); //sudo dnf install libglslang-devel
 
@@ -642,28 +632,28 @@ fn build_mln() {
         println!("cargo:rustc-link-lib=framework=CoreGraphics");
     }
     match backend {
-        GraphicsRenderingAPI::Vulkan if is_apple => {
+        GraphicsApi::Vulkan if is_apple => {
             println!("cargo:rustc-link-lib=framework=CoreText");
             println!("cargo:rustc-link-lib=framework=ImageIO");
         }
-        GraphicsRenderingAPI::Vulkan => {}
-        GraphicsRenderingAPI::OpenGL => {
-            match opengl_context(&target_os) {
+        GraphicsApi::Vulkan => {}
+        GraphicsApi::OpenGl(context) => {
+            match context {
                 // Windows native OpenGL. Not yet exercised in CI.
-                Some(OpenGlContext::Wgl) => println!("cargo:rustc-link-lib=opengl32"),
+                OpenGlContext::Wgl => println!("cargo:rustc-link-lib=opengl32"),
                 // EGL-based context links libEGL alongside libGL.
-                Some(OpenGlContext::Egl) => {
+                OpenGlContext::Egl => {
                     println!("cargo:rustc-link-lib=GL");
                     println!("cargo:rustc-link-lib=EGL");
                 }
-                Some(OpenGlContext::Glx) | None => println!("cargo:rustc-link-lib=GL"),
+                OpenGlContext::Glx => println!("cargo:rustc-link-lib=GL"),
             }
             if target_os == "linux" && with_x11() {
                 // The GLX context uses X11 symbols such as XInitThreads.
                 println!("cargo:rustc-link-lib=X11");
             }
         }
-        GraphicsRenderingAPI::Metal => {
+        GraphicsApi::Metal => {
             // macOS Metal framework dependencies
             println!("cargo:rustc-link-lib=framework=Metal");
             println!("cargo:rustc-link-lib=framework=MetalKit");
