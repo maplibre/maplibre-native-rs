@@ -454,13 +454,11 @@ fn build_local(
     config.configure_arg("-DMLN_WITH_GLFW=OFF");
     if target_os == "linux" {
         config.configure_arg("-DMLN_WITH_WAYLAND=OFF");
-        config.configure_arg(
-            if matches!(backend, GraphicsRenderingAPI::OpenGL(OpenGlContext::Glx)) {
-                "-DMLN_WITH_X11=ON"
-            } else {
-                "-DMLN_WITH_X11=OFF"
-            },
-        );
+        config.configure_arg(if matches!(backend, GraphicsApi::OpenGl(OpenGlContext::Glx)) {
+            "-DMLN_WITH_X11=ON"
+        } else {
+            "-DMLN_WITH_X11=OFF"
+        });
     }
 
     // Forward an optional compiler launcher (sccache/ccache) so downstream CI can
