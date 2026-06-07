@@ -84,13 +84,14 @@ get-crate-field field package=main_crate:  (assert-cmd 'jq')
 # Get the minimum supported Rust version (MSRV) for the crate
 get-msrv package=main_crate:  (get-crate-field 'rust_version' package)
 
-# Install Linux dependencies (Ubuntu/Debian). Supports 'vulkan' and 'opengl' backends.
+# Install Linux dependencies (Ubuntu/Debian). Supports 'vulkan', 'egl', and 'glx' backends.
 # fontconfig is required for the slint example
 [linux]
 install-dependencies backend='vulkan':
     sudo apt-get update
     sudo apt-get install -y \
-      {{if backend == 'opengl' {'libgl1-mesa-dev libglu1-mesa-dev libx11-dev xvfb'} else if backend == 'vulkan' {'mesa-vulkan-drivers glslang-dev'} else {''} }} \
+      {{if backend == 'glx' {'libgl1-mesa-dev libglu1-mesa-dev libx11-dev'} else if backend == 'egl' {'libgl1-mesa-dev libglu1-mesa-dev libegl1-mesa-dev libgl1-mesa-dri'} else if backend == 'vulkan' {'mesa-vulkan-drivers glslang-dev'} else {''} }} \
+      {{if backend == 'glx' {'xvfb'} else {''} }} \
       build-essential \
       libcurl4-openssl-dev \
       libuv1-dev \

@@ -9,6 +9,9 @@ edition = "2024"
 # explicit features here let callers override (`cargo run --features ...`).
 metal = ["maplibre_native/metal"]
 opengl = ["maplibre_native/opengl"]
+egl = ["maplibre_native/egl"]
+glx = ["maplibre_native/glx"]
+x11 = ["maplibre_native/x11"]
 vulkan = ["maplibre_native/vulkan"]
 
 [dependencies]

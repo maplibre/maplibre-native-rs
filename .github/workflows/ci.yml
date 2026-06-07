@@ -43,12 +43,12 @@ jobs:
             backend: vulkan
             precompiled: 0
             amalgam: 0
-          # - runs-on: ubuntu-latest
-          #   backend: vulkan
-          #   precompiled: 1
-          #   amalgam: 1
           - runs-on: ubuntu-latest
-            backend: opengl
+            backend: glx
+            precompiled: 0
+            amalgam: 0
+          - runs-on: ubuntu-latest
+            backend: egl
             precompiled: 0
             amalgam: 0
           # Linux ARM
@@ -80,11 +80,11 @@ jobs:
           echo "VK_ICD_FILENAMES=$(brew --prefix molten-vk)/etc/vulkan/icd.d/MoltenVK_icd.json" >> $GITHUB_ENV
           echo "DYLD_LIBRARY_PATH=$(brew --prefix vulkan-loader)/lib" >> $GITHUB_ENV
       - run: rustup update stable && rustup default stable
-      - name: Run CI tests (Linux OpenGL via Xvfb)
-        if: startsWith(matrix.runs-on, 'ubuntu') && matrix.backend == 'opengl'
+      - name: Run CI tests (Linux OpenGL GLX via Xvfb)
+        if: startsWith(matrix.runs-on, 'ubuntu') && matrix.backend == 'glx'
         run: xvfb-run -a --server-args="-screen 0 1280x1024x24" just ci-test ${{ matrix.backend }}
       - name: Run CI tests
-        if: ${{ !(startsWith(matrix.runs-on, 'ubuntu') && matrix.backend == 'opengl') }}
+        if: ${{ !(startsWith(matrix.runs-on, 'ubuntu') && matrix.backend == 'glx') }}
         run: just ci-test ${{ matrix.backend }}
 
   test-msrv:
@@ -102,12 +102,12 @@ jobs:
             precompiled: 0
             amalgam: 0
           - runs-on: ubuntu-latest
-            backend: opengl
+            backend: glx
             precompiled: 0
             amalgam: 0
           # Linux ARM
           - runs-on: ubuntu-24.04-arm
-            backend: opengl
+            backend: egl
             precompiled: 0
             amalgam: 0
           # macOS ARM
@@ -140,11 +140,11 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: ${{ steps.msrv.outputs.value }}
-      - name: Run CI tests (MSRV, Linux OpenGL via Xvfb)
-        if: startsWith(matrix.runs-on, 'ubuntu') && matrix.backend == 'opengl'
+      - name: Run CI tests (MSRV, Linux OpenGL GLX via Xvfb)
+        if: startsWith(matrix.runs-on, 'ubuntu') && matrix.backend == 'glx'
         run: xvfb-run -a --server-args="-screen 0 1280x1024x24" just ci_mode=0 ci-test-msrv ${{ matrix.backend }} # Ignore warnings in MSRV
       - name: Run CI tests (MSRV)
-        if: ${{ !(startsWith(matrix.runs-on, 'ubuntu') && matrix.backend == 'opengl') }}
+        if: ${{ !(startsWith(matrix.runs-on, 'ubuntu') && matrix.backend == 'glx') }}
         run: just ci_mode=0 ci-test-msrv ${{ matrix.backend }} # Ignore warnings in MSRV
 
   # This final step is needed to mark the whole workflow as successful

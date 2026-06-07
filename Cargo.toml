@@ -23,9 +23,19 @@ default = ["log", "json", "geojson"]
 metal = []
 opengl = []
 vulkan = []
-# Enables parsing style-spec layer JSON via `AnyLayer::from_json_str`/`from_json_value`.
+
+# Use an EGL context for OpenGL
+egl = ["opengl"]
+# Use a GLX context for OpenGL (Linux)
+glx = ["opengl", "x11"]
+# Build MapLibre Native with X11 support (Linux)
+x11 = []
+
+# Load styles/layers from JSON via `serde_json`
 json = ["dep:serde_json"]
+# Interoperate with the `geojson` crate
 geojson = ["dep:geojson"]
+# Logging via the `log` crate.
 log = ["dep:log"]
 
 [dependencies]
