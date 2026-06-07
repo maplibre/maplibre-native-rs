@@ -3,6 +3,8 @@
 #include <mbgl/style/conversion.hpp>
 #include <mbgl/style/conversion_impl.hpp>
 #include <mbgl/style/layer.hpp>
+#include <mbgl/style/source.hpp>
+#include <mbgl/util/geojson.hpp>
 
 #include <cmath>
 #include <cstdint>
@@ -76,6 +78,15 @@ void object_insert(StyleValue &obj, rust::Str key,
 // Parses a style-spec `Layer` object.
 std::unique_ptr<mbgl::style::Layer>
 layer_from_value(const StyleValue &value, rust::String &error_message);
+
+// Parses a style-spec `Source` object.
+std::unique_ptr<mbgl::style::Source>
+source_from_value(rust::Str id, const StyleValue &value,
+                  rust::String &error_message);
+
+std::optional<mbgl::GeoJSON>
+style_value_to_geojson(const StyleValue &value,
+                       mbgl::style::conversion::Error &error);
 
 } // namespace mln::bridge
 
@@ -179,9 +190,14 @@ public:
     return {};
   }
 
-  static std::optional<GeoJSON> toGeoJSON(T, Error &error) {
-    error = {"GeoJSON conversion from StyleValue is not implemented"};
-    return {};
+  // A GeoJSON source's `data` may be an inline GeoJSON object (not only a URL
+  // string), so source conversion calls this to parse it from the StyleValue tree.
+  static std::optional<GeoJSON> toGeoJSON(T value, Error &error) {
+    if (value == nullptr) {
+      error = {"GeoJSON value must not be null"};
+      return {};
+    }
+    return mln::bridge::style_value_to_geojson(*value, error);
   }
 };
 
