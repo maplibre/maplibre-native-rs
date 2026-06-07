@@ -43,19 +43,9 @@ enum GraphicsApi {
     Vulkan,
 }
 
-/// Whether to use an EGL context for Linux OpenGL (`MLN_WITH_EGL`).
-fn with_egl() -> bool {
-    env::var("CARGO_FEATURE_EGL").is_ok()
-}
-
 /// Whether to use a GLX context for Linux OpenGL.
 fn with_glx() -> bool {
     env::var("CARGO_FEATURE_GLX").is_ok()
-}
-
-/// Whether MapLibre Native should be built with X11 support (`MLN_WITH_X11`).
-fn with_x11() -> bool {
-    env::var("CARGO_FEATURE_X11").is_ok()
 }
 
 /// The OpenGL context/platform mbgl will use, derived from features and target OS.
@@ -71,12 +61,12 @@ enum OpenGlContext {
 
 /// Resolves the OpenGL context for the given target OS.
 ///
-/// Linux defaults to EGL. Explicit `glx` selects GLX, and `x11` without `egl`
-/// also selects GLX for compatibility with the previous Linux OpenGL path.
+/// Linux defaults to EGL. Explicit `glx` selects GLX through X11 for
+/// compatibility with the previous Linux OpenGL path.
 fn opengl_context(target_os: &str) -> OpenGlContext {
     match target_os {
         "linux" => {
-            if with_glx() || (with_x11() && !with_egl()) {
+            if with_glx() {
                 OpenGlContext::Glx
             } else {
                 OpenGlContext::Egl
@@ -91,16 +81,8 @@ fn opengl_context(target_os: &str) -> OpenGlContext {
 
 /// Emits `cargo:warning` for redundant or unsupported feature combinations.
 fn warn_feature_combinations(target_os: &str) {
-    if with_egl() && with_glx() {
-        println!("cargo::warning=Features 'egl' and 'glx' are both enabled; using GLX.");
-    }
-    if with_x11() && env::var("CARGO_FEATURE_OPENGL").is_ok() && with_egl() && !with_glx() {
-        println!(
-            "cargo::warning=Feature 'x11' has no effect on the EGL OpenGL context (X11 is linked but unused)."
-        );
-    }
-    if with_egl() && target_os != "linux" {
-        println!("cargo::warning=Feature 'egl' currently only affects Linux OpenGL builds.");
+    if with_glx() && target_os != "linux" {
+        println!("cargo::warning=Feature 'glx' currently only affects Linux OpenGL builds.");
     }
 }
 
@@ -472,7 +454,13 @@ fn build_local(
     config.configure_arg("-DMLN_WITH_GLFW=OFF");
     if target_os == "linux" {
         config.configure_arg("-DMLN_WITH_WAYLAND=OFF");
-        config.configure_arg(if with_x11() { "-DMLN_WITH_X11=ON" } else { "-DMLN_WITH_X11=OFF" });
+        config.configure_arg(
+            if matches!(backend, GraphicsRenderingAPI::OpenGL(OpenGlContext::Glx)) {
+                "-DMLN_WITH_X11=ON"
+            } else {
+                "-DMLN_WITH_X11=OFF"
+            },
+        );
     }
 
     // Forward an optional compiler launcher (sccache/ccache) so downstream CI can
@@ -648,7 +636,7 @@ fn build_mln() {
                 }
                 OpenGlContext::Glx => println!("cargo:rustc-link-lib=GL"),
             }
-            if target_os == "linux" && with_x11() {
+            if target_os == "linux" && context == OpenGlContext::Glx {
                 // The GLX context uses X11 symbols such as XInitThreads.
                 println!("cargo:rustc-link-lib=X11");
             }

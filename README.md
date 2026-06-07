@@ -22,11 +22,7 @@ This crate supports multiple rendering backends:
 - `metal` (default on macOS/iOS): `cargo build --features metal`
 - `opengl` (Linux/Windows): `cargo build --features opengl`
 
-OpenGL context and windowing features on Linux:
-
-- `egl`: use EGL context (default)
-- `glx`: use a GLX context. Implies `x11`
-- `x11`: build with X11 support
+On Linux, OpenGL uses EGL by default for headless rendering. Use the `glx` feature only when you explicitly need rendering through GLX/X11.
 
 We also support the following other features (all enabled by default):
 
@@ -81,7 +77,7 @@ The following platform and rendering-API combinations are supported and tested i
 ### Dependencies
 
 This command will install the required dependencies on Linux or macOS for the `vulkan` backend.
-You may also use it with the `egl` or `glx` parameter on Linux.
+You may also use it with the `opengl` or `glx` parameter on Linux.
 It is OK to run this command multiple times for each backend.
 
 ```shell

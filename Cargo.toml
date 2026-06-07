@@ -24,12 +24,8 @@ metal = []
 opengl = []
 vulkan = []
 
-# Use an EGL context for OpenGL
-egl = ["opengl"]
 # Use a GLX context for OpenGL (Linux)
-glx = ["opengl", "x11"]
-# Build MapLibre Native with X11 support (Linux)
-x11 = []
+glx = ["opengl"]
 
 # Load styles/layers from JSON via `serde_json`
 json = ["dep:serde_json"]

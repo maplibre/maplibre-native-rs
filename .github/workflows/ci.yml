@@ -55,7 +55,7 @@ jobs:
             precompiled: 0
             amalgam: 0
           - runs-on: ubuntu-latest
-            backend: egl
+            backend: opengl
             precompiled: 0
             amalgam: 0
           # Linux ARM
@@ -114,7 +114,7 @@ jobs:
             amalgam: 0
           # Linux ARM
           - runs-on: ubuntu-24.04-arm
-            backend: egl
+            backend: opengl
             precompiled: 0
             amalgam: 0
           # macOS ARM
