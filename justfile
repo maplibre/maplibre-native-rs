@@ -91,7 +91,8 @@ install-dependencies backend='vulkan':
     sudo apt-get update
     sudo apt-get install -y \
       {{if backend == 'glx' {'libgl1-mesa-dev libglu1-mesa-dev libx11-dev xvfb'} else {''} }} \
-      {{if backend == 'opengl' || backend == 'egl' {'libgl1-mesa-dev libglu1-mesa-dev libegl1-mesa-dev libgl1-mesa-dri'} else {''} }} \
+      {{if backend == 'egl' {'libgl1-mesa-dev libglu1-mesa-dev libegl1-mesa-dev libgl1-mesa-dri'} else {''} }} \
+      {{if backend == 'opengl' {'libgl1-mesa-dev libglu1-mesa-dev libegl1-mesa-dev libgl1-mesa-dri'} else {''} }} \
       {{if backend == 'vulkan' {'mesa-vulkan-drivers glslang-dev'} else {''} }} \
       build-essential \
       libcurl4-openssl-dev \
