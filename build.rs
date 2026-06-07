@@ -152,8 +152,9 @@ impl GraphicsRenderingAPI {
             }
         };
 
-        if selected == Self::OpenGL && target_os != "linux" && target_os != "windows" {
-            panic!(
+        if selected == Self::OpenGL {
+            assert!(
+                target_os == "linux" || target_os == "windows",
                 "the OpenGL backend is currently supported only on Linux and Windows; use `metal` on macOS/iOS"
             );
         }
