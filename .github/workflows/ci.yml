@@ -11,10 +11,6 @@ defaults:
   run:
     shell: bash
 
-env:
-  # Otherwise egl initialisation fails
-  # In CI we don't have a display-surface to render to
-  EGL_PLATFORM: surfaceless
 jobs:
   lint:
     name: Lint
