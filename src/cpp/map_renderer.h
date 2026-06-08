@@ -112,7 +112,7 @@ inline std::unique_ptr<std::string> encodeImage(mbgl::PremultipliedImage image) 
     return std::make_unique<std::string>(std::move(data));
 }
 
-// TODO: Remove this mutex once the upstream fix is released and `MLN_REVISION` is
+// TODO: Remove this mutex once the upstream fix is released and `MLN_COMMIT` is
 // bumped: https://github.com/maplibre/maplibre-native/pull/4332
 #if MLN_RENDER_BACKEND_OPENGL
 inline std::mutex& headlessDisplayMutex() {

@@ -235,7 +235,7 @@ update-maplibre-native: (assert-cmd "curl") (assert-cmd "jq")
         echo "Updating Maplibre Native Core from $MLN_CORE_RELEASE_SHA to $LATEST_MLN_CORE_RELEASE_SHA"
         sed -i.tmp -E "/\[package\.metadata\.mln\]/,/^\[/{s/release\s*=\s*\"[^\"]+\"/release = \"$LATEST_MLN_CORE_RELEASE_SHA\"/}" Cargo.toml && \
         rm -f Cargo.toml.tmp
-        sed -i.tmp "s/const MLN_REVISION: &str = \"[^\"]*\"/const MLN_REVISION: \&str = \"$LATEST_MLN_CORE_RELEASE_SHA\"/" build.rs
+        sed -i.tmp "s/const MLN_COMMIT: &str = \"[^\"]*\"/const MLN_COMMIT: \&str = \"$LATEST_MLN_CORE_RELEASE_SHA\"/" build.rs
         rm -f build.rs.tmp
     fi
 
