@@ -428,6 +428,7 @@ fn build_local(
         GraphicsRenderingAPI::Vulkan => {
             config.configure_arg("-DMLN_WITH_VULKAN=ON");
         }
+        #[cfg(feature = "wgpu")]
         GraphicsRenderingAPI::WGPU => {
             config.configure_arg("-DMLN_WITH_WEBGPU=ON");
             config.configure_arg("-DMLN_WEBGPU_IMPL_FFI=ON");
@@ -436,6 +437,10 @@ fn build_local(
                 "-DMLN_WEBGPU_IMPL_WEBGPU_HEADER_DIR={}",
                 webgpu_shim::WEBGPU_HEADER_INCLUDE_DIR
             ));
+        }
+        #[cfg(not(feature = "wgpu"))]
+        GraphicsRenderingAPI::WGPU => {
+            panic!("The `wgpu` feature must be enabled to use WGPU rendering.");
         }
     }
     if amalgam_lib {
@@ -468,7 +473,6 @@ fn build_local(
     ];
     if matches!(api, GraphicsRenderingAPI::WGPU) {
         maplibre_native_include_dirs.push("vendor/wgpu-native/ffi");
-        maplibre_native_include_dirs.push("vendor/wgpu-native/ffi/webgpu-headers");
         include_dirs.push(dest.join("build").join("webgpu-cpp"));
     }
 
