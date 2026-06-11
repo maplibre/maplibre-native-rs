@@ -472,6 +472,7 @@ fn build_local(
         "vendor/expected-lite/include",
     ];
     if matches!(api, GraphicsRenderingAPI::WGPU) {
+        maplibre_native_include_dirs.push("vendor/webgpu-cpp");
         maplibre_native_include_dirs.push("vendor/wgpu-native/ffi");
         include_dirs.push(dest.join("build").join("webgpu-cpp"));
     }
