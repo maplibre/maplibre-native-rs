@@ -56,6 +56,9 @@ geojson_into_source(std::unique_ptr<mbgl::style::GeoJSONSource> source);
 namespace mln::bridge::style::sources::geojson {
 std::unique_ptr<mbgl::style::GeoJSONSource> create(rust::Str id);
 
+void setURL(const std::unique_ptr<mbgl::style::GeoJSONSource> &source,
+            rust::Str url);
+
 void setGeoJson(mbgl::style::GeoJSONSource &source,
                 const mln::bridge::geojson::GeoJson &geojson);
 } // namespace mln::bridge::style::sources::geojson

@@ -168,6 +168,8 @@ pub mod sources {
 
         /// Creates a new GeoJSON source with the given ID.
         fn create(id: &str) -> UniquePtr<GeoJSONSource>;
+        /// Sets the URL for loading GeoJSON data.
+        fn setURL(source: &UniquePtr<GeoJSONSource>, url: &str);
         /// Sets the GeoJSON data for the source.
         fn setGeoJson(source: Pin<&mut GeoJSONSource>, geojson: &CxxGeoJson);
     }

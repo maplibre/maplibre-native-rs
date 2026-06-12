@@ -378,6 +378,76 @@ fn submodule_update<P: AsRef<Path>>(repository: P) -> Result<(), Box<dyn std::er
     Ok(())
 }
 
+fn configure_local_build(
+    config: &mut cmake::Config,
+    api: GraphicsRenderingAPI,
+    amalgam_lib: bool,
+    target_os: &str,
+) {
+    // maplibre-native's platform/darwin/darwin.cmake calls enable_language(Swift),
+    // which the default "Unix Makefiles" generator does not support. Switch to Ninja.
+    if target_os == "macos" || target_os == "ios" {
+        config.generator("Ninja");
+    }
+
+    match api {
+        GraphicsRenderingAPI::Metal => {
+            config.configure_arg("-DMLN_WITH_METAL=ON");
+        }
+        GraphicsRenderingAPI::OpenGL => {
+            config.configure_arg("-DMLN_WITH_OPENGL=ON");
+            if target_os == "linux" {
+                // GLX headless backend transitively requires X11.
+                config.configure_arg("-DMLN_WITH_X11=ON");
+            }
+        }
+        GraphicsRenderingAPI::Vulkan => {
+            config.configure_arg("-DMLN_WITH_VULKAN=ON");
+            if target_os == "linux" {
+                // Vulkan has no X11 dependency.
+                config.configure_arg("-DMLN_WITH_X11=OFF");
+            }
+        }
+        #[cfg(feature = "wgpu")]
+        GraphicsRenderingAPI::WGPU => {
+            config.configure_arg("-DMLN_WITH_WEBGPU=ON");
+            config.configure_arg("-DMLN_WEBGPU_IMPL_FFI=ON");
+            config.configure_arg("-DMLN_WEBGPU_IMPL_WGPU=ON");
+            if target_os == "linux" {
+                // The WGPU backend does not need X11.
+                config.configure_arg("-DMLN_WITH_X11=OFF");
+            }
+            config.configure_arg(format!(
+                "-DMLN_WEBGPU_IMPL_WEBGPU_HEADER_DIR={}",
+                webgpu_shim::WEBGPU_HEADER_INCLUDE_DIR
+            ));
+        }
+        #[cfg(not(feature = "wgpu"))]
+        GraphicsRenderingAPI::WGPU => {
+            panic!("The `wgpu` feature must be enabled to use WGPU rendering.");
+        }
+    }
+    if amalgam_lib {
+        config.configure_arg("-DMLN_CREATE_AMALGAMATION:BOOL=ON");
+    }
+    if target_os == "linux" {
+        config.configure_arg("-DMLN_WITH_WAYLAND=OFF");
+    }
+
+    // We only build the `mbgl-core` target, so skip configuring the GLFW demo app.
+    config.configure_arg("-DMLN_WITH_GLFW=OFF");
+
+    // Forward an optional compiler launcher (sccache/ccache) so downstream CI can
+    // cache the C++ objects without patching this crate.
+    println!("cargo:rerun-if-env-changed=MLN_CMAKE_CXX_LAUNCHER");
+    if let Ok(launcher) = env::var("MLN_CMAKE_CXX_LAUNCHER") {
+        if !launcher.trim().is_empty() {
+            config.define("CMAKE_CXX_COMPILER_LAUNCHER", launcher.trim());
+            config.define("CMAKE_C_COMPILER_LAUNCHER", launcher.trim());
+        }
+    }
+}
+
 fn build_local(
     respository_dir: &Path,
     name: &str,
@@ -413,63 +483,7 @@ fn build_local(
     let mut config = cmake::Config::new(maplibre_native_dir.clone());
     config.build_target(TARGET_NAME);
     let api = GraphicsRenderingAPI::from_selected_features();
-
-    // maplibre-native's platform/darwin/darwin.cmake calls enable_language(Swift),
-    // which the default "Unix Makefiles" generator does not support. Switch to Ninja.
-    if target_os == "macos" || target_os == "ios" {
-        config.generator("Ninja");
-    }
-
-    match api {
-        GraphicsRenderingAPI::Metal => {
-            config.configure_arg("-DMLN_WITH_METAL=ON");
-        }
-        GraphicsRenderingAPI::OpenGL => {
-            config.configure_arg("-DMLN_WITH_OPENGL=ON");
-            #[cfg(target_os = "linux")]
-            // GLX headless backend transitively requires X11.
-            config.configure_arg("-DMLN_WITH_X11=ON");
-        }
-        GraphicsRenderingAPI::Vulkan => {
-            config.configure_arg("-DMLN_WITH_VULKAN=ON");
-            #[cfg(target_os = "linux")]
-            // Vulkan has no X11 dependency.
-            config.configure_arg("-DMLN_WITH_X11=OFF");
-        }
-        #[cfg(feature = "wgpu")]
-        GraphicsRenderingAPI::WGPU => {
-            config.configure_arg("-DMLN_WITH_WEBGPU=ON");
-            config.configure_arg("-DMLN_WEBGPU_IMPL_FFI=ON");
-            config.configure_arg("-DMLN_WEBGPU_IMPL_WGPU=ON");
-            config.configure_arg("-DMLN_WITH_X11=OFF");
-            config.configure_arg(format!(
-                "-DMLN_WEBGPU_IMPL_WEBGPU_HEADER_DIR={}",
-                webgpu_shim::WEBGPU_HEADER_INCLUDE_DIR
-            ));
-        }
-        #[cfg(not(feature = "wgpu"))]
-        GraphicsRenderingAPI::WGPU => {
-            panic!("The `wgpu` feature must be enabled to use WGPU rendering.");
-        }
-    }
-    if amalgam_lib {
-        config.configure_arg("-DMLN_CREATE_AMALGAMATION:BOOL=ON");
-    }
-    #[cfg(target_os = "linux")]
-    config.configure_arg("-DMLN_WITH_WAYLAND=OFF");
-
-    // We only build the `mbgl-core` target, so skip configuring the GLFW demo app.
-    config.configure_arg("-DMLN_WITH_GLFW=OFF");
-
-    // Forward an optional compiler launcher (sccache/ccache) so downstream CI can
-    // cache the C++ objects without patching this crate.
-    println!("cargo:rerun-if-env-changed=MLN_CMAKE_CXX_LAUNCHER");
-    if let Ok(launcher) = env::var("MLN_CMAKE_CXX_LAUNCHER") {
-        if !launcher.trim().is_empty() {
-            config.define("CMAKE_CXX_COMPILER_LAUNCHER", launcher.trim());
-            config.define("CMAKE_C_COMPILER_LAUNCHER", launcher.trim());
-        }
-    }
+    configure_local_build(&mut config, api, amalgam_lib, target_os);
 
     let dest = config.build();
     println!("cargo:rustc-link-search=native={}", dest.join("build").display());
