@@ -23,7 +23,7 @@ default = ["log", "json", "geojson"]
 metal = []
 opengl = []
 vulkan = []
-wgpu = ["dep:wgpu"]
+wgpu = ["dep:webgpu-shim", "dep:wgpu"]
 # Enables parsing style-spec layer JSON via `AnyLayer::from_json_str`/`from_json_value`.
 json = ["dep:serde_json"]
 geojson = ["dep:geojson"]
@@ -37,7 +37,7 @@ log = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }
 thiserror.workspace = true
 url.workspace = true
-webgpu-shim.workspace = true
+webgpu-shim = { workspace = true, optional = true }
 wgpu = { workspace = true, optional = true }
 
 [build-dependencies]
@@ -49,7 +49,7 @@ flate2.workspace = true
 tar.workspace = true
 toml = "0.8"
 walkdir.workspace = true
-webgpu-shim.workspace = true
+webgpu-shim = { workspace = true, optional = true }
 
 [dev-dependencies]
 env_logger.workspace = true
