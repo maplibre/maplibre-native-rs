@@ -90,10 +90,9 @@ get-msrv package=main_crate:  (get-crate-field 'rust_version' package)
 install-dependencies backend='vulkan':
     sudo apt-get update
     sudo apt-get install -y \
-      {{if backend == 'opengl' {'libgl1-mesa-dev libglu1-mesa-dev libx11-dev'} else if backend == 'vulkan' {'mesa-vulkan-drivers glslang-dev'} else {''} }} \
+      {{if backend == 'opengl' {'libgl1-mesa-dev libglu1-mesa-dev libx11-dev xvfb'} else if backend == 'vulkan' {'mesa-vulkan-drivers glslang-dev'} else {''} }} \
       build-essential \
       libcurl4-openssl-dev \
-      libglfw3-dev \
       libuv1-dev \
       libz-dev \
       libfontconfig-dev \
@@ -105,7 +104,6 @@ install-dependencies backend='vulkan':
       libwebp-dev \
       ccache \
       cmake \
-      xvfb \
       pkg-config # required for fontconfig detection
 
 # Install macOS dependencies via Homebrew.
@@ -117,7 +115,6 @@ install-dependencies backend='vulkan':
         cmake \
         ninja \
         curl \
-        glfw \
         libuv \
         libpng \
         jpeg-turbo \

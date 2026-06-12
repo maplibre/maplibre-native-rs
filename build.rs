@@ -6,6 +6,8 @@
 //!
 //! IMPORTANT: The library path must point to the amalgam library which contains all the dependent libraries if `MLN_CORE_LIBRARY_NO_AMALGAM` is not set!
 //!
+//! Set `MLN_CMAKE_CXX_LAUNCHER` to forward a compiler launcher (e.g. `ccache`/`sccache`) to `CMAKE_CXX_COMPILER_LAUNCHER` when building from source.
+//!
 //! Required libraries:
 //! Fedora:
 //!     - `sudo dnf install libicu-devel libglslang-devel spirv-tools-devel libpng-devel libjpeg-turbo-devel libuv-devel libwebp-devel`
@@ -424,9 +426,15 @@ fn build_local(
         }
         GraphicsRenderingAPI::OpenGL => {
             config.configure_arg("-DMLN_WITH_OPENGL=ON");
+            #[cfg(target_os = "linux")]
+            // GLX headless backend transitively requires X11.
+            config.configure_arg("-DMLN_WITH_X11=ON");
         }
         GraphicsRenderingAPI::Vulkan => {
             config.configure_arg("-DMLN_WITH_VULKAN=ON");
+            #[cfg(target_os = "linux")]
+            // Vulkan has no X11 dependency.
+            config.configure_arg("-DMLN_WITH_X11=OFF");
         }
         #[cfg(feature = "wgpu")]
         GraphicsRenderingAPI::WGPU => {
@@ -446,10 +454,22 @@ fn build_local(
     if amalgam_lib {
         config.configure_arg("-DMLN_CREATE_AMALGAMATION:BOOL=ON");
     }
-    if cfg!(target_os = "linux") {
-        config.configure_arg("-DMLN_WITH_WAYLAND=OFF");
-        config.configure_arg("-DMLN_WITH_X11=ON");
+    #[cfg(target_os = "linux")]
+    config.configure_arg("-DMLN_WITH_WAYLAND=OFF");
+
+    // We only build the `mbgl-core` target, so skip configuring the GLFW demo app.
+    config.configure_arg("-DMLN_WITH_GLFW=OFF");
+
+    // Forward an optional compiler launcher (sccache/ccache) so downstream CI can
+    // cache the C++ objects without patching this crate.
+    println!("cargo:rerun-if-env-changed=MLN_CMAKE_CXX_LAUNCHER");
+    if let Ok(launcher) = env::var("MLN_CMAKE_CXX_LAUNCHER") {
+        if !launcher.trim().is_empty() {
+            config.define("CMAKE_CXX_COMPILER_LAUNCHER", launcher.trim());
+            config.define("CMAKE_C_COMPILER_LAUNCHER", launcher.trim());
+        }
     }
+
     let dest = config.build();
     println!("cargo:rustc-link-search=native={}", dest.join("build").display());
     println!(
@@ -638,7 +658,6 @@ fn build_mln() {
         }
         GraphicsRenderingAPI::OpenGL => {
             println!("cargo:rustc-link-lib=GL");
-            println!("cargo:rustc-link-lib=EGL");
             if cfg!(target_os = "linux") {
                 // GLX backend uses X11 symbols such as XInitThreads.
                 println!("cargo:rustc-link-lib=X11");

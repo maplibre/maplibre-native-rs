@@ -134,7 +134,7 @@ fn style(map: &Rc<RefCell<MapLibre>>) {
     .unwrap()
     .decode()
     .unwrap();
-    let image_id = style.add_image("The id", &image, true).unwrap();
+    let image_id = style.add_image("The id", &image, 1.0, true).unwrap();
 
     let mut shapes_source = GeoJsonSource::new("shapes-source");
     let shapes = r#"{

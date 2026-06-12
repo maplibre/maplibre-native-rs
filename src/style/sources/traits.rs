@@ -1,7 +1,7 @@
 use sealed::IntoSource;
 
 use crate::bridge::{ffi, sources};
-use crate::style::GeoJsonSource;
+use crate::style::{AnySource, GeoJsonSource};
 
 mod sealed {
     use crate::bridge::ffi;
@@ -29,3 +29,15 @@ impl IntoSource for GeoJsonSource {
 }
 
 impl Source for GeoJsonSource {}
+
+impl IntoSource for AnySource {
+    fn source_id(&self) -> &str {
+        self.source_id()
+    }
+
+    fn into_source(self) -> cxx::UniquePtr<ffi::CxxSource> {
+        self.into_inner()
+    }
+}
+
+impl Source for AnySource {}

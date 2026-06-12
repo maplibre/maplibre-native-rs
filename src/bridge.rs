@@ -92,16 +92,41 @@ impl std::fmt::Debug for geojson::GeoJson {
 /// Currently supports GeoJSON sources, with extensibility for additional source types.
 #[cxx::bridge()]
 pub mod sources {
+    /// MapLibre style-spec source type.
+    /// Rust mirror of `mbgl::style::SourceType`.
+    #[derive(Debug)]
+    #[namespace = "mbgl::style"]
+    enum SourceType {
+        /// Vector tile source.
+        Vector,
+        /// Raster tile source.
+        Raster,
+        /// Raster DEM source.
+        RasterDEM,
+        /// GeoJSON source.
+        GeoJSON,
+        /// Video source.
+        Video,
+        /// Annotations source.
+        Annotations,
+        /// Image source.
+        Image,
+        /// Custom vector source.
+        CustomVector,
+    }
+
     #[namespace = "mbgl::style"]
     extern "C++" {
         include!("mbgl/style/source.hpp");
         include!("mbgl/style/sources/geojson_source.hpp");
-
+        include!("mbgl/style/types.hpp");
         // Opaque types
         /// Base class for all MapLibre Native style sources.
         type Source;
         /// A GeoJSON source for MapLibre rendering.
         type GeoJSONSource;
+        /// `mbgl::style::SourceType`
+        type SourceType;
     }
 
     #[namespace = "mln::bridge::geojson"]
@@ -117,6 +142,22 @@ pub mod sources {
     unsafe extern "C++" {
         include!("sources/sources.h");
 
+        /// A non-owning handle to a style-owned source.
+        type SourceHandle;
+        /// A non-owning handle to a style-owned GeoJSON source.
+        type GeoJSONSourceHandle;
+
+        /// Returns the source ID.
+        fn sourceId(self: &SourceHandle) -> String;
+        /// Returns the MapLibre style-spec source type.
+        fn sourceType(self: &SourceHandle) -> SourceType;
+        /// Downcasts this handle to a GeoJSON source handle, if it is one.
+        fn asGeoJson(self: &SourceHandle) -> UniquePtr<GeoJSONSourceHandle>;
+        /// Returns the GeoJSON source ID.
+        fn sourceId(self: &GeoJSONSourceHandle) -> String;
+        /// Sets the GeoJSON data for this source.
+        fn setGeoJson(self: Pin<&mut GeoJSONSourceHandle>, geojson: &CxxGeoJson);
+
         /// Upcasts a GeoJSON source handle to the base `Source` type.
         fn geojson_into_source(source: UniquePtr<GeoJSONSource>) -> UniquePtr<Source>;
     }
@@ -128,10 +169,13 @@ pub mod sources {
         /// Creates a new GeoJSON source with the given ID.
         fn create(id: &str) -> UniquePtr<GeoJSONSource>;
         /// Sets the GeoJSON data for the source.
-        fn setGeoJson(source: &UniquePtr<GeoJSONSource>, geojson: &CxxGeoJson);
-        /// Sets the URL for loading GeoJSON data.
-        fn setURL(source: &UniquePtr<GeoJSONSource>, url: &str);
+        fn setGeoJson(source: Pin<&mut GeoJSONSource>, geojson: &CxxGeoJson);
     }
+
+    // Generate `UniquePtr<SourceHandle>` support. cxx emits it only in the
+    // module that uses the type in a signature, but `SourceHandle` is only
+    // returned via the `ffi` module's alias, so request it explicitly here.
+    impl UniquePtr<SourceHandle> {}
 }
 
 impl std::fmt::Debug for sources::GeoJSONSource {
@@ -244,10 +288,8 @@ pub mod layers {
         include!("layers/layers.h");
 
         /// Returns the layer's ID (the style-spec `"id"` field).
-        #[cfg(feature = "json")]
         fn layer_id(layer: &UniquePtr<Layer>) -> String;
         /// Returns the layer's type name (e.g. `"circle"`, `"fill"`).
-        #[cfg(feature = "json")]
         fn layer_type(layer: &UniquePtr<Layer>) -> String;
 
         /// Upcasts a circle layer handle to the base `Layer` type.
@@ -264,16 +306,12 @@ pub mod layers {
         fn symbol_into_layer(layer: UniquePtr<SymbolLayer>) -> UniquePtr<Layer>;
 
         /// Downcasts a base layer handle to a circle layer. Returns null on type mismatch.
-        #[cfg(feature = "json")]
         fn try_into_circle(layer: UniquePtr<Layer>) -> UniquePtr<CircleLayer>;
         /// Downcasts a base layer handle to a fill layer. Returns null on type mismatch.
-        #[cfg(feature = "json")]
         fn try_into_fill(layer: UniquePtr<Layer>) -> UniquePtr<FillLayer>;
         /// Downcasts a base layer handle to a line layer. Returns null on type mismatch.
-        #[cfg(feature = "json")]
         fn try_into_line(layer: UniquePtr<Layer>) -> UniquePtr<LineLayer>;
         /// Downcasts a base layer handle to a symbol layer. Returns null on type mismatch.
-        #[cfg(feature = "json")]
         fn try_into_symbol(layer: UniquePtr<Layer>) -> UniquePtr<SymbolLayer>;
 
         /// Creates a new circle layer.
@@ -342,9 +380,12 @@ pub mod style_value {
     #[namespace = "mbgl::style"]
     extern "C++" {
         include!("mbgl/style/layer.hpp");
+        include!("mbgl/style/source.hpp");
 
         #[rust_name = "StyleLayer"]
         type Layer = crate::bridge::layers::Layer;
+        #[rust_name = "StyleSource"]
+        type Source = crate::bridge::sources::Source;
     }
 
     unsafe extern "C++" {
@@ -382,6 +423,14 @@ pub mod style_value {
             value: &StyleValue,
             error_message: &mut String,
         ) -> UniquePtr<StyleLayer>;
+
+        /// Parses a style-spec source object from a `StyleValue` tree.
+        /// On failure, `error_message` is populated and the returned pointer is null.
+        fn source_from_value(
+            id: &str,
+            value: &StyleValue,
+            error_message: &mut String,
+        ) -> UniquePtr<StyleSource>;
     }
 }
 
@@ -937,6 +986,20 @@ pub mod ffi {
         type Layer = super::layers::Layer;
     }
 
+    #[namespace = "mln::bridge::style::sources"]
+    extern "C++" {
+        /// Source handle opaque type.
+        #[rust_name = "CxxSourceHandle"]
+        type SourceHandle = super::sources::SourceHandle;
+    }
+
+    #[namespace = "mln::bridge::geojson"]
+    extern "C++" {
+        /// GeoJSON value opaque type.
+        #[rust_name = "FfiGeoJson"]
+        type GeoJson = super::geojson::GeoJson;
+    }
+
     #[namespace = "mbgl::webgpu"]
     extern "C++" {
         #[cfg(feature = "wgpu")]
@@ -1004,6 +1067,22 @@ pub mod ffi {
             bearing: f64,
             pitch: f64,
         ) -> FfiCameraOptions;
+        /// Calculates camera options that fit geographic coordinates.
+        fn cameraForLatLngs(
+            self: Pin<&mut MapRenderer>,
+            lat_lngs: &[LatLng],
+            padding: &EdgeInsets,
+            bearing: f64,
+            pitch: f64,
+        ) -> FfiCameraOptions;
+        /// Calculates camera options that fit a GeoJSON value's geometry.
+        fn cameraForGeoJson(
+            self: Pin<&mut MapRenderer>,
+            geojson: &FfiGeoJson,
+            padding: &EdgeInsets,
+            bearing: f64,
+            pitch: f64,
+        ) -> FfiCameraOptions;
         /// Returns whether a render request has completed.
         fn isReady(self: &RenderRequest) -> bool;
         /// Returns whether a completed render request failed.
@@ -1042,6 +1121,7 @@ pub mod ffi {
             id: &str,
             data: &[u8],
             size: Size,
+            pixel_ratio: f32,
             signed_distance_field: bool,
         ) -> Result<()>;
         /// Removes an image from the style.
@@ -1051,6 +1131,11 @@ pub mod ffi {
             self: Pin<&mut MapRenderer>,
             source: UniquePtr<CxxSource>,
         ) -> Result<()>;
+        /// Gets a mutable reference to a style source by ID.
+        fn style_get_source_mut(
+            self: Pin<&mut MapRenderer>,
+            id: &str,
+        ) -> UniquePtr<CxxSourceHandle>;
         /// Removes a source from the style by ID.
         fn style_remove_source(self: Pin<&mut MapRenderer>, id: &str);
         /// Adds a layer to the style, optionally before an existing layer
@@ -1060,8 +1145,8 @@ pub mod ffi {
             layer: UniquePtr<CxxLayer>,
             before_id: &str,
         ) -> Result<()>;
-        /// Removes a layer from the style by ID.
-        fn style_remove_layer(self: Pin<&mut MapRenderer>, id: &str);
+        /// Removes a layer from the style by ID and returns it.
+        fn style_remove_layer(self: Pin<&mut MapRenderer>, id: &str) -> UniquePtr<CxxLayer>;
 
         #[cfg(feature = "wgpu")]
         fn setDeviceAndQueue(self: Pin<&mut MapRenderer>, device: WGPUDevice, queue: WGPUQueue);

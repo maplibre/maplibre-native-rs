@@ -2,14 +2,11 @@
 
 use std::num::NonZeroU32;
 use std::path::PathBuf;
-use std::time::{Duration, Instant};
 
 use maplibre_native::{
-    CameraUpdate, CircleLayer, Color, FillLayer, GeoJson, GeoJsonSource, Image, ImageRenderer,
-    ImageRendererBuilder, LatLng, LineCap, LineJoin, LineLayer, Static,
+    CameraUpdate, CircleLayer, Color, FillLayer, GeoJson, GeoJsonSource, ImageRenderer,
+    ImageRendererBuilder, LatLng, LineCap, LineJoin, LineLayer, SourceRefMut, Static,
 };
-
-const RENDER_TIMEOUT: Duration = Duration::from_secs(5);
 
 fn fixture_path(name: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests").join("fixtures").join(name)
@@ -73,6 +70,15 @@ fn overlay_geojson() -> GeoJson {
     .expect("inline GeoJSON should parse")
 }
 
+fn empty_geojson() -> GeoJson {
+    r#"{
+        "type": "FeatureCollection",
+        "features": []
+    }"#
+    .parse::<GeoJson>()
+    .expect("inline GeoJSON should parse")
+}
+
 fn has_non_background_pixel(image: &image::RgbaImage) -> bool {
     image.pixels().any(|pixel| {
         let [red, green, blue, alpha] = pixel.0;
@@ -80,21 +86,19 @@ fn has_non_background_pixel(image: &image::RgbaImage) -> bool {
     })
 }
 
-fn render_until<F>(renderer: &mut ImageRenderer<Static>, predicate: F) -> Image
-where
-    F: Fn(&Image) -> bool,
-{
-    let started = Instant::now();
-    loop {
-        let frame = renderer.render_static(&camera(1.0)).expect("GeoJSON layers should render");
-        if predicate(&frame) {
-            break frame;
-        }
-        assert!(
-            started.elapsed() < RENDER_TIMEOUT,
-            "GeoJSON layers did not draw expected pixels within {RENDER_TIMEOUT:?}",
-        );
-    }
+fn has_green_pixel(image: &image::RgbaImage) -> bool {
+    image.pixels().any(|pixel| {
+        let [red, green, _blue, alpha] = pixel.0;
+        alpha > 0 && green > red.saturating_add(20)
+    })
+}
+
+fn render(renderer: &mut ImageRenderer<Static>) -> image::RgbaImage {
+    renderer.render_static(&camera(1.0)).expect("static render should succeed").as_image().clone()
+}
+
+fn center_pixel(image: &image::RgbaImage) -> image::Rgba<u8> {
+    *image.get_pixel(image.width() / 2, image.height() / 2)
 }
 
 #[test]
@@ -128,10 +132,45 @@ fn geojson_source_renders_circle_line_and_fill_layers() {
     circle.set_circle_stroke_width(2.0);
     style.add_layer(circle).expect("circle layer should be added");
 
-    let image = render_until(&mut renderer, |image| has_non_background_pixel(image.as_image()));
+    let image = render(&mut renderer);
+    assert!(has_non_background_pixel(&image), "GeoJSON layers should draw visible pixels");
+    assert_eq!(image.width(), 128);
+    assert_eq!(image.height(), 128);
+}
 
-    assert_eq!(image.as_image().width(), 128);
-    assert_eq!(image.as_image().height(), 128);
+#[test]
+fn geojson_source_ref_mut_updates_existing_source() {
+    let mut renderer = renderer();
+
+    let mut source = GeoJsonSource::new("dynamic-source");
+    let geojson = overlay_geojson();
+    source.set_geojson(&geojson);
+
+    {
+        let mut style = renderer.style();
+        let source_id = style.add_source(source).expect("GeoJSON source should be added");
+
+        let mut fill = FillLayer::new("dynamic-fill", &source_id);
+        fill.set_fill_color(Color::rgb(0.0, 1.0, 0.0));
+        style.add_layer(fill).expect("fill layer should be added");
+    }
+
+    let image = render(&mut renderer);
+    assert!(has_green_pixel(&image), "fill should render green before the update");
+
+    {
+        let mut style = renderer.style();
+        let Some(SourceRefMut::GeoJson(mut source)) = style.source_mut("dynamic-source") else {
+            panic!("dynamic-source should be a GeoJSON source");
+        };
+        assert_eq!(source.source_id().as_str(), "dynamic-source");
+        source.set_geojson(&empty_geojson());
+    }
+
+    let image = render(&mut renderer);
+    assert!(!has_green_pixel(&image), "green should disappear after clearing the source");
+    assert_eq!(image.width(), 128);
+    assert_eq!(image.height(), 128);
 }
 
 #[test]
@@ -139,7 +178,7 @@ fn layer_management_methods_smoke_test() {
     let mut renderer = renderer();
     let mut style = renderer.style();
 
-    style.remove_layer("missing-layer");
+    assert!(style.remove_layer("missing-layer").is_none());
     style.remove_source("missing-source");
 
     let mut source = GeoJsonSource::new("removable-source");
@@ -172,9 +211,9 @@ fn layer_management_methods_smoke_test() {
         .expect("layer with missing before id should append");
     assert_eq!(missing_before_layer.as_str(), "missing-before-layer");
 
-    style.remove_layer(&before_layer);
-    style.remove_layer(&missing_before_layer);
-    style.remove_layer(&removable_layer);
+    assert!(style.remove_layer(&before_layer).is_some());
+    assert!(style.remove_layer(&missing_before_layer).is_some());
+    assert!(style.remove_layer(&removable_layer).is_some());
     style.remove_source(&source_id);
 
     let mut source = GeoJsonSource::new("removable-source");
@@ -187,7 +226,42 @@ fn layer_management_methods_smoke_test() {
     let removable_layer = style.add_layer(circle).expect("circle layer should be re-added");
     assert_eq!(removable_layer.as_str(), "removable-layer");
 
-    let image = render_until(&mut renderer, |image| has_non_background_pixel(image.as_image()));
-    assert_eq!(image.as_image().width(), 128);
-    assert_eq!(image.as_image().height(), 128);
+    let image = render(&mut renderer);
+    assert!(has_non_background_pixel(&image), "re-added layer should draw visible pixels");
+    assert_eq!(image.width(), 128);
+    assert_eq!(image.height(), 128);
+}
+
+#[test]
+fn removed_layer_can_be_added_again() {
+    let mut renderer = renderer();
+    let mut style = renderer.style();
+
+    let mut source = GeoJsonSource::new("move-source");
+    source.set_geojson(&overlay_geojson());
+    let source_id = style.add_source(source).expect("GeoJSON source should be added");
+
+    let mut red = CircleLayer::new("move-red", &source_id);
+    red.set_circle_color(Color::rgb(1.0, 0.0, 0.0));
+    red.set_circle_radius(24.0);
+    let red_layer = style.add_layer(red).expect("red layer should be added");
+
+    let mut green = CircleLayer::new("move-green", &source_id);
+    green.set_circle_color(Color::rgb(0.0, 1.0, 0.0));
+    green.set_circle_radius(24.0);
+    let green_layer =
+        style.add_layer_before(green, &red_layer).expect("green layer should be added below red");
+
+    let image = render(&mut renderer);
+    let [red, green, _blue, _alpha] = center_pixel(&image).0;
+    assert!(red > green, "red should render above green before removing");
+
+    let mut style = renderer.style();
+    let green = style.remove_layer(&green_layer).expect("green layer should be removed");
+    assert!(style.remove_layer("missing-layer").is_none());
+    style.add_layer(green).expect("green layer should be added again");
+
+    let image = render(&mut renderer);
+    let [red, green, _blue, _alpha] = center_pixel(&image).0;
+    assert!(green > red, "green should render above red after re-adding");
 }

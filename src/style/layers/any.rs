@@ -65,6 +65,27 @@ pub enum AnyLayer {
 }
 
 impl AnyLayer {
+    pub(crate) fn from_layer_ptr(layer: UniquePtr<ffi::CxxLayer>) -> Option<Self> {
+        if layer.is_null() {
+            return None;
+        }
+
+        let layer_id = layers::layer_id(&layer);
+        let layer_type = layers::layer_type(&layer);
+
+        Some(match layer_type.as_str() {
+            "circle" => {
+                Self::Circle(CircleLayer::from_ffi_parts(layer_id, layers::try_into_circle(layer)))
+            }
+            "fill" => Self::Fill(FillLayer::from_ffi_parts(layer_id, layers::try_into_fill(layer))),
+            "line" => Self::Line(LineLayer::from_ffi_parts(layer_id, layers::try_into_line(layer))),
+            "symbol" => {
+                Self::Symbol(SymbolLayer::from_ffi_parts(layer_id, layers::try_into_symbol(layer)))
+            }
+            _ => Self::Opaque(OpaqueLayer { layer_id, layer_type, layer }),
+        })
+    }
+
     /// Parses a single style-spec layer object from a JSON string.
     ///
     /// # Errors
@@ -91,20 +112,7 @@ impl AnyLayer {
         if layer.is_null() {
             return Err(StyleError::Native(error_message));
         }
-        let layer_id = layers::layer_id(&layer);
-        let layer_type = layers::layer_type(&layer);
-
-        Ok(match layer_type.as_str() {
-            "circle" => {
-                Self::Circle(CircleLayer::from_ffi_parts(layer_id, layers::try_into_circle(layer)))
-            }
-            "fill" => Self::Fill(FillLayer::from_ffi_parts(layer_id, layers::try_into_fill(layer))),
-            "line" => Self::Line(LineLayer::from_ffi_parts(layer_id, layers::try_into_line(layer))),
-            "symbol" => {
-                Self::Symbol(SymbolLayer::from_ffi_parts(layer_id, layers::try_into_symbol(layer)))
-            }
-            _ => Self::Opaque(OpaqueLayer { layer_id, layer_type, layer }),
-        })
+        Self::from_layer_ptr(layer).ok_or(StyleError::Native(error_message))
     }
 
     /// Returns the layer's ID.

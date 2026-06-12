@@ -14,7 +14,8 @@ use crate::bridge::ffi::BridgeImage;
 use crate::renderer::map_observer::MapObserverCallbacks;
 use crate::renderer::{MapDebugOptions, MapLoadError, MapLoadErrorKind};
 use crate::{
-    CameraUpdate, EdgeInsets, LatLng, LatLngBounds, RunLoopHandle, ScreenCoordinate, Size, StyleRef,
+    CameraUpdate, EdgeInsets, GeoJson, LatLng, LatLngBounds, RunLoopHandle, ScreenCoordinate, Size,
+    StyleRef,
 };
 
 /// A rendered map image.
@@ -398,6 +399,46 @@ impl<S> ImageRenderer<S> {
         let camera =
             self.instance.pin_mut().cameraForLatLngBounds(&bounds, &padding, bearing, pitch);
         CameraUpdate::from_camera_options(camera)
+    }
+
+    /// Calculates a camera update that fits geographic coordinates.
+    ///
+    /// Returns `None` when `lat_lngs` is empty.
+    #[must_use]
+    pub fn camera_for_lat_lngs(
+        &mut self,
+        lat_lngs: &[LatLng],
+        padding: Option<EdgeInsets>,
+        bearing: f64,
+        pitch: f64,
+    ) -> Option<CameraUpdate> {
+        let padding = padding.unwrap_or_default();
+        let camera = self.instance.pin_mut().cameraForLatLngs(lat_lngs, &padding, bearing, pitch);
+        (camera.has_center || camera.has_zoom).then(|| CameraUpdate::from_camera_options(camera))
+    }
+
+    /// Calculates a camera update that fits a GeoJSON value's geometry.
+    ///
+    /// Accepts any GeoJSON (a geometry, feature, or feature collection); its
+    /// geometry is fit into the view.
+    ///
+    /// Returns `None` when there is no geometry to fit — e.g. an empty feature
+    /// collection or an empty geometry collection — in which case MapLibre
+    /// Native produces no camera.
+    #[must_use]
+    pub fn camera_for_geojson(
+        &mut self,
+        geojson: &GeoJson,
+        padding: Option<EdgeInsets>,
+        bearing: f64,
+        pitch: f64,
+    ) -> Option<CameraUpdate> {
+        let padding = padding.unwrap_or_default();
+        let camera =
+            self.instance.pin_mut().cameraForGeoJson(geojson.as_inner(), &padding, bearing, pitch);
+        // An empty geometry yields a default (empty) `CameraOptions`; report that
+        // as "could not fit" rather than a silent no-op camera.
+        (camera.has_center || camera.has_zoom).then(|| CameraUpdate::from_camera_options(camera))
     }
 
     fn submit_with_camera(

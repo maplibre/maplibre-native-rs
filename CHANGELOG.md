@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.2](https://github.com/maplibre/maplibre-native-rs/compare/v0.8.1...v0.8.2) - 2026-06-08
+
+### Added
+
+- *(style)* add JSON source conversion ([#227](https://github.com/maplibre/maplibre-native-rs/pull/227))
+
+### Other
+
+- *(deps)* bump the all-actions-version-updates group with 2 updates ([#231](https://github.com/maplibre/maplibre-native-rs/pull/231))
+- don't configure glfw demo app and its x11 dependency ([#226](https://github.com/maplibre/maplibre-native-rs/pull/226))
+- forward `MLN_CMAKE_CXX_LAUNCHER` to cmake for ccache integration ([#224](https://github.com/maplibre/maplibre-native-rs/pull/224))
+
+## [0.8.1](https://github.com/maplibre/maplibre-native-rs/compare/v0.8.0...v0.8.1) - 2026-06-04
+
+### Added
+
+- *(style)* add mutable source refs for GeoJSON updates ([#215](https://github.com/maplibre/maplibre-native-rs/pull/215))
+
+## [0.8.0](https://github.com/maplibre/maplibre-native-rs/compare/v0.7.0...v0.8.0) - 2026-06-03
+
+### Added
+
+- *(renderer)* add camera_for_geojson and camera_for_lat_lngs ([#219](https://github.com/maplibre/maplibre-native-rs/pull/219))
+- *(style)* support pixel ratio for style images ([#220](https://github.com/maplibre/maplibre-native-rs/pull/220))
+- *(style)* return the removed layer from remove_layer ([#218](https://github.com/maplibre/maplibre-native-rs/pull/218))
+
+### Other
+
+- *(ci)* Fix update-maplibre-native workflow ([#216](https://github.com/maplibre/maplibre-native-rs/pull/216))
+
 ## [0.7.0](https://github.com/maplibre/maplibre-native-rs/compare/v0.6.1...v0.7.0) - 2026-06-01
 
 ### Other

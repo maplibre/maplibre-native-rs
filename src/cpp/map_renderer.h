@@ -33,6 +33,7 @@
 #include "rust/cxx.h"
 #include "rust_log_observer.h"
 #include "map_observer.h"
+#include "sources/sources.h"
 
 #if (!defined(__APPLE__) || defined(MLN_DARWIN_USE_LIBUV)) && __has_include(<uv.h>)
 #include <uv.h>
@@ -54,8 +55,12 @@ constexpr size_t BYTES_PER_PIXEL = 4; // rgba
 struct BridgeImage;
 class RenderRequest;
 struct FfiCameraOptions;
+struct LatLng;
 struct LatLngBounds;
 struct EdgeInsets;
+namespace geojson {
+class GeoJson;
+}
 
 inline mbgl::util::RunLoop& threadRunLoop() {
     // MapLibre Native's RunLoop is thread-affine. Keep one private loop per
@@ -154,12 +159,12 @@ public:
     void style_add_image(rust::Str id,
                          rust::Slice<const unsigned char> data,
                          mbgl::Size size,
+                         float pixel_ratio,
                          bool signed_distance_field) {
         mbgl::PremultipliedImage image(size, data.data(), data.size());
 
-        const float pixelRatio = 1.0;
         map->getStyle().addImage(std::make_unique<mbgl::style::Image>(
-            std::string(id), std::move(image), pixelRatio, signed_distance_field));
+            std::string(id), std::move(image), pixel_ratio, signed_distance_field));
     }
 
     void style_remove_image(rust::Str id) {
@@ -168,6 +173,14 @@ public:
 
     void style_add_source(std::unique_ptr<mbgl::style::Source> source) {
         map->getStyle().addSource(std::move(source));
+    }
+
+    std::unique_ptr<mln::bridge::style::sources::SourceHandle> style_get_source_mut(rust::Str id) {
+        auto* source = map->getStyle().getSource(std::string(id));
+        if (!source) {
+            return nullptr;
+        }
+        return std::make_unique<mln::bridge::style::sources::SourceHandle>(source);
     }
 
     void style_remove_source(rust::Str id) {
@@ -181,8 +194,8 @@ public:
             before_id.empty() ? std::nullopt : std::optional<std::string>{std::string(before_id)});
     }
 
-    void style_remove_layer(rust::Str id) {
-        map->getStyle().removeLayer(std::string(id));
+    std::unique_ptr<mbgl::style::Layer> style_remove_layer(rust::Str id) {
+        return map->getStyle().removeLayer(std::string(id));
     }
 
     void style_load_from_url(const rust::Str styleUrl) {
@@ -209,6 +222,16 @@ public:
                                            const EdgeInsets& padding,
                                            double bearing,
                                            double pitch);
+
+    FfiCameraOptions cameraForLatLngs(rust::Slice<const LatLng> latLngs,
+                                      const EdgeInsets& padding,
+                                      double bearing,
+                                      double pitch);
+
+    FfiCameraOptions cameraForGeoJson(const mln::bridge::geojson::GeoJson& geojson,
+                                      const EdgeInsets& padding,
+                                      double bearing,
+                                      double pitch);
 
     std::unique_ptr<std::string> readStillImageBytes() {
         return encodeImage(frontend->readStillImage());

@@ -1,7 +1,9 @@
 use image::DynamicImage;
 
 use crate::bridge::ffi;
-use crate::{ImageId, ImageRenderer, Layer, LayerId, Source, SourceId, StyleError};
+use crate::{
+    AnyLayer, ImageId, ImageRenderer, Layer, LayerId, Source, SourceId, SourceRefMut, StyleError,
+};
 
 /// A mutable reference to the renderer's current map style.
 #[derive(Debug)]
@@ -14,7 +16,7 @@ impl<'a, S> StyleRef<'a, S> {
         Self { image_renderer }
     }
 
-    /// Adds an image to the style with the given ID and options.
+    /// Adds an image to the style with the given ID, pixel ratio, and options.
     ///
     /// Pass `true` for `signed_distance_field` to register the image as an SDF (signed
     /// distance field) icon; pass `false` for a regular bitmap icon.
@@ -26,6 +28,7 @@ impl<'a, S> StyleRef<'a, S> {
         &mut self,
         id: impl AsRef<str>,
         image: &DynamicImage,
+        pixel_ratio: f32,
         signed_distance_field: bool,
     ) -> Result<ImageId, StyleError> {
         use image::EncodableLayout;
@@ -35,6 +38,7 @@ impl<'a, S> StyleRef<'a, S> {
             id,
             image.as_bytes(),
             ffi::Size { width: image.width(), height: image.height() },
+            pixel_ratio,
             signed_distance_field,
         )?;
         Ok(ImageId::new(id.to_owned()))
@@ -56,6 +60,15 @@ impl<'a, S> StyleRef<'a, S> {
         let source_id = SourceId::new(source.source_id().to_owned());
         self.image_renderer.instance.pin_mut().style_add_source(source.into_source())?;
         Ok(source_id)
+    }
+
+    /// Returns a mutable reference to a source in the current map style.
+    ///
+    /// Returns `None` if `source_id` does not match an existing source.
+    pub fn source_mut(&mut self, source_id: impl AsRef<str>) -> Option<SourceRefMut<'_>> {
+        SourceRefMut::from_ffi(
+            self.image_renderer.instance.pin_mut().style_get_source_mut(source_id.as_ref()),
+        )
     }
 
     /// Adds a new layer and returns its stable layer ID.
@@ -100,11 +113,13 @@ impl<'a, S> StyleRef<'a, S> {
         Ok(())
     }
 
-    /// Removes a layer from the current map style by ID.
+    /// Removes a layer from the current map style by ID and returns it.
     ///
-    /// No-op if `layer_id` does not match an existing layer.
-    pub fn remove_layer(&mut self, layer_id: impl AsRef<str>) {
-        self.image_renderer.instance.pin_mut().style_remove_layer(layer_id.as_ref());
+    /// Returns `None` if `layer_id` does not match an existing layer.
+    pub fn remove_layer(&mut self, layer_id: impl AsRef<str>) -> Option<AnyLayer> {
+        AnyLayer::from_layer_ptr(
+            self.image_renderer.instance.pin_mut().style_remove_layer(layer_id.as_ref()),
+        )
     }
 
     /// Removes a source from the current map style by ID.
