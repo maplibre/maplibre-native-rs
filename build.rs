@@ -441,6 +441,7 @@ fn build_local(
             config.configure_arg("-DMLN_WITH_WEBGPU=ON");
             config.configure_arg("-DMLN_WEBGPU_IMPL_FFI=ON");
             config.configure_arg("-DMLN_WEBGPU_IMPL_WGPU=ON");
+            config.configure_arg("-DMLN_WITH_X11=OFF");
             config.configure_arg(format!(
                 "-DMLN_WEBGPU_IMPL_WEBGPU_HEADER_DIR={}",
                 webgpu_shim::WEBGPU_HEADER_INCLUDE_DIR
