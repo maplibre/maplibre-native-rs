@@ -413,9 +413,9 @@ fn configure_local_build(
             config.configure_arg("-DMLN_WITH_WEBGPU=ON");
             config.configure_arg("-DMLN_WEBGPU_IMPL_FFI=ON");
             config.configure_arg("-DMLN_WEBGPU_IMPL_WGPU=ON");
-            config.configure_arg("-DMLN_WITH_EGL=ON");
             if target_os == "linux" {
-                // The WGPU backend does not need X11.
+                // Use EGL here to avoid an X11/GLX dependency for WGPU.
+                config.configure_arg("-DMLN_WITH_EGL=ON");
                 config.configure_arg("-DMLN_WITH_X11=OFF");
             }
             config.configure_arg(format!(
@@ -507,10 +507,12 @@ fn build_local(
         "vendor/metal-cpp",
         "vendor/expected-lite/include",
     ];
+    #[cfg(feature = "wgpu")]
     if matches!(api, GraphicsRenderingAPI::WGPU) {
         maplibre_native_include_dirs.push("vendor/webgpu-cpp");
         maplibre_native_include_dirs.push("vendor/wgpu-native/ffi");
         include_dirs.push(dest.join("build").join("webgpu-cpp"));
+        include_dirs.push(PathBuf::from(webgpu_shim::WEBGPU_HEADER_INCLUDE_DIR));
     }
 
     // maplibre-rs include dirs
