@@ -90,7 +90,7 @@ get-msrv package=main_crate:  (get-crate-field 'rust_version' package)
 install-dependencies backend='vulkan':
     sudo apt-get update
     sudo apt-get install -y \
-      {{if backend == 'opengl' {'libgl1-mesa-dev libglu1-mesa-dev libx11-dev xvfb'} else if backend == 'vulkan' {'mesa-vulkan-drivers glslang-dev'} else {''} }} \
+      {{if backend == 'opengl' {'libgl1-mesa-dev libglu1-mesa-dev libx11-dev xvfb'} else if backend == 'vulkan' {'mesa-vulkan-drivers glslang-dev'} else if backend == 'wgpu' {'libgl1-mesa-dev libegl1-mesa-dev'} else {''} }} \
       build-essential \
       libcurl4-openssl-dev \
       libuv1-dev \

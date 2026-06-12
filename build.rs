@@ -413,6 +413,7 @@ fn configure_local_build(
             config.configure_arg("-DMLN_WITH_WEBGPU=ON");
             config.configure_arg("-DMLN_WEBGPU_IMPL_FFI=ON");
             config.configure_arg("-DMLN_WEBGPU_IMPL_WGPU=ON");
+            config.configure_arg("-DMLN_WITH_EGL=ON");
             if target_os == "linux" {
                 // The WGPU backend does not need X11.
                 config.configure_arg("-DMLN_WITH_X11=OFF");
