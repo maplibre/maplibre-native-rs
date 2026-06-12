@@ -496,7 +496,7 @@ fn build_local(
 
     // maplibre-native include directories
     let mut include_dirs = Vec::new();
-    let mut maplibre_native_include_dirs = vec![
+    let maplibre_native_include_dirs = vec![
         "include",
         "src", // contains offscreen_texture.hpp
         "platform/default/include",
@@ -509,8 +509,8 @@ fn build_local(
     ];
     #[cfg(feature = "wgpu")]
     if matches!(api, GraphicsRenderingAPI::WGPU) {
-        maplibre_native_include_dirs.push("vendor/webgpu-cpp");
-        maplibre_native_include_dirs.push("vendor/wgpu-native/ffi");
+        include_dirs.push(maplibre_native_dir.join("vendor/webgpu-cpp"));
+        include_dirs.push(maplibre_native_dir.join("vendor/wgpu-native/ffi"));
         include_dirs.push(dest.join("build").join("webgpu-cpp"));
         include_dirs.push(PathBuf::from(webgpu_shim::WEBGPU_HEADER_INCLUDE_DIR));
     }
