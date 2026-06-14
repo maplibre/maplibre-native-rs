@@ -510,7 +510,6 @@ fn build_local(
     #[cfg(feature = "wgpu")]
     if matches!(api, GraphicsRenderingAPI::WGPU) {
         include_dirs.push(maplibre_native_dir.join("vendor/webgpu-cpp"));
-        include_dirs.push(maplibre_native_dir.join("vendor/wgpu-native/ffi"));
         include_dirs.push(dest.join("build").join("webgpu-cpp"));
         include_dirs.push(PathBuf::from(webgpu_shim::WEBGPU_HEADER_INCLUDE_DIR));
     }
