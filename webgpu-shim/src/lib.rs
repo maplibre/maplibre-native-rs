@@ -47,6 +47,12 @@ mod generated_bindings {
 }
 use generated_bindings::*;
 
+#[cold]
+fn unsupported_webgpu_function(function: &str) -> ! {
+    eprintln!("unsupported WebGPU C ABI function called: {function}");
+    std::process::abort();
+}
+
 pub struct WGPUDeviceImpl(wgpu::Device);
 pub struct WGPUQueueImpl(wgpu::Queue);
 
@@ -227,27 +233,27 @@ opaque_handle_types!(
 pub unsafe extern "C" fn wgpuCreateInstance(
     descriptor: *const WGPUInstanceDescriptor,
 ) -> WGPUInstance {
-    panic!("wgpuCreateInstance must be implemented");
+    unsupported_webgpu_function("wgpuCreateInstance");
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuGetInstanceFeatures(features: *mut WGPUSupportedInstanceFeatures) {
-    panic!("wgpuGetInstanceFeatures must be implemented");
+    unsupported_webgpu_function("wgpuGetInstanceFeatures");
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuGetInstanceLimits(limits: *mut WGPUInstanceLimits) -> WGPUStatus {
-    panic!("wgpuGetInstanceLimits must be implemented");
+    unsupported_webgpu_function("wgpuGetInstanceLimits");
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuHasInstanceFeature(feature: WGPUInstanceFeatureName) -> WGPUBool {
-    panic!("wgpuHasInstanceFeature must be implemented");
+    unsupported_webgpu_function("wgpuHasInstanceFeature");
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuGetProcAddress(procName: WGPUStringView) -> WGPUProc {
-    panic!("wgpuGetProcAddress must be implemented");
+    unsupported_webgpu_function("wgpuGetProcAddress");
 }
 
 #[unsafe(no_mangle)]
@@ -255,7 +261,7 @@ pub unsafe extern "C" fn wgpuAdapterGetFeatures(
     adapter: WGPUAdapter,
     features: *mut WGPUSupportedFeatures,
 ) {
-    panic!("wgpuAdapterGetFeatures must be implemented");
+    unsupported_webgpu_function("wgpuAdapterGetFeatures");
 }
 
 #[unsafe(no_mangle)]
@@ -263,7 +269,7 @@ pub unsafe extern "C" fn wgpuAdapterGetInfo(
     adapter: WGPUAdapter,
     info: *mut WGPUAdapterInfo,
 ) -> WGPUStatus {
-    panic!("wgpuAdapterGetInfo must be implemented");
+    unsupported_webgpu_function("wgpuAdapterGetInfo");
 }
 
 #[unsafe(no_mangle)]
@@ -271,7 +277,7 @@ pub unsafe extern "C" fn wgpuAdapterGetLimits(
     adapter: WGPUAdapter,
     limits: *mut WGPULimits,
 ) -> WGPUStatus {
-    panic!("wgpuAdapterGetLimits must be implemented");
+    unsupported_webgpu_function("wgpuAdapterGetLimits");
 }
 
 #[unsafe(no_mangle)]
@@ -279,7 +285,7 @@ pub unsafe extern "C" fn wgpuAdapterHasFeature(
     adapter: WGPUAdapter,
     feature: WGPUFeatureName,
 ) -> WGPUBool {
-    panic!("wgpuAdapterHasFeature must be implemented");
+    unsupported_webgpu_function("wgpuAdapterHasFeature");
 }
 
 #[unsafe(no_mangle)]
@@ -288,32 +294,32 @@ pub unsafe extern "C" fn wgpuAdapterRequestDevice(
     descriptor: *const WGPUDeviceDescriptor,
     callbackInfo: WGPURequestDeviceCallbackInfo,
 ) -> WGPUFuture {
-    panic!("wgpuAdapterRequestDevice must be implemented");
+    unsupported_webgpu_function("wgpuAdapterRequestDevice");
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuAdapterAddRef(adapter: WGPUAdapter) {
-    panic!("wgpuAdapterAddRef must be implemented");
+    unsupported_webgpu_function("wgpuAdapterAddRef");
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuAdapterRelease(adapter: WGPUAdapter) {
-    panic!("wgpuAdapterRelease must be implemented");
+    unsupported_webgpu_function("wgpuAdapterRelease");
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuAdapterInfoFreeMembers(adapterInfo: WGPUAdapterInfo) {
-    panic!("wgpuAdapterInfoFreeMembers must be implemented");
+    unsupported_webgpu_function("wgpuAdapterInfoFreeMembers");
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuBindGroupSetLabel(bindGroup: WGPUBindGroup, label: WGPUStringView) {
-    panic!("wgpuBindGroupSetLabel must be implemented");
+    unsupported_webgpu_function("wgpuBindGroupSetLabel");
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuBindGroupAddRef(bindGroup: WGPUBindGroup) {
-    panic!("wgpuBindGroupAddRef must be implemented");
+    unsupported_webgpu_function("wgpuBindGroupAddRef");
 }
 
 #[unsafe(no_mangle)]
@@ -329,12 +335,12 @@ pub unsafe extern "C" fn wgpuBindGroupLayoutSetLabel(
     bindGroupLayout: WGPUBindGroupLayout,
     label: WGPUStringView,
 ) {
-    panic!("wgpuBindGroupLayoutSetLabel must be implemented");
+    unsupported_webgpu_function("wgpuBindGroupLayoutSetLabel");
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuBindGroupLayoutAddRef(bindGroupLayout: WGPUBindGroupLayout) {
-    panic!("wgpuBindGroupLayoutAddRef must be implemented");
+    unsupported_webgpu_function("wgpuBindGroupLayoutAddRef");
 }
 
 #[unsafe(no_mangle)]
@@ -357,7 +363,7 @@ pub unsafe extern "C" fn wgpuBufferGetConstMappedRange(
     offset: usize,
     size: usize,
 ) -> *const ::std::os::raw::c_void {
-    panic!("wgpuBufferGetConstMappedRange must be implemented");
+    unsupported_webgpu_function("wgpuBufferGetConstMappedRange");
 }
 
 #[unsafe(no_mangle)]
@@ -389,17 +395,17 @@ pub unsafe extern "C" fn wgpuBufferGetMappedRange(
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuBufferGetMapState(buffer: WGPUBuffer) -> WGPUBufferMapState {
-    panic!("wgpuBufferGetMapState must be implemented");
+    unsupported_webgpu_function("wgpuBufferGetMapState");
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuBufferGetSize(buffer: WGPUBuffer) -> u64 {
-    panic!("wgpuBufferGetSize must be implemented");
+    unsupported_webgpu_function("wgpuBufferGetSize");
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuBufferGetUsage(buffer: WGPUBuffer) -> WGPUBufferUsage {
-    panic!("wgpuBufferGetUsage must be implemented");
+    unsupported_webgpu_function("wgpuBufferGetUsage");
 }
 
 #[unsafe(no_mangle)]
@@ -410,7 +416,7 @@ pub unsafe extern "C" fn wgpuBufferMapAsync(
     size: usize,
     callbackInfo: WGPUBufferMapCallbackInfo,
 ) -> WGPUFuture {
-    panic!("wgpuBufferMapAsync must be implemented");
+    unsupported_webgpu_function("wgpuBufferMapAsync");
 }
 
 #[unsafe(no_mangle)]
@@ -420,12 +426,12 @@ pub unsafe extern "C" fn wgpuBufferReadMappedRange(
     data: *mut ::std::os::raw::c_void,
     size: usize,
 ) -> WGPUStatus {
-    panic!("wgpuBufferReadMappedRange must be implemented");
+    unsupported_webgpu_function("wgpuBufferReadMappedRange");
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuBufferSetLabel(buffer: WGPUBuffer, label: WGPUStringView) {
-    panic!("wgpuBufferSetLabel must be implemented");
+    unsupported_webgpu_function("wgpuBufferSetLabel");
 }
 
 #[unsafe(no_mangle)]
@@ -444,12 +450,12 @@ pub unsafe extern "C" fn wgpuBufferWriteMappedRange(
     data: *const ::std::os::raw::c_void,
     size: usize,
 ) -> WGPUStatus {
-    panic!("wgpuBufferWriteMappedRange must be implemented");
+    unsupported_webgpu_function("wgpuBufferWriteMappedRange");
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuBufferAddRef(buffer: WGPUBuffer) {
-    panic!("wgpuBufferAddRef must be implemented");
+    unsupported_webgpu_function("wgpuBufferAddRef");
 }
 
 #[unsafe(no_mangle)]
@@ -465,12 +471,12 @@ pub unsafe extern "C" fn wgpuCommandBufferSetLabel(
     commandBuffer: WGPUCommandBuffer,
     label: WGPUStringView,
 ) {
-    panic!("wgpuCommandBufferSetLabel must be implemented");
+    unsupported_webgpu_function("wgpuCommandBufferSetLabel");
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuCommandBufferAddRef(commandBuffer: WGPUCommandBuffer) {
-    panic!("wgpuCommandBufferAddRef must be implemented");
+    unsupported_webgpu_function("wgpuCommandBufferAddRef");
 }
 
 #[unsafe(no_mangle)]
@@ -486,7 +492,7 @@ pub unsafe extern "C" fn wgpuCommandEncoderBeginComputePass(
     commandEncoder: WGPUCommandEncoder,
     descriptor: *const WGPUComputePassDescriptor,
 ) -> WGPUComputePassEncoder {
-    panic!("wgpuCommandEncoderBeginComputePass must be implemented");
+    unsupported_webgpu_function("wgpuCommandEncoderBeginComputePass");
 }
 
 #[unsafe(no_mangle)]
@@ -610,7 +616,7 @@ pub unsafe extern "C" fn wgpuCommandEncoderClearBuffer(
     offset: u64,
     size: u64,
 ) {
-    panic!("wgpuCommandEncoderClearBuffer must be implemented");
+    unsupported_webgpu_function("wgpuCommandEncoderClearBuffer");
 }
 
 #[unsafe(no_mangle)]
@@ -622,7 +628,7 @@ pub unsafe extern "C" fn wgpuCommandEncoderCopyBufferToBuffer(
     destinationOffset: u64,
     size: u64,
 ) {
-    panic!("wgpuCommandEncoderCopyBufferToBuffer must be implemented");
+    unsupported_webgpu_function("wgpuCommandEncoderCopyBufferToBuffer");
 }
 
 #[unsafe(no_mangle)]
@@ -632,7 +638,7 @@ pub unsafe extern "C" fn wgpuCommandEncoderCopyBufferToTexture(
     destination: *const WGPUTexelCopyTextureInfo,
     copySize: *const WGPUExtent3D,
 ) {
-    panic!("wgpuCommandEncoderCopyBufferToTexture must be implemented");
+    unsupported_webgpu_function("wgpuCommandEncoderCopyBufferToTexture");
 }
 
 #[unsafe(no_mangle)]
@@ -642,7 +648,7 @@ pub unsafe extern "C" fn wgpuCommandEncoderCopyTextureToBuffer(
     destination: *const WGPUTexelCopyBufferInfo,
     copySize: *const WGPUExtent3D,
 ) {
-    panic!("wgpuCommandEncoderCopyTextureToBuffer must be implemented");
+    unsupported_webgpu_function("wgpuCommandEncoderCopyTextureToBuffer");
 }
 
 #[unsafe(no_mangle)]
@@ -652,7 +658,7 @@ pub unsafe extern "C" fn wgpuCommandEncoderCopyTextureToTexture(
     destination: *const WGPUTexelCopyTextureInfo,
     copySize: *const WGPUExtent3D,
 ) {
-    panic!("wgpuCommandEncoderCopyTextureToTexture must be implemented");
+    unsupported_webgpu_function("wgpuCommandEncoderCopyTextureToTexture");
 }
 
 #[unsafe(no_mangle)]
@@ -676,12 +682,12 @@ pub unsafe extern "C" fn wgpuCommandEncoderInsertDebugMarker(
     commandEncoder: WGPUCommandEncoder,
     markerLabel: WGPUStringView,
 ) {
-    panic!("wgpuCommandEncoderInsertDebugMarker must be implemented");
+    unsupported_webgpu_function("wgpuCommandEncoderInsertDebugMarker");
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuCommandEncoderPopDebugGroup(commandEncoder: WGPUCommandEncoder) {
-    panic!("wgpuCommandEncoderPopDebugGroup must be implemented");
+    unsupported_webgpu_function("wgpuCommandEncoderPopDebugGroup");
 }
 
 #[unsafe(no_mangle)]
@@ -689,7 +695,7 @@ pub unsafe extern "C" fn wgpuCommandEncoderPushDebugGroup(
     commandEncoder: WGPUCommandEncoder,
     groupLabel: WGPUStringView,
 ) {
-    panic!("wgpuCommandEncoderPushDebugGroup must be implemented");
+    unsupported_webgpu_function("wgpuCommandEncoderPushDebugGroup");
 }
 
 #[unsafe(no_mangle)]
@@ -701,7 +707,7 @@ pub unsafe extern "C" fn wgpuCommandEncoderResolveQuerySet(
     destination: WGPUBuffer,
     destinationOffset: u64,
 ) {
-    panic!("wgpuCommandEncoderResolveQuerySet must be implemented");
+    unsupported_webgpu_function("wgpuCommandEncoderResolveQuerySet");
 }
 
 #[unsafe(no_mangle)]
@@ -709,7 +715,7 @@ pub unsafe extern "C" fn wgpuCommandEncoderSetLabel(
     commandEncoder: WGPUCommandEncoder,
     label: WGPUStringView,
 ) {
-    panic!("wgpuCommandEncoderSetLabel must be implemented");
+    unsupported_webgpu_function("wgpuCommandEncoderSetLabel");
 }
 
 #[unsafe(no_mangle)]
@@ -718,12 +724,12 @@ pub unsafe extern "C" fn wgpuCommandEncoderWriteTimestamp(
     querySet: WGPUQuerySet,
     queryIndex: u32,
 ) {
-    panic!("wgpuCommandEncoderWriteTimestamp must be implemented");
+    unsupported_webgpu_function("wgpuCommandEncoderWriteTimestamp");
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuCommandEncoderAddRef(commandEncoder: WGPUCommandEncoder) {
-    panic!("wgpuCommandEncoderAddRef must be implemented");
+    unsupported_webgpu_function("wgpuCommandEncoderAddRef");
 }
 
 #[unsafe(no_mangle)]
@@ -741,7 +747,7 @@ pub unsafe extern "C" fn wgpuComputePassEncoderDispatchWorkgroups(
     workgroupCountY: u32,
     workgroupCountZ: u32,
 ) {
-    panic!("wgpuComputePassEncoderDispatchWorkgroups must be implemented");
+    unsupported_webgpu_function("wgpuComputePassEncoderDispatchWorkgroups");
 }
 
 #[unsafe(no_mangle)]
@@ -750,12 +756,12 @@ pub unsafe extern "C" fn wgpuComputePassEncoderDispatchWorkgroupsIndirect(
     indirectBuffer: WGPUBuffer,
     indirectOffset: u64,
 ) {
-    panic!("wgpuComputePassEncoderDispatchWorkgroupsIndirect must be implemented");
+    unsupported_webgpu_function("wgpuComputePassEncoderDispatchWorkgroupsIndirect");
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuComputePassEncoderEnd(computePassEncoder: WGPUComputePassEncoder) {
-    panic!("wgpuComputePassEncoderEnd must be implemented");
+    unsupported_webgpu_function("wgpuComputePassEncoderEnd");
 }
 
 #[unsafe(no_mangle)]
@@ -763,14 +769,14 @@ pub unsafe extern "C" fn wgpuComputePassEncoderInsertDebugMarker(
     computePassEncoder: WGPUComputePassEncoder,
     markerLabel: WGPUStringView,
 ) {
-    panic!("wgpuComputePassEncoderInsertDebugMarker must be implemented");
+    unsupported_webgpu_function("wgpuComputePassEncoderInsertDebugMarker");
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuComputePassEncoderPopDebugGroup(
     computePassEncoder: WGPUComputePassEncoder,
 ) {
-    panic!("wgpuComputePassEncoderPopDebugGroup must be implemented");
+    unsupported_webgpu_function("wgpuComputePassEncoderPopDebugGroup");
 }
 
 #[unsafe(no_mangle)]
@@ -778,7 +784,7 @@ pub unsafe extern "C" fn wgpuComputePassEncoderPushDebugGroup(
     computePassEncoder: WGPUComputePassEncoder,
     groupLabel: WGPUStringView,
 ) {
-    panic!("wgpuComputePassEncoderPushDebugGroup must be implemented");
+    unsupported_webgpu_function("wgpuComputePassEncoderPushDebugGroup");
 }
 
 #[unsafe(no_mangle)]
@@ -789,7 +795,7 @@ pub unsafe extern "C" fn wgpuComputePassEncoderSetBindGroup(
     dynamicOffsetCount: usize,
     dynamicOffsets: *const u32,
 ) {
-    panic!("wgpuComputePassEncoderSetBindGroup must be implemented");
+    unsupported_webgpu_function("wgpuComputePassEncoderSetBindGroup");
 }
 
 #[unsafe(no_mangle)]
@@ -797,7 +803,7 @@ pub unsafe extern "C" fn wgpuComputePassEncoderSetLabel(
     computePassEncoder: WGPUComputePassEncoder,
     label: WGPUStringView,
 ) {
-    panic!("wgpuComputePassEncoderSetLabel must be implemented");
+    unsupported_webgpu_function("wgpuComputePassEncoderSetLabel");
 }
 
 #[unsafe(no_mangle)]
@@ -805,17 +811,17 @@ pub unsafe extern "C" fn wgpuComputePassEncoderSetPipeline(
     computePassEncoder: WGPUComputePassEncoder,
     pipeline: WGPUComputePipeline,
 ) {
-    panic!("wgpuComputePassEncoderSetPipeline must be implemented");
+    unsupported_webgpu_function("wgpuComputePassEncoderSetPipeline");
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuComputePassEncoderAddRef(computePassEncoder: WGPUComputePassEncoder) {
-    panic!("wgpuComputePassEncoderAddRef must be implemented");
+    unsupported_webgpu_function("wgpuComputePassEncoderAddRef");
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuComputePassEncoderRelease(computePassEncoder: WGPUComputePassEncoder) {
-    panic!("wgpuComputePassEncoderRelease must be implemented");
+    unsupported_webgpu_function("wgpuComputePassEncoderRelease");
 }
 
 #[unsafe(no_mangle)]
@@ -823,7 +829,7 @@ pub unsafe extern "C" fn wgpuComputePipelineGetBindGroupLayout(
     computePipeline: WGPUComputePipeline,
     groupIndex: u32,
 ) -> WGPUBindGroupLayout {
-    panic!("wgpuComputePipelineGetBindGroupLayout must be implemented");
+    unsupported_webgpu_function("wgpuComputePipelineGetBindGroupLayout");
 }
 
 #[unsafe(no_mangle)]
@@ -831,17 +837,17 @@ pub unsafe extern "C" fn wgpuComputePipelineSetLabel(
     computePipeline: WGPUComputePipeline,
     label: WGPUStringView,
 ) {
-    panic!("wgpuComputePipelineSetLabel must be implemented");
+    unsupported_webgpu_function("wgpuComputePipelineSetLabel");
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuComputePipelineAddRef(computePipeline: WGPUComputePipeline) {
-    panic!("wgpuComputePipelineAddRef must be implemented");
+    unsupported_webgpu_function("wgpuComputePipelineAddRef");
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuComputePipelineRelease(computePipeline: WGPUComputePipeline) {
-    panic!("wgpuComputePipelineRelease must be implemented");
+    unsupported_webgpu_function("wgpuComputePipelineRelease");
 }
 
 fn handle_error_fatal(
@@ -987,7 +993,7 @@ pub unsafe extern "C" fn wgpuDeviceCreateComputePipeline(
     device: WGPUDevice,
     descriptor: *const WGPUComputePipelineDescriptor,
 ) -> WGPUComputePipeline {
-    panic!("wgpuDeviceCreateComputePipeline must be implemented");
+    unsupported_webgpu_function("wgpuDeviceCreateComputePipeline");
 }
 
 #[unsafe(no_mangle)]
@@ -996,7 +1002,7 @@ pub unsafe extern "C" fn wgpuDeviceCreateComputePipelineAsync(
     descriptor: *const WGPUComputePipelineDescriptor,
     callbackInfo: WGPUCreateComputePipelineAsyncCallbackInfo,
 ) -> WGPUFuture {
-    panic!("wgpuDeviceCreateComputePipelineAsync must be implemented");
+    unsupported_webgpu_function("wgpuDeviceCreateComputePipelineAsync");
 }
 
 #[unsafe(no_mangle)]
@@ -1065,7 +1071,7 @@ pub unsafe extern "C" fn wgpuDeviceCreateRenderBundleEncoder(
     device: WGPUDevice,
     descriptor: *const WGPURenderBundleEncoderDescriptor,
 ) -> WGPURenderBundleEncoder {
-    panic!("wgpuDeviceCreateRenderBundleEncoder must be implemented");
+    unsupported_webgpu_function("wgpuDeviceCreateRenderBundleEncoder");
 }
 
 #[unsafe(no_mangle)]
@@ -1274,7 +1280,7 @@ pub unsafe extern "C" fn wgpuDeviceCreateRenderPipelineAsync(
     descriptor: *const WGPURenderPipelineDescriptor,
     callbackInfo: WGPUCreateRenderPipelineAsyncCallbackInfo,
 ) -> WGPUFuture {
-    panic!("wgpuDeviceCreateRenderPipelineAsync must be implemented");
+    unsupported_webgpu_function("wgpuDeviceCreateRenderPipelineAsync");
 }
 
 #[unsafe(no_mangle)]
@@ -1375,7 +1381,7 @@ pub unsafe extern "C" fn wgpuDeviceGetAdapterInfo(
     device: WGPUDevice,
     adapterInfo: *mut WGPUAdapterInfo,
 ) -> WGPUStatus {
-    panic!("wgpuDeviceGetAdapterInfo must be implemented");
+    unsupported_webgpu_function("wgpuDeviceGetAdapterInfo");
 }
 
 #[unsafe(no_mangle)]
@@ -1383,7 +1389,7 @@ pub unsafe extern "C" fn wgpuDeviceGetFeatures(
     device: WGPUDevice,
     features: *mut WGPUSupportedFeatures,
 ) {
-    panic!("wgpuDeviceGetFeatures must be implemented");
+    unsupported_webgpu_function("wgpuDeviceGetFeatures");
 }
 
 #[unsafe(no_mangle)]
@@ -1391,17 +1397,17 @@ pub unsafe extern "C" fn wgpuDeviceGetLimits(
     device: WGPUDevice,
     limits: *mut WGPULimits,
 ) -> WGPUStatus {
-    panic!("wgpuDeviceGetLimits must be implemented");
+    unsupported_webgpu_function("wgpuDeviceGetLimits");
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuDeviceGetLostFuture(device: WGPUDevice) -> WGPUFuture {
-    panic!("wgpuDeviceGetLostFuture must be implemented");
+    unsupported_webgpu_function("wgpuDeviceGetLostFuture");
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuDeviceGetQueue(device: WGPUDevice) -> WGPUQueue {
-    panic!("wgpuDeviceGetQueue must be implemented");
+    unsupported_webgpu_function("wgpuDeviceGetQueue");
 }
 
 #[unsafe(no_mangle)]
@@ -1409,7 +1415,7 @@ pub unsafe extern "C" fn wgpuDeviceHasFeature(
     device: WGPUDevice,
     feature: WGPUFeatureName,
 ) -> WGPUBool {
-    panic!("wgpuDeviceHasFeature must be implemented");
+    unsupported_webgpu_function("wgpuDeviceHasFeature");
 }
 
 #[unsafe(no_mangle)]
@@ -1417,27 +1423,27 @@ pub unsafe extern "C" fn wgpuDevicePopErrorScope(
     device: WGPUDevice,
     callbackInfo: WGPUPopErrorScopeCallbackInfo,
 ) -> WGPUFuture {
-    panic!("wgpuDevicePopErrorScope must be implemented");
+    unsupported_webgpu_function("wgpuDevicePopErrorScope");
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuDevicePushErrorScope(device: WGPUDevice, filter: WGPUErrorFilter) {
-    panic!("wgpuDevicePushErrorScope must be implemented");
+    unsupported_webgpu_function("wgpuDevicePushErrorScope");
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuDeviceSetLabel(device: WGPUDevice, label: WGPUStringView) {
-    panic!("wgpuDeviceSetLabel must be implemented");
+    unsupported_webgpu_function("wgpuDeviceSetLabel");
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuDeviceAddRef(device: WGPUDevice) {
-    panic!("wgpuDeviceAddRef must be implemented");
+    unsupported_webgpu_function("wgpuDeviceAddRef");
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuDeviceRelease(device: WGPUDevice) {
-    panic!("wgpuDeviceRelease must be implemented");
+    unsupported_webgpu_function("wgpuDeviceRelease");
 }
 
 #[unsafe(no_mangle)]
@@ -1445,17 +1451,17 @@ pub unsafe extern "C" fn wgpuExternalTextureSetLabel(
     externalTexture: WGPUExternalTexture,
     label: WGPUStringView,
 ) {
-    panic!("wgpuExternalTextureSetLabel must be implemented");
+    unsupported_webgpu_function("wgpuExternalTextureSetLabel");
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuExternalTextureAddRef(externalTexture: WGPUExternalTexture) {
-    panic!("wgpuExternalTextureAddRef must be implemented");
+    unsupported_webgpu_function("wgpuExternalTextureAddRef");
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuExternalTextureRelease(externalTexture: WGPUExternalTexture) {
-    panic!("wgpuExternalTextureRelease must be implemented");
+    unsupported_webgpu_function("wgpuExternalTextureRelease");
 }
 
 #[unsafe(no_mangle)]
@@ -1463,7 +1469,7 @@ pub unsafe extern "C" fn wgpuInstanceCreateSurface(
     instance: WGPUInstance,
     descriptor: *const WGPUSurfaceDescriptor,
 ) -> WGPUSurface {
-    panic!("wgpuInstanceCreateSurface must be implemented");
+    unsupported_webgpu_function("wgpuInstanceCreateSurface");
 }
 
 #[unsafe(no_mangle)]
@@ -1471,7 +1477,7 @@ pub unsafe extern "C" fn wgpuInstanceGetWGSLLanguageFeatures(
     instance: WGPUInstance,
     features: *mut WGPUSupportedWGSLLanguageFeatures,
 ) {
-    panic!("wgpuInstanceGetWGSLLanguageFeatures must be implemented");
+    unsupported_webgpu_function("wgpuInstanceGetWGSLLanguageFeatures");
 }
 
 #[unsafe(no_mangle)]
@@ -1479,12 +1485,12 @@ pub unsafe extern "C" fn wgpuInstanceHasWGSLLanguageFeature(
     instance: WGPUInstance,
     feature: WGPUWGSLLanguageFeatureName,
 ) -> WGPUBool {
-    panic!("wgpuInstanceHasWGSLLanguageFeature must be implemented");
+    unsupported_webgpu_function("wgpuInstanceHasWGSLLanguageFeature");
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuInstanceProcessEvents(instance: WGPUInstance) {
-    panic!("wgpuInstanceProcessEvents must be implemented");
+    unsupported_webgpu_function("wgpuInstanceProcessEvents");
 }
 
 #[unsafe(no_mangle)]
@@ -1493,7 +1499,7 @@ pub unsafe extern "C" fn wgpuInstanceRequestAdapter(
     options: *const WGPURequestAdapterOptions,
     callbackInfo: WGPURequestAdapterCallbackInfo,
 ) -> WGPUFuture {
-    panic!("wgpuInstanceRequestAdapter must be implemented");
+    unsupported_webgpu_function("wgpuInstanceRequestAdapter");
 }
 
 #[unsafe(no_mangle)]
@@ -1503,17 +1509,17 @@ pub unsafe extern "C" fn wgpuInstanceWaitAny(
     futures: *mut WGPUFutureWaitInfo,
     timeoutNS: u64,
 ) -> WGPUWaitStatus {
-    panic!("wgpuInstanceWaitAny must be implemented");
+    unsupported_webgpu_function("wgpuInstanceWaitAny");
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuInstanceAddRef(instance: WGPUInstance) {
-    panic!("wgpuInstanceAddRef must be implemented");
+    unsupported_webgpu_function("wgpuInstanceAddRef");
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuInstanceRelease(instance: WGPUInstance) {
-    panic!("wgpuInstanceRelease must be implemented");
+    unsupported_webgpu_function("wgpuInstanceRelease");
 }
 
 #[unsafe(no_mangle)]
@@ -1552,12 +1558,12 @@ pub unsafe extern "C" fn wgpuQuerySetDestroy(querySet: WGPUQuerySet) {
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuQuerySetGetCount(querySet: WGPUQuerySet) -> u32 {
-    panic!("wgpuQuerySetGetCount must be implemented");
+    unsupported_webgpu_function("wgpuQuerySetGetCount");
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuQuerySetGetType(querySet: WGPUQuerySet) -> WGPUQueryType {
-    panic!("wgpuQuerySetGetType must be implemented");
+    unsupported_webgpu_function("wgpuQuerySetGetType");
 }
 
 #[unsafe(no_mangle)]
@@ -1588,12 +1594,12 @@ pub unsafe extern "C" fn wgpuQueueOnSubmittedWorkDone(
     queue: WGPUQueue,
     callbackInfo: WGPUQueueWorkDoneCallbackInfo,
 ) -> WGPUFuture {
-    panic!("wgpuQueueOnSubmittedWorkDone must be implemented");
+    unsupported_webgpu_function("wgpuQueueOnSubmittedWorkDone");
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuQueueSetLabel(queue: WGPUQueue, label: WGPUStringView) {
-    panic!("wgpuQueueSetLabel must be implemented");
+    unsupported_webgpu_function("wgpuQueueSetLabel");
 }
 
 #[unsafe(no_mangle)]
@@ -1712,12 +1718,12 @@ pub unsafe extern "C" fn wgpuQueueWriteTexture(
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuQueueAddRef(queue: WGPUQueue) {
-    panic!("wgpuQueueAddRef must be implemented");
+    unsupported_webgpu_function("wgpuQueueAddRef");
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuQueueRelease(queue: WGPUQueue) {
-    panic!("wgpuQueueRelease must be implemented");
+    unsupported_webgpu_function("wgpuQueueRelease");
 }
 
 #[unsafe(no_mangle)]
@@ -1725,17 +1731,17 @@ pub unsafe extern "C" fn wgpuRenderBundleSetLabel(
     renderBundle: WGPURenderBundle,
     label: WGPUStringView,
 ) {
-    panic!("wgpuRenderBundleSetLabel must be implemented");
+    unsupported_webgpu_function("wgpuRenderBundleSetLabel");
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuRenderBundleAddRef(renderBundle: WGPURenderBundle) {
-    panic!("wgpuRenderBundleAddRef must be implemented");
+    unsupported_webgpu_function("wgpuRenderBundleAddRef");
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuRenderBundleRelease(renderBundle: WGPURenderBundle) {
-    panic!("wgpuRenderBundleRelease must be implemented");
+    unsupported_webgpu_function("wgpuRenderBundleRelease");
 }
 
 #[unsafe(no_mangle)]
@@ -1746,7 +1752,7 @@ pub unsafe extern "C" fn wgpuRenderBundleEncoderDraw(
     firstVertex: u32,
     firstInstance: u32,
 ) {
-    panic!("wgpuRenderBundleEncoderDraw must be implemented");
+    unsupported_webgpu_function("wgpuRenderBundleEncoderDraw");
 }
 
 #[unsafe(no_mangle)]
@@ -1758,7 +1764,7 @@ pub unsafe extern "C" fn wgpuRenderBundleEncoderDrawIndexed(
     baseVertex: i32,
     firstInstance: u32,
 ) {
-    panic!("wgpuRenderBundleEncoderDrawIndexed must be implemented");
+    unsupported_webgpu_function("wgpuRenderBundleEncoderDrawIndexed");
 }
 
 #[unsafe(no_mangle)]
@@ -1767,7 +1773,7 @@ pub unsafe extern "C" fn wgpuRenderBundleEncoderDrawIndexedIndirect(
     indirectBuffer: WGPUBuffer,
     indirectOffset: u64,
 ) {
-    panic!("wgpuRenderBundleEncoderDrawIndexedIndirect must be implemented");
+    unsupported_webgpu_function("wgpuRenderBundleEncoderDrawIndexedIndirect");
 }
 
 #[unsafe(no_mangle)]
@@ -1776,7 +1782,7 @@ pub unsafe extern "C" fn wgpuRenderBundleEncoderDrawIndirect(
     indirectBuffer: WGPUBuffer,
     indirectOffset: u64,
 ) {
-    panic!("wgpuRenderBundleEncoderDrawIndirect must be implemented");
+    unsupported_webgpu_function("wgpuRenderBundleEncoderDrawIndirect");
 }
 
 #[unsafe(no_mangle)]
@@ -1784,7 +1790,7 @@ pub unsafe extern "C" fn wgpuRenderBundleEncoderFinish(
     renderBundleEncoder: WGPURenderBundleEncoder,
     descriptor: *const WGPURenderBundleDescriptor,
 ) -> WGPURenderBundle {
-    panic!("wgpuRenderBundleEncoderFinish must be implemented");
+    unsupported_webgpu_function("wgpuRenderBundleEncoderFinish");
 }
 
 #[unsafe(no_mangle)]
@@ -1792,14 +1798,14 @@ pub unsafe extern "C" fn wgpuRenderBundleEncoderInsertDebugMarker(
     renderBundleEncoder: WGPURenderBundleEncoder,
     markerLabel: WGPUStringView,
 ) {
-    panic!("wgpuRenderBundleEncoderInsertDebugMarker must be implemented");
+    unsupported_webgpu_function("wgpuRenderBundleEncoderInsertDebugMarker");
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuRenderBundleEncoderPopDebugGroup(
     renderBundleEncoder: WGPURenderBundleEncoder,
 ) {
-    panic!("wgpuRenderBundleEncoderPopDebugGroup must be implemented");
+    unsupported_webgpu_function("wgpuRenderBundleEncoderPopDebugGroup");
 }
 
 #[unsafe(no_mangle)]
@@ -1807,7 +1813,7 @@ pub unsafe extern "C" fn wgpuRenderBundleEncoderPushDebugGroup(
     renderBundleEncoder: WGPURenderBundleEncoder,
     groupLabel: WGPUStringView,
 ) {
-    panic!("wgpuRenderBundleEncoderPushDebugGroup must be implemented");
+    unsupported_webgpu_function("wgpuRenderBundleEncoderPushDebugGroup");
 }
 
 #[unsafe(no_mangle)]
@@ -1818,7 +1824,7 @@ pub unsafe extern "C" fn wgpuRenderBundleEncoderSetBindGroup(
     dynamicOffsetCount: usize,
     dynamicOffsets: *const u32,
 ) {
-    panic!("wgpuRenderBundleEncoderSetBindGroup must be implemented");
+    unsupported_webgpu_function("wgpuRenderBundleEncoderSetBindGroup");
 }
 
 #[unsafe(no_mangle)]
@@ -1829,7 +1835,7 @@ pub unsafe extern "C" fn wgpuRenderBundleEncoderSetIndexBuffer(
     offset: u64,
     size: u64,
 ) {
-    panic!("wgpuRenderBundleEncoderSetIndexBuffer must be implemented");
+    unsupported_webgpu_function("wgpuRenderBundleEncoderSetIndexBuffer");
 }
 
 #[unsafe(no_mangle)]
@@ -1837,7 +1843,7 @@ pub unsafe extern "C" fn wgpuRenderBundleEncoderSetLabel(
     renderBundleEncoder: WGPURenderBundleEncoder,
     label: WGPUStringView,
 ) {
-    panic!("wgpuRenderBundleEncoderSetLabel must be implemented");
+    unsupported_webgpu_function("wgpuRenderBundleEncoderSetLabel");
 }
 
 #[unsafe(no_mangle)]
@@ -1845,7 +1851,7 @@ pub unsafe extern "C" fn wgpuRenderBundleEncoderSetPipeline(
     renderBundleEncoder: WGPURenderBundleEncoder,
     pipeline: WGPURenderPipeline,
 ) {
-    panic!("wgpuRenderBundleEncoderSetPipeline must be implemented");
+    unsupported_webgpu_function("wgpuRenderBundleEncoderSetPipeline");
 }
 
 #[unsafe(no_mangle)]
@@ -1856,21 +1862,21 @@ pub unsafe extern "C" fn wgpuRenderBundleEncoderSetVertexBuffer(
     offset: u64,
     size: u64,
 ) {
-    panic!("wgpuRenderBundleEncoderSetVertexBuffer must be implemented");
+    unsupported_webgpu_function("wgpuRenderBundleEncoderSetVertexBuffer");
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuRenderBundleEncoderAddRef(
     renderBundleEncoder: WGPURenderBundleEncoder,
 ) {
-    panic!("wgpuRenderBundleEncoderAddRef must be implemented");
+    unsupported_webgpu_function("wgpuRenderBundleEncoderAddRef");
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuRenderBundleEncoderRelease(
     renderBundleEncoder: WGPURenderBundleEncoder,
 ) {
-    panic!("wgpuRenderBundleEncoderRelease must be implemented");
+    unsupported_webgpu_function("wgpuRenderBundleEncoderRelease");
 }
 
 #[unsafe(no_mangle)]
@@ -1878,7 +1884,7 @@ pub unsafe extern "C" fn wgpuRenderPassEncoderBeginOcclusionQuery(
     renderPassEncoder: WGPURenderPassEncoder,
     queryIndex: u32,
 ) {
-    panic!("wgpuRenderPassEncoderBeginOcclusionQuery must be implemented");
+    unsupported_webgpu_function("wgpuRenderPassEncoderBeginOcclusionQuery");
 }
 
 #[unsafe(no_mangle)]
@@ -1889,7 +1895,7 @@ pub unsafe extern "C" fn wgpuRenderPassEncoderDraw(
     firstVertex: u32,
     firstInstance: u32,
 ) {
-    panic!("wgpuRenderPassEncoderDraw must be implemented");
+    unsupported_webgpu_function("wgpuRenderPassEncoderDraw");
 }
 
 #[unsafe(no_mangle)]
@@ -1921,7 +1927,7 @@ pub unsafe extern "C" fn wgpuRenderPassEncoderDrawIndexedIndirect(
     indirectBuffer: WGPUBuffer,
     indirectOffset: u64,
 ) {
-    panic!("wgpuRenderPassEncoderDrawIndexedIndirect must be implemented");
+    unsupported_webgpu_function("wgpuRenderPassEncoderDrawIndexedIndirect");
 }
 
 #[unsafe(no_mangle)]
@@ -1930,7 +1936,7 @@ pub unsafe extern "C" fn wgpuRenderPassEncoderDrawIndirect(
     indirectBuffer: WGPUBuffer,
     indirectOffset: u64,
 ) {
-    panic!("wgpuRenderPassEncoderDrawIndirect must be implemented");
+    unsupported_webgpu_function("wgpuRenderPassEncoderDrawIndirect");
 }
 
 #[unsafe(no_mangle)]
@@ -1943,7 +1949,7 @@ pub unsafe extern "C" fn wgpuRenderPassEncoderEnd(renderPassEncoder: WGPURenderP
 pub unsafe extern "C" fn wgpuRenderPassEncoderEndOcclusionQuery(
     renderPassEncoder: WGPURenderPassEncoder,
 ) {
-    panic!("wgpuRenderPassEncoderEndOcclusionQuery must be implemented");
+    unsupported_webgpu_function("wgpuRenderPassEncoderEndOcclusionQuery");
 }
 
 #[unsafe(no_mangle)]
@@ -1952,7 +1958,7 @@ pub unsafe extern "C" fn wgpuRenderPassEncoderExecuteBundles(
     bundleCount: usize,
     bundles: *const WGPURenderBundle,
 ) {
-    panic!("wgpuRenderPassEncoderExecuteBundles must be implemented");
+    unsupported_webgpu_function("wgpuRenderPassEncoderExecuteBundles");
 }
 
 #[unsafe(no_mangle)]
@@ -1960,14 +1966,14 @@ pub unsafe extern "C" fn wgpuRenderPassEncoderInsertDebugMarker(
     renderPassEncoder: WGPURenderPassEncoder,
     markerLabel: WGPUStringView,
 ) {
-    panic!("wgpuRenderPassEncoderInsertDebugMarker must be implemented");
+    unsupported_webgpu_function("wgpuRenderPassEncoderInsertDebugMarker");
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuRenderPassEncoderPopDebugGroup(
     renderPassEncoder: WGPURenderPassEncoder,
 ) {
-    panic!("wgpuRenderPassEncoderPopDebugGroup must be implemented");
+    unsupported_webgpu_function("wgpuRenderPassEncoderPopDebugGroup");
 }
 
 #[unsafe(no_mangle)]
@@ -1975,7 +1981,7 @@ pub unsafe extern "C" fn wgpuRenderPassEncoderPushDebugGroup(
     renderPassEncoder: WGPURenderPassEncoder,
     groupLabel: WGPUStringView,
 ) {
-    panic!("wgpuRenderPassEncoderPushDebugGroup must be implemented");
+    unsupported_webgpu_function("wgpuRenderPassEncoderPushDebugGroup");
 }
 
 #[unsafe(no_mangle)]
@@ -2013,7 +2019,7 @@ pub unsafe extern "C" fn wgpuRenderPassEncoderSetBlendConstant(
     renderPassEncoder: WGPURenderPassEncoder,
     color: *const WGPUColor,
 ) {
-    panic!("wgpuRenderPassEncoderSetBlendConstant must be implemented");
+    unsupported_webgpu_function("wgpuRenderPassEncoderSetBlendConstant");
 }
 
 #[unsafe(no_mangle)]
@@ -2048,7 +2054,7 @@ pub unsafe extern "C" fn wgpuRenderPassEncoderSetLabel(
     renderPassEncoder: WGPURenderPassEncoder,
     label: WGPUStringView,
 ) {
-    panic!("wgpuRenderPassEncoderSetLabel must be implemented");
+    unsupported_webgpu_function("wgpuRenderPassEncoderSetLabel");
 }
 
 #[unsafe(no_mangle)]
@@ -2149,7 +2155,7 @@ pub unsafe extern "C" fn wgpuRenderPassEncoderSetViewport(
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuRenderPassEncoderAddRef(renderPassEncoder: WGPURenderPassEncoder) {
-    panic!("wgpuRenderPassEncoderAddRef must be implemented");
+    unsupported_webgpu_function("wgpuRenderPassEncoderAddRef");
 }
 
 #[unsafe(no_mangle)]
@@ -2175,12 +2181,12 @@ pub unsafe extern "C" fn wgpuRenderPipelineSetLabel(
     renderPipeline: WGPURenderPipeline,
     label: WGPUStringView,
 ) {
-    panic!("wgpuRenderPipelineSetLabel must be implemented");
+    unsupported_webgpu_function("wgpuRenderPipelineSetLabel");
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuRenderPipelineAddRef(renderPipeline: WGPURenderPipeline) {
-    panic!("wgpuRenderPipelineAddRef must be implemented");
+    unsupported_webgpu_function("wgpuRenderPipelineAddRef");
 }
 
 #[unsafe(no_mangle)]
@@ -2193,12 +2199,12 @@ pub unsafe extern "C" fn wgpuRenderPipelineRelease(renderPipeline: WGPURenderPip
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuSamplerSetLabel(sampler: WGPUSampler, label: WGPUStringView) {
-    panic!("wgpuSamplerSetLabel must be implemented");
+    unsupported_webgpu_function("wgpuSamplerSetLabel");
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuSamplerAddRef(sampler: WGPUSampler) {
-    panic!("wgpuSamplerAddRef must be implemented");
+    unsupported_webgpu_function("wgpuSamplerAddRef");
 }
 
 #[unsafe(no_mangle)]
@@ -2214,7 +2220,7 @@ pub unsafe extern "C" fn wgpuShaderModuleGetCompilationInfo(
     shaderModule: WGPUShaderModule,
     callbackInfo: WGPUCompilationInfoCallbackInfo,
 ) -> WGPUFuture {
-    panic!("wgpuShaderModuleGetCompilationInfo must be implemented");
+    unsupported_webgpu_function("wgpuShaderModuleGetCompilationInfo");
 }
 
 #[unsafe(no_mangle)]
@@ -2222,12 +2228,12 @@ pub unsafe extern "C" fn wgpuShaderModuleSetLabel(
     shaderModule: WGPUShaderModule,
     label: WGPUStringView,
 ) {
-    panic!("wgpuShaderModuleSetLabel must be implemented");
+    unsupported_webgpu_function("wgpuShaderModuleSetLabel");
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuShaderModuleAddRef(shaderModule: WGPUShaderModule) {
-    panic!("wgpuShaderModuleAddRef must be implemented");
+    unsupported_webgpu_function("wgpuShaderModuleAddRef");
 }
 
 #[unsafe(no_mangle)]
@@ -2242,21 +2248,21 @@ pub unsafe extern "C" fn wgpuShaderModuleRelease(shaderModule: WGPUShaderModule)
 pub unsafe extern "C" fn wgpuSupportedFeaturesFreeMembers(
     supportedFeatures: WGPUSupportedFeatures,
 ) {
-    panic!("wgpuSupportedFeaturesFreeMembers must be implemented");
+    unsupported_webgpu_function("wgpuSupportedFeaturesFreeMembers");
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuSupportedInstanceFeaturesFreeMembers(
     supportedInstanceFeatures: WGPUSupportedInstanceFeatures,
 ) {
-    panic!("wgpuSupportedInstanceFeaturesFreeMembers must be implemented");
+    unsupported_webgpu_function("wgpuSupportedInstanceFeaturesFreeMembers");
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuSupportedWGSLLanguageFeaturesFreeMembers(
     supportedWGSLLanguageFeatures: WGPUSupportedWGSLLanguageFeatures,
 ) {
-    panic!("wgpuSupportedWGSLLanguageFeaturesFreeMembers must be implemented");
+    unsupported_webgpu_function("wgpuSupportedWGSLLanguageFeaturesFreeMembers");
 }
 
 #[unsafe(no_mangle)]
@@ -2264,7 +2270,7 @@ pub unsafe extern "C" fn wgpuSurfaceConfigure(
     surface: WGPUSurface,
     config: *const WGPUSurfaceConfiguration,
 ) {
-    panic!("wgpuSurfaceConfigure must be implemented");
+    unsupported_webgpu_function("wgpuSurfaceConfigure");
 }
 
 #[unsafe(no_mangle)]
@@ -2273,7 +2279,7 @@ pub unsafe extern "C" fn wgpuSurfaceGetCapabilities(
     adapter: WGPUAdapter,
     capabilities: *mut WGPUSurfaceCapabilities,
 ) -> WGPUStatus {
-    panic!("wgpuSurfaceGetCapabilities must be implemented");
+    unsupported_webgpu_function("wgpuSurfaceGetCapabilities");
 }
 
 #[unsafe(no_mangle)]
@@ -2281,39 +2287,39 @@ pub unsafe extern "C" fn wgpuSurfaceGetCurrentTexture(
     surface: WGPUSurface,
     surfaceTexture: *mut WGPUSurfaceTexture,
 ) {
-    panic!("wgpuSurfaceGetCurrentTexture must be implemented");
+    unsupported_webgpu_function("wgpuSurfaceGetCurrentTexture");
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuSurfacePresent(surface: WGPUSurface) -> WGPUStatus {
-    panic!("wgpuSurfacePresent must be implemented");
+    unsupported_webgpu_function("wgpuSurfacePresent");
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuSurfaceSetLabel(surface: WGPUSurface, label: WGPUStringView) {
-    panic!("wgpuSurfaceSetLabel must be implemented");
+    unsupported_webgpu_function("wgpuSurfaceSetLabel");
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuSurfaceUnconfigure(surface: WGPUSurface) {
-    panic!("wgpuSurfaceUnconfigure must be implemented");
+    unsupported_webgpu_function("wgpuSurfaceUnconfigure");
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuSurfaceAddRef(surface: WGPUSurface) {
-    panic!("wgpuSurfaceAddRef must be implemented");
+    unsupported_webgpu_function("wgpuSurfaceAddRef");
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuSurfaceRelease(surface: WGPUSurface) {
-    panic!("wgpuSurfaceRelease must be implemented");
+    unsupported_webgpu_function("wgpuSurfaceRelease");
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuSurfaceCapabilitiesFreeMembers(
     surfaceCapabilities: WGPUSurfaceCapabilities,
 ) {
-    panic!("wgpuSurfaceCapabilitiesFreeMembers must be implemented");
+    unsupported_webgpu_function("wgpuSurfaceCapabilitiesFreeMembers");
 }
 
 #[unsafe(no_mangle)]
@@ -2343,59 +2349,59 @@ pub unsafe extern "C" fn wgpuTextureCreateView(
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuTextureDestroy(texture: WGPUTexture) {
-    panic!("wgpuTextureDestroy must be implemented");
+    unsupported_webgpu_function("wgpuTextureDestroy");
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuTextureGetDepthOrArrayLayers(texture: WGPUTexture) -> u32 {
-    panic!("wgpuTextureGetDepthOrArrayLayers must be implemented");
+    unsupported_webgpu_function("wgpuTextureGetDepthOrArrayLayers");
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuTextureGetDimension(texture: WGPUTexture) -> WGPUTextureDimension {
-    panic!("wgpuTextureGetDimension must be implemented");
+    unsupported_webgpu_function("wgpuTextureGetDimension");
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuTextureGetFormat(texture: WGPUTexture) -> WGPUTextureFormat {
-    panic!("wgpuTextureGetFormat must be implemented");
+    unsupported_webgpu_function("wgpuTextureGetFormat");
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuTextureGetHeight(texture: WGPUTexture) -> u32 {
-    panic!("wgpuTextureGetHeight must be implemented");
+    unsupported_webgpu_function("wgpuTextureGetHeight");
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuTextureGetMipLevelCount(texture: WGPUTexture) -> u32 {
-    panic!("wgpuTextureGetMipLevelCount must be implemented");
+    unsupported_webgpu_function("wgpuTextureGetMipLevelCount");
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuTextureGetSampleCount(texture: WGPUTexture) -> u32 {
-    panic!("wgpuTextureGetSampleCount must be implemented");
+    unsupported_webgpu_function("wgpuTextureGetSampleCount");
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuTextureGetTextureBindingViewDimension(
     texture: WGPUTexture,
 ) -> WGPUTextureViewDimension {
-    panic!("wgpuTextureGetTextureBindingViewDimension must be implemented");
+    unsupported_webgpu_function("wgpuTextureGetTextureBindingViewDimension");
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuTextureGetUsage(texture: WGPUTexture) -> WGPUTextureUsage {
-    panic!("wgpuTextureGetUsage must be implemented");
+    unsupported_webgpu_function("wgpuTextureGetUsage");
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuTextureGetWidth(texture: WGPUTexture) -> u32 {
-    panic!("wgpuTextureGetWidth must be implemented");
+    unsupported_webgpu_function("wgpuTextureGetWidth");
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn wgpuTextureSetLabel(texture: WGPUTexture, label: WGPUStringView) {
-    panic!("wgpuTextureSetLabel must be implemented");
+    unsupported_webgpu_function("wgpuTextureSetLabel");
 }
 
 #[unsafe(no_mangle)]
@@ -2419,7 +2425,7 @@ pub unsafe extern "C" fn wgpuTextureViewSetLabel(
     textureView: WGPUTextureView,
     label: WGPUStringView,
 ) {
-    panic!("wgpuTextureViewSetLabel must be implemented");
+    unsupported_webgpu_function("wgpuTextureViewSetLabel");
 }
 
 #[unsafe(no_mangle)]
