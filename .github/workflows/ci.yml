@@ -47,6 +47,12 @@ jobs:
           #   backend: vulkan
           #   precompiled: 1
           #   amalgam: 1
+          # WebGPU (wgpu) ships only as a prebuilt Linux x64 amalgam, so it is
+          # exercised through the precompiled path.
+          - runs-on: ubuntu-latest
+            backend: webgpu
+            precompiled: 1
+            amalgam: 1
           - runs-on: ubuntu-latest
             backend: opengl
             precompiled: 0
@@ -83,8 +89,13 @@ jobs:
       - name: Run CI tests (Linux OpenGL via Xvfb)
         if: startsWith(matrix.runs-on, 'ubuntu') && matrix.backend == 'opengl'
         run: xvfb-run -a --server-args="-screen 0 1280x1024x24" just ci-test ${{ matrix.backend }}
+      # WebGPU ships only as a headless Linux x64 amalgam, and the windowed
+      # examples pin a different backend, so test the library crate only.
+      - name: Run CI tests (WebGPU library only via Xvfb)
+        if: matrix.backend == 'webgpu'
+        run: xvfb-run -a --server-args="-screen 0 1280x1024x24" just ci-test-lib ${{ matrix.backend }}
       - name: Run CI tests
-        if: ${{ !(startsWith(matrix.runs-on, 'ubuntu') && matrix.backend == 'opengl') }}
+        if: ${{ !(startsWith(matrix.runs-on, 'ubuntu') && matrix.backend == 'opengl') && matrix.backend != 'webgpu' }}
         run: just ci-test ${{ matrix.backend }}
 
   test-msrv:

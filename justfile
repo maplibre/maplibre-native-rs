@@ -31,6 +31,16 @@ ci-lint: env-info test-fmt clippy
 # Run all tests as expected by CI
 ci-test backend: (env-info) (build backend) (test backend) (test-doc backend) (test-example_slint backend) && assert-git-is-clean
 
+# Like `ci-test`, but scoped to the library crate and its integration tests
+# (`-p maplibre_native`). Use for backends whose example binaries are not
+# buildable: the windowed examples in `examples/*` pin a windowed backend
+# (vulkan/metal), so the headless-only WebGPU amalgam cannot build the whole
+# workspace under `--features webgpu`.
+ci-test-lib backend: (env-info) && assert-git-is-clean
+    cargo build -p maplibre_native --features {{backend}} --all-targets
+    cargo test -p maplibre_native --features {{backend}} --all-targets
+    DOCS_RS=1 cargo doc -p maplibre_native --no-deps --features {{backend}}
+
 # Run minimal subset of tests to ensure compatibility with MSRV
 ci-test-msrv backend: (ci-test backend)  # for now, same as ci-test
 
@@ -90,7 +100,7 @@ get-msrv package=main_crate:  (get-crate-field 'rust_version' package)
 install-dependencies backend='vulkan':
     sudo apt-get update
     sudo apt-get install -y \
-      {{if backend == 'opengl' {'libgl1-mesa-dev libglu1-mesa-dev libx11-dev xvfb'} else if backend == 'vulkan' {'mesa-vulkan-drivers glslang-dev'} else {''} }} \
+      {{if backend == 'opengl' {'libgl1-mesa-dev libglu1-mesa-dev libx11-dev xvfb'} else if backend == 'vulkan' {'mesa-vulkan-drivers glslang-dev'} else if backend == 'webgpu' {'libgl1-mesa-dev libglu1-mesa-dev libx11-dev xvfb mesa-vulkan-drivers'} else {''} }} \
       build-essential \
       libcurl4-openssl-dev \
       libuv1-dev \
