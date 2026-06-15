@@ -20,7 +20,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex, OnceLock};
 use wgpu::SamplerDescriptor;
 
-pub const WEBGPU_HEADER_INCLUDE_DIR: &str = env!("BINDING_GENERATOR_WEBGPU_HEADER_INCLUDE_DIR");
+pub const WEBGPU_HEADER_INCLUDE_DIR: &str = env!("WEBGPU_SHIM_WEBGPU_HEADER_INCLUDE_DIR");
 
 mod conv;
 

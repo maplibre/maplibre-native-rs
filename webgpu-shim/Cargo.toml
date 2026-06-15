@@ -4,8 +4,6 @@ version = "0.1.0"
 edition = "2024"
 description = "Webgpu shim based on wgpu"
 
-[features]
-
 [dependencies]
 cxx = { workspace = true }
 wgpu = { workspace = true }

@@ -1,4 +1,3 @@
-use core::panic;
 use downloader::{Download, Downloader};
 use std::env;
 use std::fs;
@@ -62,9 +61,7 @@ fn main() {
 
     let bindings = builder.generate().expect("Unable to generate bindings");
 
-    // Write the bindings to the $OUT_DIR/bindings.rs file.
     let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
-    // println!("cargo:warning=binding outpath: {:?}", out_path.join("bindings.rs"));
     bindings.write_to_file(out_path.join("bindings.rs")).expect("Couldn't write bindings!");
 }
 
@@ -95,6 +92,6 @@ fn download_webgpu_header() -> String {
     }
 
     let out_path = out_path.as_os_str().to_str().expect("Failed to resolve webgpu include dir");
-    println!("cargo:rustc-env=BINDING_GENERATOR_WEBGPU_HEADER_INCLUDE_DIR={}", out_path);
+    println!("cargo:rustc-env=WEBGPU_SHIM_WEBGPU_HEADER_INCLUDE_DIR={}", out_path);
     out_path.to_owned()
 }

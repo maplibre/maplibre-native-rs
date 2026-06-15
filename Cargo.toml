@@ -42,7 +42,6 @@ wgpu = { workspace = true, optional = true }
 
 [build-dependencies]
 cmake.workspace = true
-const_format = "0.2.35"
 cxx-build.workspace = true
 downloader.workspace = true
 flate2.workspace = true
