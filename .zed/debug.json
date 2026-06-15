@@ -8,7 +8,7 @@
     "args": [],
     "cwd": "$ZED_WORKTREE_ROOT/examples/slint",
     "build": {
-      "label": "Run",
+      "label": "Build Slint example",
       "command": "cargo",
       "args": ["build"],
       "env": {},
