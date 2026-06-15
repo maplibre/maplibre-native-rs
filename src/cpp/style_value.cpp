@@ -2,7 +2,7 @@
 
 #include <mbgl/style/conversion/layer.hpp>
 #include <mbgl/style/conversion/source.hpp>
-#include <mapbox/geojson.hpp>
+#include <mbgl/style/conversion/geojson.hpp>
 
 #include <iomanip>
 #include <locale>
@@ -171,7 +171,10 @@ std::unique_ptr<mbgl::style::Source> source_from_value(rust::Str id,
 std::optional<mbgl::GeoJSON> style_value_to_geojson(const StyleValue& value,
                                                     mbgl::style::conversion::Error& error) {
     try {
-        return mapbox::geojson::parse(stringify_style_value(value));
+        // Use the public `mbgl::*` conversion API instead of the bundled
+        // mapbox::geojson::parse, which the precompiled amalgam does not export
+        // (armerge keeps only `mbgl.*`).
+        return mbgl::style::conversion::parseGeoJSON(stringify_style_value(value), error);
     } catch (const std::exception& ex) {
         error.message = ex.what();
         return std::nullopt;
