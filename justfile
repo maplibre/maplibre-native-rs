@@ -60,6 +60,7 @@ env-info:
     @echo "RUST_BACKTRACE='$RUST_BACKTRACE'"
     @echo "MLN_PRECOMPILE='$MLN_PRECOMPILE'"
     @echo "MLN_CORE_LIBRARY_USE_AMALGAM='$MLN_CORE_LIBRARY_USE_AMALGAM'"
+    @echo "MLN_CMAKE_CXX_LAUNCHER='$MLN_CMAKE_CXX_LAUNCHER'"
 
 # Reformat all code `cargo fmt`. If nightly is available, use it for better results
 fmt:
@@ -102,7 +103,6 @@ install-dependencies backend='vulkan':
       libpng-dev \
       libjpeg-turbo8-dev \
       libwebp-dev \
-      ccache \
       cmake \
       pkg-config # required for fontconfig detection
 
