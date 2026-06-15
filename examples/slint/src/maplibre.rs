@@ -1,18 +1,15 @@
-use std::rc::Rc;
-
-use slint::ComponentHandle;
-
 use crate::{MainWindow, MapAdapter};
-mod headless;
-use std::cell::RefCell;
-use std::path::Path;
-
-pub use headless::{MapLibre, create_map};
 use image::ImageReader;
 use maplibre_native::{
     CircleLayer, Color, FillLayer, GeoJson, GeoJsonSource, LineLayer, ScreenCoordinate,
     SymbolAnchor, SymbolLayer,
 };
+use std::cell::RefCell;
+use std::path::Path;
+use std::rc::Rc;
+mod headless;
+pub use headless::{MapLibre, create_map};
+use slint::ComponentHandle;
 
 pub fn init(ui: &MainWindow, map: &Rc<RefCell<MapLibre>>) {
     loop {
@@ -30,12 +27,34 @@ pub fn init(ui: &MainWindow, map: &Rc<RefCell<MapLibre>>) {
         }
     }
 
+    ui.window()
+        .set_rendering_notifier({
+            let map = Rc::downgrade(map);
+            move |state, graphics_api| {
+                if matches!(state, slint::RenderingState::RenderingSetup) {
+                    let slint::GraphicsAPI::WGPU29 { instance: _instance, device, queue, .. } =
+                        graphics_api
+                    else {
+                        return;
+                    };
+                    map.upgrade()
+                        .unwrap()
+                        .borrow_mut()
+                        .renderer()
+                        .set_device_queue(device.clone(), queue.clone());
+                }
+            }
+        })
+        .unwrap();
+
     ui.on_map_size_changed({
         let map = Rc::downgrade(map);
         move |size| {
-            let size =
-                maplibre_native::Size { width: size.width as u32, height: size.height as u32 };
-            map.upgrade().unwrap().borrow_mut().renderer().set_map_size(size);
+            if size.width > 0. && size.height > 0. {
+                let size =
+                    maplibre_native::Size { width: size.width as u32, height: size.height as u32 };
+                map.upgrade().unwrap().borrow_mut().set_map_size(size);
+            }
         }
     });
 
@@ -46,19 +65,11 @@ pub fn init(ui: &MainWindow, map: &Rc<RefCell<MapLibre>>) {
             let map = map.upgrade().unwrap();
             let mut map = map.borrow_mut();
             map.renderer().render_once();
-            if map.updated() {
-                let image = map.renderer().read_still_image();
-                let size = image.size();
-                let img = slint::SharedPixelBuffer::<slint::Rgba8Pixel>::clone_from_slice(
-                    image.buffer(),
-                    size.width,
-                    size.height,
-                );
-                ui_handle
-                    .upgrade()
-                    .unwrap()
-                    .global::<MapAdapter>()
-                    .set_map_texture(slint::Image::from_rgba8(img)); // TODO: check if the image really changed, otherwise we don't need to clone!
+            if map.updated()
+                && let Some(image) = map.renderer().take_texture()
+                && let Ok(image) = image.try_into()
+            {
+                ui_handle.upgrade().unwrap().global::<MapAdapter>().set_map_texture(image);
             }
         }
     });
@@ -94,8 +105,25 @@ pub fn init(ui: &MainWindow, map: &Rc<RefCell<MapLibre>>) {
             map.upgrade().unwrap().borrow_mut().renderer().scale_by(scale, pos);
         }
     });
+
+    ui.global::<MapAdapter>().on_bearing_changed({
+        let map = Rc::downgrade(map);
+        move |delta: f32| {
+            // MapLibre's rotateBy API expects a gesture from one pointer position to another.
+            // Control+wheel provides only a scalar delta, so convert it into a small synthetic drag.
+            map.upgrade().unwrap().borrow_mut().rotate_by(delta);
+        }
+    });
+
+    ui.global::<MapAdapter>().on_pitch_changed({
+        let map = Rc::downgrade(map);
+        move |delta: f32| {
+            map.upgrade().unwrap().borrow_mut().renderer().pitch_by(delta.into());
+        }
+    });
 }
 
+// Style the map and add a marker
 fn style(map: &Rc<RefCell<MapLibre>>) {
     let mut map_borrow = map.borrow_mut();
     let mut style = map_borrow.renderer().style();

@@ -29,7 +29,7 @@ check:
 ci-lint: env-info test-fmt clippy
 
 # Run all tests as expected by CI
-ci-test backend: (env-info) (build backend) (test backend) (test-doc backend) (test-example_slint backend) && assert-git-is-clean
+ci-test backend: (env-info) (build backend) (test backend) (test-doc backend) && assert-git-is-clean
 
 # Build with MSRV to ensure the crate compiles on the minimum supported Rust
 build-msrv backend:
@@ -91,7 +91,7 @@ get-msrv package=main_crate:  (get-crate-field 'rust_version' package)
 install-dependencies backend='vulkan':
     sudo apt-get update
     sudo apt-get install -y \
-      {{if backend == 'opengl' {'libgl1-mesa-dev libglu1-mesa-dev libx11-dev xvfb'} else if backend == 'vulkan' {'mesa-vulkan-drivers glslang-dev'} else {''} }} \
+      {{if backend == 'opengl' {'libgl1-mesa-dev libglu1-mesa-dev libx11-dev xvfb'} else if backend == 'vulkan' {'mesa-vulkan-drivers glslang-dev'} else if backend == 'wgpu' {'libgl1-mesa-dev libegl1-mesa-dev'} else {''} }} \
       build-essential \
       libcurl4-openssl-dev \
       libuv1-dev \
@@ -162,9 +162,9 @@ semver *args:  (cargo-install 'cargo-semver-checks')
 test backend='vulkan':
     cargo test --all-targets --features {{backend}} --workspace
 
-# Test slint example
-test-example_slint backend='vulkan':
-    cd examples/slint && cargo build --features {{backend}}
+# Build slint example outside workspace.
+build-example_slint:
+    cd examples/slint && cargo build
 
 # Run all tests and accept the changes. Requires cargo-insta to be installed.
 test-accept:

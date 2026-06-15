@@ -23,6 +23,7 @@ default = ["log", "json", "geojson"]
 metal = []
 opengl = []
 vulkan = []
+wgpu = ["dep:webgpu-shim", "dep:wgpu"]
 # Enables parsing style-spec layer JSON via `AnyLayer::from_json_str`/`from_json_value`.
 json = ["dep:serde_json"]
 geojson = ["dep:geojson"]
@@ -36,6 +37,8 @@ log = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }
 thiserror.workspace = true
 url.workspace = true
+webgpu-shim = { workspace = true, optional = true }
+wgpu = { workspace = true, optional = true }
 
 [build-dependencies]
 cmake.workspace = true
@@ -45,6 +48,7 @@ flate2.workspace = true
 tar.workspace = true
 toml = "0.8"
 walkdir.workspace = true
+webgpu-shim = { workspace = true, optional = true }
 
 [dev-dependencies]
 env_logger.workspace = true
@@ -60,7 +64,9 @@ tokio = { workspace = true, features = ["macros", "sync", "rt-multi-thread"] }
 ##########################################################
 
 [workspace]
-members = [".", "examples/*"]
+members = [".", "examples/render", "examples/tile-server", "webgpu-shim"]
+# examples/slint requires wgpu backend which is not compatible with other backends enabled
+exclude = ["examples/slint"]
 
 [workspace.package]
 edition = "2021"
@@ -87,6 +93,8 @@ thiserror = "2.0.16"
 tokio = { version = "1", features = [], default-features = false }
 url = "2.5.7"
 walkdir = "2.5.0"
+webgpu-shim = { path = "webgpu-shim" }
+wgpu = { version = "29.0.0" }
 
 [workspace.lints.rust]
 missing_debug_implementations = "warn"

@@ -13,10 +13,15 @@ pub struct GeoJsonSource {
 }
 
 impl GeoJsonSource {
-    /// Create a new GeoJSON source
+    /// Create a new `GeoJSON` source with default options
     #[must_use]
     pub fn new(id: &str) -> Self {
         Self { source_id: id.to_owned(), source: sources::create(id) }
+    }
+
+    /// Sets the URL for loading `GeoJSON` data.
+    pub fn set_url(&mut self, url: &str) {
+        sources::setURL(&self.source, url);
     }
 
     pub(crate) fn source_id(&self) -> &str {
