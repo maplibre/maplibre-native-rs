@@ -6,10 +6,8 @@ use std::rc::Rc;
 use maplibre_native::tile_server_options::TileServerOptions;
 use maplibre_native::{
     CameraUpdate, Continuous, ImageRenderer, ImageRendererBuilder, LatLng, MapLoadError,
-    ResourceOptions, ScreenCoordinate,
+    ResourceOptions, ScreenCoordinate, Size,
 };
-
-use crate::Size;
 
 #[derive(Default)]
 struct Flags {
@@ -23,17 +21,20 @@ pub struct MapLibre {
     flags: Rc<RefCell<Flags>>,
     renderer: ImageRenderer<Continuous>,
     last_pos: ScreenCoordinate,
+    map_size: Size,
 }
 
 impl MapLibre {
-    pub fn new(renderer: ImageRenderer<Continuous>) -> Self {
-        Self { renderer, flags: Rc::default(), last_pos: ScreenCoordinate::default() }
+    pub fn new(renderer: ImageRenderer<Continuous>, map_size: Size) -> Self {
+        Self { renderer, flags: Rc::default(), last_pos: ScreenCoordinate::default(), map_size }
     }
 
+    #[allow(dead_code)]
     pub fn style_loaded(&self) -> bool {
         self.flags.borrow().style_loaded
     }
 
+    #[allow(dead_code)]
     pub fn style_loading_error(&self) -> Option<MapLoadError> {
         self.flags.borrow().loading_style_error.clone()
     }
@@ -55,6 +56,41 @@ impl MapLibre {
     pub fn position(&self) -> ScreenCoordinate {
         self.last_pos
     }
+
+    pub fn set_map_size(&mut self, size: Size) {
+        self.map_size = size;
+        self.renderer.set_map_size(size);
+    }
+
+    // Inverse the map rotation logic from MapLibre's `Map::rotateBy` to convert a control+wheel delta into a synthetic drag gesture.
+    pub fn rotate_by(&mut self, delta: f32) {
+        let first = self.position();
+        let mut center = ScreenCoordinate {
+            x: f64::from(self.map_size.width) / 2.0,
+            y: f64::from(self.map_size.height) / 2.0,
+        };
+
+        let offset = first - center;
+        let distance = offset.x.hypot(offset.y);
+
+        if distance < 200.0 {
+            let height_offset = -200.0;
+            let rotate_bearing = offset.y.atan2(offset.x);
+            center = ScreenCoordinate {
+                x: first.x + rotate_bearing.cos() * height_offset,
+                y: first.y + rotate_bearing.sin() * height_offset,
+            };
+        }
+
+        let relative = first - center;
+        let angle = f64::from(delta).to_radians();
+        let second = ScreenCoordinate {
+            x: center.x + relative.x * angle.cos() - relative.y * angle.sin(),
+            y: center.y + relative.x * angle.sin() + relative.y * angle.cos(),
+        };
+
+        self.renderer.rotate_by(first, second);
+    }
 }
 
 pub fn create_map(size: Size) -> Rc<RefCell<MapLibre>> {
@@ -63,11 +99,16 @@ pub fn create_map(size: Size) -> Rc<RefCell<MapLibre>> {
         // .with_api_key(api_key)
         .with_cache_path(Path::new(env!("CARGO_MANIFEST_DIR")).join("maplibre_database.sqlite"));
 
-    let mut renderer = ImageRendererBuilder::new()
-        .with_size(
+    let mut renderer = ImageRendererBuilder::new();
+    let mut map_size = Size { width: 0, height: 0 };
+    if size.width > 0 && size.height > 0 {
+        map_size = size;
+        renderer = renderer.with_size(
             NonZeroU32::new(size.width as u32).unwrap(),
             NonZeroU32::new(size.height as u32).unwrap(),
-        )
+        );
+    }
+    let mut renderer = renderer
         .with_pixel_ratio(1.0)
         .with_resource_options(resource_options)
         .build_continuous_renderer();
@@ -81,15 +122,13 @@ pub fn create_map(size: Size) -> Rc<RefCell<MapLibre>> {
             .bearing(0.0)
             .pitch(0.0),
     );
-    renderer.load_style_from_url(&"https://demotiles.maplibre.org/style.json".parse().unwrap());
 
-    let map = Rc::new(RefCell::new(MapLibre::new(renderer)));
+    let map = Rc::new(RefCell::new(MapLibre::new(renderer, map_size)));
 
     let map_observer = map.borrow_mut().renderer().map_observer();
     map_observer.set_did_become_idle_callback({
         let flags = Rc::downgrade(&map.borrow().flags);
         move || {
-            println!("set_on_did_become_idle_callback");
             flags.upgrade().inspect(|v| {
                 v.borrow_mut().map_idle = true;
             });

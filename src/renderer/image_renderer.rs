@@ -251,6 +251,12 @@ impl<S> Debug for ImageRenderer<S> {
 }
 
 impl<S> ImageRenderer<S> {
+    #[cfg(feature = "wgpu")]
+    /// Bind the renderer to the WGPU device and queue provided by the host UI. So Textures between maplibre-native and a rust application can be shared
+    pub fn set_device_queue(&mut self, device: wgpu::Device, queue: wgpu::Queue) {
+        self.instance.pin_mut().setDeviceAndQueue(device.into(), queue.into());
+    }
+
     /// Starts loading the style from a URL.
     ///
     /// Wait for the returned request before rendering if you need the load result
@@ -550,6 +556,16 @@ impl ImageRenderer<Continuous> {
         self.instance.pin_mut().scaleBy(scale, &pos);
     }
 
+    /// Adjust the map pitch by the given delta in degrees.
+    pub fn pitch_by(&mut self, pitch: f64) {
+        self.instance.pin_mut().pitchBy(pitch);
+    }
+
+    /// Rotate the map using two screen coordinates that represent the gesture delta.
+    pub fn rotate_by(&mut self, first: ScreenCoordinate, second: ScreenCoordinate) {
+        self.instance.pin_mut().rotateBy(&first, &second);
+    }
+
     /// Trigger render loop once (animations)
     pub fn render_once(&mut self) {
         self.instance.pin_mut().render_once();
@@ -558,6 +574,18 @@ impl ImageRenderer<Continuous> {
     /// Reading rendered image
     pub fn read_still_image(&mut self) -> ImagePtr {
         ImagePtr::new(self.instance.pin_mut().readStillImage())
+    }
+
+    #[cfg(feature = "wgpu")]
+    /// Take the latest rendered map texture, if one is available.
+    pub fn take_texture(&mut self) -> Option<wgpu::Texture> {
+        let texture_2d = self.instance.pin_mut().takeTexture();
+        if texture_2d.is_null() {
+            return None;
+        }
+
+        let raw_texture = ffi::getWGPUTexture(&texture_2d);
+        raw_texture.try_into().ok()
     }
 }
 
