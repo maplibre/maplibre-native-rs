@@ -41,6 +41,9 @@ enum GraphicsRenderingAPI {
     OpenGL,
     /// [Vulkan API](https://www.vulkan.org/)
     Vulkan,
+    /// [WebGPU](https://www.w3.org/TR/webgpu/) via the wgpu-native backend.
+    /// Currently only available as a prebuilt Linux x64 amalgam.
+    WebGPU,
 }
 impl GraphicsRenderingAPI {
     /// Selects the rendering API based on enabled cargo features and platform.
@@ -48,30 +51,33 @@ impl GraphicsRenderingAPI {
     /// - If one feature is enabled, it is used.
     /// - If none are enabled, defaults to Metal on macOS/iOS, Vulkan elsewhere.
     /// - If multiple are enabled, falls back to OpenGL > Metal > Vulkan, with a warning.
+    ///   `webgpu` is never selected as a fallback; it must be requested explicitly.
     fn from_selected_features() -> Self {
         let with_opengl = env::var("CARGO_FEATURE_OPENGL").is_ok();
         let with_metal = env::var("CARGO_FEATURE_METAL").is_ok();
         let with_vulkan = env::var("CARGO_FEATURE_VULKAN").is_ok();
+        let with_webgpu = env::var("CARGO_FEATURE_WEBGPU").is_ok();
 
         let target_os = env::var("CARGO_CFG_TARGET_OS").expect("CARGO_CFG_TARGET_OS not set");
         let is_macos = target_os == "ios" || target_os == "macos";
 
-        match (with_metal, with_vulkan, with_opengl) {
-            (true, false, false) => Self::Metal,
-            (false, true, false) => Self::Vulkan,
-            (false, false, true) => Self::OpenGL,
-            (false, false, false) => {
+        match (with_metal, with_vulkan, with_opengl, with_webgpu) {
+            (true, false, false, false) => Self::Metal,
+            (false, true, false, false) => Self::Vulkan,
+            (false, false, true, false) => Self::OpenGL,
+            (false, false, false, true) => Self::WebGPU,
+            (false, false, false, false) => {
                 if is_macos {
                     Self::Metal
                 } else {
                     Self::Vulkan
                 }
             }
-            (_, _, _) => {
+            (_, _, _, _) => {
                 // TODO: modify for better defaults
                 // This might not be the best logic, but it can change at any moment because it's a fallback with a warning
                 // Current logic: if opengl is enabled, always use that, otherwise pick metal on macOS and vulkan on other platforms
-                println!("cargo::warning=Features 'metal', 'opengl', and 'vulkan' are mutually exclusive.");
+                println!("cargo::warning=Features 'metal', 'opengl', 'vulkan', and 'webgpu' are mutually exclusive.");
 
                 let default_choice = if with_opengl {
                     Self::OpenGL
@@ -92,6 +98,8 @@ impl std::fmt::Display for GraphicsRenderingAPI {
             Self::Metal => f.write_str("metal"),
             Self::OpenGL => f.write_str("opengl"),
             Self::Vulkan => f.write_str("vulkan"),
+            // Must match the wgpu amalgam asset suffix (libmaplibre-native-core-amalgam-linux-x64-wgpu.a).
+            Self::WebGPU => f.write_str("wgpu"),
         }
     }
 }
@@ -389,7 +397,14 @@ fn build_local(
             #[cfg(target_os = "linux")]
             // Vulkan has no X11 dependency.
             config.configure_arg("-DMLN_WITH_X11=OFF");
-        } //GraphicsRenderingAPI::WebGPU => config.configure_arg("-DMLN_WITH_WEBGPU=ON").configure_arg("-DMLN_WEBGPU_IMPL_WGPU=ON"),
+        }
+        GraphicsRenderingAPI::WebGPU => {
+            config.configure_arg("-DMLN_WITH_WEBGPU=ON");
+            config.configure_arg("-DMLN_WEBGPU_IMPL_WGPU=ON");
+            #[cfg(target_os = "linux")]
+            // Headless WebGPU does not need X11.
+            config.configure_arg("-DMLN_WITH_X11=OFF");
+        }
     }
     if amalgam_lib {
         config.configure_arg("-DMLN_CREATE_AMALGAMATION:BOOL=ON");
@@ -561,6 +576,17 @@ fn build_mln() {
             println!("cargo:rustc-link-lib=framework=ImageIO");
         }
         GraphicsRenderingAPI::Vulkan => {}
+        // wgpu-native itself is bundled into the amalgam and dlopens the Vulkan
+        // loader at runtime. The prebuilt Linux x64 wgpu amalgam additionally
+        // pulls in maplibre's GLX/X11 platform code and libuv, which are system
+        // libraries that are not bundled and must be linked here.
+        GraphicsRenderingAPI::WebGPU => {
+            if cfg!(target_os = "linux") {
+                println!("cargo:rustc-link-lib=uv");
+                println!("cargo:rustc-link-lib=GL");
+                println!("cargo:rustc-link-lib=X11");
+            }
+        }
         GraphicsRenderingAPI::OpenGL => {
             println!("cargo:rustc-link-lib=GL");
             if cfg!(target_os = "linux") {
