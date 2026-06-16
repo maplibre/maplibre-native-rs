@@ -31,8 +31,8 @@ ci-lint: env-info test-fmt clippy
 # Run all tests as expected by CI
 ci-test backend: (env-info) (build backend) (test backend) (test-doc backend) && assert-git-is-clean
 
-# Run minimal subset of tests to ensure compatibility with MSRV
-ci-test-msrv backend: (ci-test backend)  # for now, same as ci-test
+# Build with MSRV to ensure the crate compiles on the minimum supported Rust
+build-msrv backend: (build backend)
 
 # Clean all build artifacts
 clean:

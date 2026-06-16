@@ -83,10 +83,6 @@ jobs:
             backend: vulkan
             precompiled: 0
             amalgam: 0
-          # - runs-on: ubuntu-latest
-          #   backend: vulkan
-          #   precompiled: 1
-          #   amalgam: 1
           - runs-on: ubuntu-latest
             backend: opengl
             precompiled: 0
@@ -129,8 +125,8 @@ jobs:
         if: ${{ !(startsWith(matrix.runs-on, 'ubuntu') && matrix.backend == 'opengl') }}
         run: just ci-test ${{ matrix.backend }}
 
-  test-msrv:
-    name: Test MSRV ${{ matrix.runs-on }} - ${{ matrix.backend }} - Precompiled ${{ matrix.precompiled }}
+  build-msrv:
+    name: Build MSRV ${{ matrix.runs-on }} - ${{ matrix.backend }}
     runs-on: ${{ matrix.runs-on }}
     permissions:
       contents: read
@@ -138,27 +134,15 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Linux x86
+          # MSRV mainly checks Rust/toolchain compatibility.
+          # Backend-specific behavior is covered by the stable jobs above, so
+          # one Linux leg and one macOS leg are enough to cover build.rs target_os branches.
           - runs-on: ubuntu-latest
             backend: vulkan
-            precompiled: 0
-            amalgam: 0
-          - runs-on: ubuntu-latest
-            backend: opengl
-            precompiled: 0
-            amalgam: 0
-          # Linux ARM
-          - runs-on: ubuntu-24.04-arm
-            backend: opengl
-            precompiled: 0
-            amalgam: 0
-          # macOS ARM
-          - runs-on: macos-latest
-            backend: metal
             precompiled: 0
             amalgam: 0
           - runs-on: macos-latest
-            backend: vulkan
+            backend: metal
             precompiled: 0
             amalgam: 0
     steps:
@@ -173,10 +157,6 @@ jobs:
       - run: echo "MLN_PRECOMPILE=${{ matrix.precompiled }}" >> $GITHUB_ENV
       - run: echo "MLN_CORE_LIBRARY_USE_AMALGAM=${{ matrix.amalgam }}" >> $GITHUB_ENV
       - run: just env-info install-dependencies '${{ matrix.backend }}'
-      - if: startsWith(matrix.runs-on, 'macos') && matrix.backend == 'vulkan'
-        run: |
-          echo "VK_ICD_FILENAMES=$(brew --prefix molten-vk)/etc/vulkan/icd.d/MoltenVK_icd.json" >> $GITHUB_ENV
-          echo "DYLD_LIBRARY_PATH=$(brew --prefix vulkan-loader)/lib" >> $GITHUB_ENV
       - name: Read MSRV
         id: msrv
         run: echo "value=$(just get-msrv)" >> $GITHUB_OUTPUT
@@ -184,17 +164,13 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: ${{ steps.msrv.outputs.value }}
-      - name: Run CI tests (MSRV, Linux OpenGL via Xvfb)
-        if: startsWith(matrix.runs-on, 'ubuntu') && matrix.backend == 'opengl'
-        run: xvfb-run -a --server-args="-screen 0 1280x1024x24" just ci_mode=0 ci-test-msrv ${{ matrix.backend }} # Ignore warnings in MSRV
-      - name: Run CI tests (MSRV)
-        if: ${{ !(startsWith(matrix.runs-on, 'ubuntu') && matrix.backend == 'opengl') }}
-        run: just ci_mode=0 ci-test-msrv ${{ matrix.backend }} # Ignore warnings in MSRV
+      - name: Build with MSRV
+        run: just ci_mode=0 build-msrv ${{ matrix.backend }} # Ignore warnings in MSRV
 
   # This final step is needed to mark the whole workflow as successful
   # Don't change its name - it is used by the merge protection rules
   ci-passed:
-    needs: [lint, test, test-msrv, slint-example]
+    needs: [lint, test, build-msrv, slint-example]
     if: always()
     runs-on: ubuntu-latest
     permissions: {}
