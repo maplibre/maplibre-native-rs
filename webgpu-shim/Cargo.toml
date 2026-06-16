@@ -1,0 +1,14 @@
+[package]
+name = "webgpu-shim"
+version = "0.1.0"
+edition = "2024"
+description = "Webgpu shim based on wgpu"
+
+[dependencies]
+cxx = { workspace = true }
+wgpu = { workspace = true }
+
+[build-dependencies]
+bindgen = "0.72.0"
+downloader.workspace = true
+sha256 = "1.6"
