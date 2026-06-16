@@ -103,6 +103,7 @@ install-dependencies backend='vulkan':
       libpng-dev \
       libjpeg-turbo8-dev \
       libwebp-dev \
+      ccache \
       cmake \
       pkg-config # required for fontconfig detection
 
