@@ -31,8 +31,8 @@ ci-lint: env-info test-fmt clippy
 # Run all tests as expected by CI
 ci-test backend: (env-info) (build backend) (test backend) (test-doc backend) && assert-git-is-clean
 
-# Run minimal subset of tests to ensure compatibility with MSRV
-ci-test-msrv backend: (ci-test backend)  # for now, same as ci-test
+# Build with MSRV to ensure the crate compiles on the minimum supported Rust
+build-msrv backend: (build backend)
 
 # Clean all build artifacts
 clean:
@@ -60,6 +60,7 @@ env-info:
     @echo "RUST_BACKTRACE='$RUST_BACKTRACE'"
     @echo "MLN_PRECOMPILE='$MLN_PRECOMPILE'"
     @echo "MLN_CORE_LIBRARY_USE_AMALGAM='$MLN_CORE_LIBRARY_USE_AMALGAM'"
+    @echo "MLN_CMAKE_CXX_LAUNCHER='${MLN_CMAKE_CXX_LAUNCHER:-}'"
 
 # Reformat all code `cargo fmt`. If nightly is available, use it for better results
 fmt:
