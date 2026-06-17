@@ -35,7 +35,7 @@ const MLN_COMMIT: &str = "35cf39b72f45cfea55a34ffe7358ade5c950a3c5";
 const BRIDGE_RS: &str = "src/bridge.rs";
 const BRIDGE_CPP_DIR: &str = "src/cpp";
 
-const BRIDGE_INCLUDE_DIRS: &[&str] = &[/*"include", */ "src/cpp"];
+const BRIDGE_INCLUDE_DIRS: &[&str] = &["include", "src/cpp"];
 
 /// Supported graphics rendering APIs.
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
@@ -664,8 +664,10 @@ fn build_mln() {
         }
         println!("cargo:rustc-link-lib=png"); // sudo dnf install libpng-devel
         println!("cargo:rustc-link-lib=jpeg"); // sudo dnf install libjpeg-turbo-devel
-        println!("cargo:rustc-link-lib=uv"); // sudo dnf install libuv-devel
         println!("cargo:rustc-link-lib=webp"); // sudo dnf install libwebp-devel
+    }
+    if !is_apple {
+        println!("cargo:rustc-link-lib=uv"); // sudo dnf install libuv-devel
     }
     println!("cargo:rustc-link-lib=curl");
     println!("cargo:rustc-link-lib=z");
