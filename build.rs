@@ -641,9 +641,8 @@ fn build_mln() {
         println!("cargo:rustc-link-lib=mbgl-vendor-csscolorparser");
         println!("cargo:rustc-link-lib=mlt-cpp"); // provided with maplibre-native
         if is_apple {
-            // darwin builds vendored ICU and uses the system sqlite3
+            // darwin builds vendored ICU (system sqlite3 is linked below for all darwin builds)
             println!("cargo:rustc-link-lib=mbgl-vendor-icu");
-            println!("cargo:rustc-link-lib=sqlite3");
         } else {
             println!("cargo:rustc-link-lib=mbgl-vendor-nunicode");
             println!("cargo:rustc-link-lib=mbgl-vendor-sqlite");
@@ -675,6 +674,7 @@ fn build_mln() {
     if is_apple {
         println!("cargo:rustc-link-lib=framework=Foundation");
         println!("cargo:rustc-link-lib=framework=CoreGraphics");
+        // darwin uses the system sqlite3 (both source and precompiled builds).
         println!("cargo:rustc-link-lib=sqlite3");
     }
     match backend {

@@ -75,8 +75,6 @@ pub mod geojson {
         fn parse(json: &str) -> Result<UniquePtr<GeoJson>>;
         /// Copies a MapLibre Native GeoJSON value.
         fn clone(geojson: &GeoJson) -> UniquePtr<GeoJson>;
-        /// Serializes a MapLibre Native GeoJSON value to a JSON string.
-        fn stringify(geojson: &GeoJson) -> Result<String>;
     }
 }
 
