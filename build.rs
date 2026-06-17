@@ -675,6 +675,7 @@ fn build_mln() {
     if is_apple {
         println!("cargo:rustc-link-lib=framework=Foundation");
         println!("cargo:rustc-link-lib=framework=CoreGraphics");
+        println!("cargo:rustc-link-lib=sqlite3");
     }
     match backend {
         GraphicsRenderingAPI::Vulkan if is_apple => {
