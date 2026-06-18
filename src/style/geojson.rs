@@ -100,12 +100,14 @@ mod tests {
     use super::GeoJson;
 
     #[test]
-    fn parse_and_clone_geojson() {
-        let geojson = r#"{"type":"Point","coordinates":[1.0,2.0]}"#
-            .parse::<GeoJson>()
-            .expect("valid point GeoJSON should parse");
+    fn clone_survives_original_drop() {
+        let cloned = {
+            let geojson = r#"{"type":"Point","coordinates":[1.0,2.0]}"#
+                .parse::<GeoJson>()
+                .expect("valid point GeoJSON should parse");
+            geojson.clone()
+        };
 
-        let cloned = geojson.clone();
         let _ = cloned.as_inner();
     }
 

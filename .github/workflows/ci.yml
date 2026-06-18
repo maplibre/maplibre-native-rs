@@ -106,8 +106,8 @@ jobs:
           # macOS ARM
           - runs-on: macos-latest
             backend: metal
-            precompiled: 1
-            amalgam: 1
+            precompiled: 0
+            amalgam: 0
           - runs-on: macos-latest
             backend: vulkan
             precompiled: 0

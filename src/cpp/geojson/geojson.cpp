@@ -18,7 +18,7 @@ std::unique_ptr<GeoJson> parse(rust::Str json) {
     mbgl::style::conversion::Error error;
     auto geojson = mbgl::style::conversion::parseGeoJSON(std::string(json), error);
     if (!geojson) {
-        throw std::runtime_error(error.message);
+        throw std::runtime_error(error.message.empty() ? "failed to parse GeoJSON" : error.message);
     }
     return std::make_unique<GeoJson>(std::move(*geojson));
 }

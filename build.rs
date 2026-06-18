@@ -35,7 +35,9 @@ const MLN_COMMIT: &str = "35cf39b72f45cfea55a34ffe7358ade5c950a3c5";
 const BRIDGE_RS: &str = "src/bridge.rs";
 const BRIDGE_CPP_DIR: &str = "src/cpp";
 
-const BRIDGE_INCLUDE_DIRS: &[&str] = &["include", "src/cpp"];
+const BRIDGE_INCLUDE_DIRS: &[&str] = &["src/cpp"];
+
+const PRECOMPILED_VENDORED_INCLUDE_DIR: &str = "include";
 
 /// Supported graphics rendering APIs.
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
@@ -317,7 +319,14 @@ struct Info {
 }
 
 fn bundle_precompiled() -> Info {
-    let (cpp_root, include_dirs) = resolve_mln_core();
+    let (cpp_root, mut include_dirs) = resolve_mln_core();
+
+    // The precompiled headers tarball omits `platform/default/` headers
+    // (e.g. `mbgl/gfx/headless_frontend.hpp`), so add vendored fallbacks.
+    let root = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
+    include_dirs.push(root.join(PRECOMPILED_VENDORED_INCLUDE_DIR));
+    // Editing a vendored fallback header must trigger a rebuild of the bridge.
+    println!("cargo:rerun-if-changed={PRECOMPILED_VENDORED_INCLUDE_DIR}");
 
     println!(
         "cargo:warning=Using precompiled maplibre-native static library from {}",
