@@ -92,7 +92,11 @@ jobs:
           # Linux x86
           - runs-on: ubuntu-latest
             backend: vulkan
-            precompiled: 1
+            precompiled: 0
+            amalgam: 0
+          - runs-on: ubuntu-latest
+            backend: vulkan
+            precompiled: 1 # also cover the prebuilt amalgam path
             amalgam: 1
           - runs-on: ubuntu-latest
             backend: opengl
