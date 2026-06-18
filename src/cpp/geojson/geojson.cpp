@@ -27,4 +27,11 @@ std::unique_ptr<GeoJson> clone(const GeoJson& geojson) {
     return std::make_unique<GeoJson>(geojson.get());
 }
 
+// TODO(maplibre-native#4345): can be restored once the precompiled core exposes a
+// public GeoJSON serializer. `mapbox::geojson::stringify` is localized (hidden) by the
+// amalgam, and maplibre-native#4345 adds `mbgl::style::conversion::stringifyGeoJSON`.
+// rust::String stringify(const GeoJson& geojson) {
+//     return mbgl::style::conversion::stringifyGeoJSON(geojson.get());
+// }
+
 } // namespace mln::bridge::geojson
