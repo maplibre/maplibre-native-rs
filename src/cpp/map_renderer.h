@@ -3,6 +3,7 @@
 #include <mbgl/actor/scheduler.hpp>
 #include <mbgl/gfx/backend_scope.hpp>
 #include <mbgl/gfx/headless_frontend.hpp>
+#include <mbgl/gfx/renderer_backend.hpp>
 #include <mbgl/style/image.hpp>
 #include <mbgl/style/layer.hpp>
 #include <mbgl/map/map.hpp>
@@ -15,7 +16,16 @@
 #include <mbgl/util/premultiply.hpp>
 #include <mbgl/util/tile_server_options.hpp>
 #include <mbgl/util/size.hpp>
-#include "mbgl/storage/resource_options.hpp"
+#include <mbgl/storage/resource_options.hpp>
+
+#if defined(MLN_WEBGPU_IMPL_FFI)
+#include <mbgl/webgpu/texture2d.hpp>
+#include <mbgl/webgpu/renderer_backend.hpp>
+#include <mbgl/webgpu/headless_backend.hpp>
+#endif
+
+
+#include <cstdint>
 #include <cassert>
 #include <memory>
 #include <mutex>
@@ -38,6 +48,9 @@ extern "C" int uv_run(uv_loop_t*, uv_run_mode);
 
 namespace mln {
 namespace bridge {
+
+struct Texture;
+struct TextureView;
 
 constexpr size_t BYTES_PER_PIXEL = 4; // rgba
 
@@ -161,6 +174,15 @@ public:
         return mapObserverInstance;
     }
 
+    #if defined(MLN_WEBGPU_IMPL_FFI)
+    std::shared_ptr<mbgl::webgpu::Texture2D> takeTexture() {
+        auto backend = static_cast<mbgl::webgpu::HeadlessBackend*>(this->frontend->getBackend());
+        auto ptr = std::static_pointer_cast<mbgl::webgpu::Texture2D>(backend->takeTexture());
+        assert(ptr);
+        return ptr;
+    }
+    #endif
+
     void style_add_image(rust::Str id,
                          rust::Slice<const unsigned char> data,
                          mbgl::Size size,
@@ -263,7 +285,21 @@ public:
         map->scaleBy(scale, pos);
     }
 
+    void pitchBy(double pitch) {
+        map->pitchBy(pitch);
+    }
 
+    void rotateBy(const mbgl::ScreenCoordinate& first, const mbgl::ScreenCoordinate& second) {
+        map->rotateBy(first, second);
+    }
+
+    // Set the wgpu device and queue required for rendering when using the wgpu ffi backend
+    #if defined(MLN_WEBGPU_IMPL_FFI)
+    void setDeviceAndQueue(WGPUDevice device, WGPUQueue queue) {
+        static_cast<mbgl::webgpu::RendererBackend*>(frontend->getBackend())->setDevice(device);
+        static_cast<mbgl::webgpu::RendererBackend*>(frontend->getBackend())->setQueue(queue);
+    }
+    #endif
 public:
     // CXX bridge helpers below access these directly. Keep them alive here
     // because the frontend and observer are passed by reference to the map.

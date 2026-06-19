@@ -7,6 +7,11 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# Cancel superseded runs on the same PR
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 defaults:
   run:
     shell: bash
@@ -25,17 +30,63 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with: { persist-credentials: false }
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+          submodules: true
       - if: github.event_name != 'release' && github.event_name != 'workflow_dispatch'
         uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+      - if: github.event_name == 'pull_request'
+        uses: hendrikmuhs/ccache-action@5ebbd400eff9e74630f759d94ddd7b6c26299639 # v1.2.20
+        with:
+          max-size: 2G
+      - if: github.event_name == 'pull_request'
+        run: echo "MLN_CMAKE_CXX_LAUNCHER=ccache" >> $GITHUB_ENV
       - run: echo "MLN_PRECOMPILE=0" >> $GITHUB_ENV
       - run: echo "MLN_CORE_LIBRARY_USE_AMALGAM=0" >> $GITHUB_ENV
       - run: rustup update stable && rustup default stable && rustup component add rustfmt && rustup component add clippy
-      - uses: taiki-e/install-action@e49978b799e49ff429d162b7a30601a569ab6538 # v2.81.1
+      - uses: taiki-e/install-action@7a79fe8c3a13344501c80d99cae481c1c9085912 # v2.81.10
         with: { tool: "just" }
       - run: just env-info install-dependencies 'vulkan'
       - run: just ci-lint
+
+  slint-example:
+    name: Build slint example ${{ matrix.runs-on }} - ${{ matrix.backend }} - Precompiled ${{ matrix.precompiled }}
+    runs-on: ${{ matrix.runs-on }}
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Linux x86
+          - runs-on: ubuntu-latest
+            precompiled: 0
+            amalgam: 0
+          # Linux ARM
+          - runs-on: ubuntu-24.04-arm
+            precompiled: 0
+            amalgam: 0
+          # macOS ARM
+          - runs-on: macos-latest
+            precompiled: 0
+            amalgam: 0
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+          submodules: true
+      - if: github.event_name != 'release' && github.event_name != 'workflow_dispatch'
+        uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+      - uses: taiki-e/install-action@db5fb34fa772531a3ece57ca434f579eb334e0fb # v2.75.30
+        with: { tool: "just" }
+      - run: echo "MLN_PRECOMPILE=${{ matrix.precompiled }}" >> $GITHUB_ENV
+      - run: echo "MLN_CORE_LIBRARY_USE_AMALGAM=${{ matrix.amalgam }}" >> $GITHUB_ENV
+      - run: just env-info install-dependencies 'wgpu'
+      - run: rustup update stable && rustup default stable
+      - name: Build Slint example
+        run: just build-example_slint
+
   test:
     name: Test ${{ matrix.runs-on }} - ${{ matrix.backend }} - Precompiled ${{ matrix.precompiled }}
     runs-on: ${{ matrix.runs-on }}
@@ -55,6 +106,10 @@ jobs:
             precompiled: 0
             amalgam: 0
           - runs-on: ubuntu-latest
+            backend: vulkan
+            precompiled: 1 # also cover the prebuilt amalgam path
+            amalgam: 1
+          - runs-on: ubuntu-latest
             backend: opengl
             precompiled: 0
             amalgam: 0
@@ -73,11 +128,19 @@ jobs:
             precompiled: 0
             amalgam: 0
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with: { persist-credentials: false }
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+          submodules: true
       - if: github.event_name != 'release' && github.event_name != 'workflow_dispatch'
         uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
-      - uses: taiki-e/install-action@e49978b799e49ff429d162b7a30601a569ab6538 # v2.81.1
+      - if: github.event_name == 'pull_request'
+        uses: hendrikmuhs/ccache-action@5ebbd400eff9e74630f759d94ddd7b6c26299639 # v1.2.20
+        with:
+          max-size: 2G
+      - if: github.event_name == 'pull_request'
+        run: echo "MLN_CMAKE_CXX_LAUNCHER=ccache" >> $GITHUB_ENV
+      - uses: taiki-e/install-action@7a79fe8c3a13344501c80d99cae481c1c9085912 # v2.81.10
         with: { tool: "just" }
       - run: echo "MLN_PRECOMPILE=${{ matrix.precompiled }}" >> $GITHUB_ENV
       - run: echo "MLN_CORE_LIBRARY_USE_AMALGAM=${{ matrix.amalgam }}" >> $GITHUB_ENV
@@ -94,8 +157,8 @@ jobs:
         if: ${{ !(startsWith(matrix.runs-on, 'ubuntu') && matrix.backend == 'glx') }}
         run: just ci-test ${{ matrix.backend }}
 
-  test-msrv:
-    name: Test MSRV ${{ matrix.runs-on }} - ${{ matrix.backend }} - Precompiled ${{ matrix.precompiled }}
+  build-msrv:
+    name: Build MSRV ${{ matrix.runs-on }} - ${{ matrix.backend }}
     runs-on: ${{ matrix.runs-on }}
     permissions:
       contents: read
@@ -103,43 +166,35 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Linux x86
+          # MSRV mainly checks Rust/toolchain compatibility.
+          # Backend-specific behavior is covered by the stable jobs above, so
+          # one Linux leg and one macOS leg are enough to cover build.rs target_os branches.
           - runs-on: ubuntu-latest
             backend: vulkan
             precompiled: 0
             amalgam: 0
-          - runs-on: ubuntu-latest
-            backend: glx
-            precompiled: 0
-            amalgam: 0
-          # Linux ARM
-          - runs-on: ubuntu-24.04-arm
-            backend: opengl
-            precompiled: 0
-            amalgam: 0
-          # macOS ARM
           - runs-on: macos-latest
             backend: metal
             precompiled: 0
             amalgam: 0
-          - runs-on: macos-latest
-            backend: vulkan
-            precompiled: 0
-            amalgam: 0
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with: { persist-credentials: false }
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+          submodules: true
       - if: github.event_name != 'release' && github.event_name != 'workflow_dispatch'
         uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
-      - uses: taiki-e/install-action@e49978b799e49ff429d162b7a30601a569ab6538 # v2.81.1
+      - if: github.event_name == 'pull_request'
+        uses: hendrikmuhs/ccache-action@5ebbd400eff9e74630f759d94ddd7b6c26299639 # v1.2.20
+        with:
+          max-size: 2G
+      - if: github.event_name == 'pull_request'
+        run: echo "MLN_CMAKE_CXX_LAUNCHER=ccache" >> $GITHUB_ENV
+      - uses: taiki-e/install-action@7a79fe8c3a13344501c80d99cae481c1c9085912 # v2.81.10
         with: { tool: "just" }
       - run: echo "MLN_PRECOMPILE=${{ matrix.precompiled }}" >> $GITHUB_ENV
       - run: echo "MLN_CORE_LIBRARY_USE_AMALGAM=${{ matrix.amalgam }}" >> $GITHUB_ENV
       - run: just env-info install-dependencies '${{ matrix.backend }}'
-      - if: startsWith(matrix.runs-on, 'macos') && matrix.backend == 'vulkan'
-        run: |
-          echo "VK_ICD_FILENAMES=$(brew --prefix molten-vk)/etc/vulkan/icd.d/MoltenVK_icd.json" >> $GITHUB_ENV
-          echo "DYLD_LIBRARY_PATH=$(brew --prefix vulkan-loader)/lib" >> $GITHUB_ENV
       - name: Read MSRV
         id: msrv
         run: echo "value=$(just get-msrv)" >> $GITHUB_OUTPUT
@@ -147,17 +202,13 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: ${{ steps.msrv.outputs.value }}
-      - name: Run CI tests (MSRV, Linux OpenGL GLX via Xvfb)
-        if: startsWith(matrix.runs-on, 'ubuntu') && matrix.backend == 'glx'
-        run: xvfb-run -a --server-args="-screen 0 1280x1024x24" just ci_mode=0 ci-test-msrv ${{ matrix.backend }} # Ignore warnings in MSRV
-      - name: Run CI tests (MSRV)
-        if: ${{ !(startsWith(matrix.runs-on, 'ubuntu') && matrix.backend == 'glx') }}
-        run: just ci_mode=0 ci-test-msrv ${{ matrix.backend }} # Ignore warnings in MSRV
+      - name: Build with MSRV
+        run: just ci_mode=0 build-msrv ${{ matrix.backend }} # Ignore warnings in MSRV
 
   # This final step is needed to mark the whole workflow as successful
   # Don't change its name - it is used by the merge protection rules
   ci-passed:
-    needs: [lint, test, test-msrv]
+    needs: [lint, test, build-msrv, slint-example]
     if: always()
     runs-on: ubuntu-latest
     permissions: {}
@@ -186,20 +237,21 @@ jobs:
     env:
       MLN_PRECOMPILE: 1
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           fetch-depth: 0
           persist-credentials: false
+          submodules: true
       - uses: dtolnay/rust-toolchain@stable
       - name: Publish to crates.io if crate's version is newer
-        uses: release-plz/action@064f4d1e36c843611ddf013be726beaa4ad804db # v0.5.129
+        uses: release-plz/action@e8792575c7f2366cf6ff3ccc33ead9ace5b691c7 # v0.5.130
         id: release
         with: { command: release }
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - if: ${{ steps.release.outputs.releases_created == 'false' }}
         name: If version is the same, create a PR proposing new version and changelog for the next release
-        uses: release-plz/action@064f4d1e36c843611ddf013be726beaa4ad804db # v0.5.129
+        uses: release-plz/action@e8792575c7f2366cf6ff3ccc33ead9ace5b691c7 # v0.5.130
         with: { command: release-pr }
         env:
           GITHUB_TOKEN: ${{ secrets.RELEASE_PLZ_TOKEN }}

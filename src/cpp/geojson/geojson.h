@@ -1,6 +1,6 @@
 #pragma once
 
-#include <mapbox/geojson.hpp>
+#include <mbgl/util/geojson.hpp>
 #include "rust/cxx.h"
 #include <memory>
 
@@ -8,18 +8,19 @@ namespace mln::bridge::geojson {
 
 class GeoJson {
 public:
-    explicit GeoJson(mapbox::geojson::geojson value);
+    explicit GeoJson(mbgl::GeoJSON value);
 
-    const mapbox::geojson::geojson& get() const;
+    const mbgl::GeoJSON& get() const;
 
 private:
-    mapbox::geojson::geojson value_;
+    mbgl::GeoJSON value_;
 };
 
 std::unique_ptr<GeoJson> parse(rust::Str json);
 
 std::unique_ptr<GeoJson> clone(const GeoJson& geojson);
 
-rust::String stringify(const GeoJson& geojson);
+// TODO(maplibre-native#4345): can be restored alongside the implementation in geojson.cpp.
+// rust::String stringify(const GeoJson& geojson);
 
 } // namespace mln::bridge::geojson

@@ -41,6 +41,10 @@ namespace mln::bridge::style::sources::geojson {
         return std::make_unique<mbgl::style::GeoJSONSource>(std::string(id));
     }
 
+    void setURL(const std::unique_ptr<mbgl::style::GeoJSONSource>& source, rust::Str url) {
+        source->setURL(std::string(url));
+    }
+
     void setGeoJson(mbgl::style::GeoJSONSource& source,
                     const mln::bridge::geojson::GeoJson& geojson) {
         source.setGeoJSON(geojson.get());
