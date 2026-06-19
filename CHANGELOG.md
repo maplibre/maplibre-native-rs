@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.3](https://github.com/maplibre/maplibre-native-rs/compare/v0.8.2...v0.8.3) - 2026-06-19
+
+### Added
+
+- support OpenGL EGL and GLX contexts ([#230](https://github.com/maplibre/maplibre-native-rs/pull/230))
+
+### Fixed
+
+- *(build)* restore precompiled MLN builds ([#242](https://github.com/maplibre/maplibre-native-rs/pull/242))
+- *(package)* make webgpu-shim publishable ([#241](https://github.com/maplibre/maplibre-native-rs/pull/241))
+
+### Other
+
+- *(deps)* bump toml to 1.1 ([#244](https://github.com/maplibre/maplibre-native-rs/pull/244))
+- cancel superseded CI runs on the same PR ([#240](https://github.com/maplibre/maplibre-native-rs/pull/240))
+- enable ccache for C++ builds on PRs ([#238](https://github.com/maplibre/maplibre-native-rs/pull/238))
+- reduce MSRV job matrix ([#239](https://github.com/maplibre/maplibre-native-rs/pull/239))
+- Implement wgpu Texture sharing
+- *(deps)* bump the all-actions-version-updates group with 2 updates ([#235](https://github.com/maplibre/maplibre-native-rs/pull/235))
+
 ## [0.8.2](https://github.com/maplibre/maplibre-native-rs/compare/v0.8.1...v0.8.2) - 2026-06-08
 
 ### Added
