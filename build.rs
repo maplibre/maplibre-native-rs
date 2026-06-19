@@ -35,7 +35,9 @@ const MLN_COMMIT: &str = "35cf39b72f45cfea55a34ffe7358ade5c950a3c5";
 const BRIDGE_RS: &str = "src/bridge.rs";
 const BRIDGE_CPP_DIR: &str = "src/cpp";
 
-const BRIDGE_INCLUDE_DIRS: &[&str] = &[/*"include", */ "src/cpp"];
+const BRIDGE_INCLUDE_DIRS: &[&str] = &["src/cpp"];
+
+const PRECOMPILED_VENDORED_INCLUDE_DIR: &str = "include";
 
 /// Supported graphics rendering APIs.
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
@@ -317,7 +319,14 @@ struct Info {
 }
 
 fn bundle_precompiled() -> Info {
-    let (cpp_root, include_dirs) = resolve_mln_core();
+    let (cpp_root, mut include_dirs) = resolve_mln_core();
+
+    // The precompiled headers tarball omits `platform/default/` headers
+    // (e.g. `mbgl/gfx/headless_frontend.hpp`), so add vendored fallbacks.
+    let root = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
+    include_dirs.push(root.join(PRECOMPILED_VENDORED_INCLUDE_DIR));
+    // Editing a vendored fallback header must trigger a rebuild of the bridge.
+    println!("cargo:rerun-if-changed={PRECOMPILED_VENDORED_INCLUDE_DIR}");
 
     println!(
         "cargo:warning=Using precompiled maplibre-native static library from {}",
@@ -641,9 +650,8 @@ fn build_mln() {
         println!("cargo:rustc-link-lib=mbgl-vendor-csscolorparser");
         println!("cargo:rustc-link-lib=mlt-cpp"); // provided with maplibre-native
         if is_apple {
-            // darwin builds vendored ICU and uses the system sqlite3
+            // darwin builds vendored ICU (system sqlite3 is linked below for all darwin builds)
             println!("cargo:rustc-link-lib=mbgl-vendor-icu");
-            println!("cargo:rustc-link-lib=sqlite3");
         } else {
             println!("cargo:rustc-link-lib=mbgl-vendor-nunicode");
             println!("cargo:rustc-link-lib=mbgl-vendor-sqlite");
@@ -664,8 +672,10 @@ fn build_mln() {
         }
         println!("cargo:rustc-link-lib=png"); // sudo dnf install libpng-devel
         println!("cargo:rustc-link-lib=jpeg"); // sudo dnf install libjpeg-turbo-devel
-        println!("cargo:rustc-link-lib=uv"); // sudo dnf install libuv-devel
         println!("cargo:rustc-link-lib=webp"); // sudo dnf install libwebp-devel
+    }
+    if !is_apple {
+        println!("cargo:rustc-link-lib=uv"); // sudo dnf install libuv-devel
     }
     println!("cargo:rustc-link-lib=curl");
     println!("cargo:rustc-link-lib=z");
@@ -673,6 +683,8 @@ fn build_mln() {
     if is_apple {
         println!("cargo:rustc-link-lib=framework=Foundation");
         println!("cargo:rustc-link-lib=framework=CoreGraphics");
+        // darwin uses the system sqlite3 (both source and precompiled builds).
+        println!("cargo:rustc-link-lib=sqlite3");
     }
     match backend {
         GraphicsRenderingAPI::Vulkan if is_apple => {

@@ -22,10 +22,6 @@ pub enum GeoJsonError {
 /// A GeoJSON value prepared for MapLibre Native.
 ///
 /// This type owns MapLibre Native's C++ GeoJSON representation.
-///
-/// MapLibre Native's GeoJSON representation is two-dimensional and silently
-/// drops `bbox`, foreign members, and any coordinate beyond X/Y, regardless of
-/// the construction path.
 pub struct GeoJson {
     inner: UniquePtr<geojson::GeoJson>,
 }
@@ -54,14 +50,16 @@ impl GeoJson {
         Self::from_json_str(&json)
     }
 
-    /// Serializes this value to a GeoJSON string using MapLibre Native.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if MapLibre Native fails to serialize the value.
-    pub fn to_json_string(&self) -> Result<String, GeoJsonError> {
-        geojson::stringify(&self.inner).map_err(|error| GeoJsonError::Native(error.to_string()))
-    }
+    // TODO(maplibre-native#4345): can be restored once the precompiled core exposes a
+    // public GeoJSON serializer
+    // /// Serializes this value to a GeoJSON string using MapLibre Native.
+    // ///
+    // /// # Errors
+    // ///
+    // /// Returns an error if MapLibre Native fails to serialize the value.
+    // pub fn to_json_string(&self) -> Result<String, GeoJsonError> {
+    //     geojson::stringify(&self.inner).map_err(|error| GeoJsonError::Native(error.to_string()))
+    // }
 
     pub(crate) fn as_inner(&self) -> &geojson::GeoJson {
         self.inner.as_ref().expect("GeoJson bridge value is unexpectedly null")
@@ -113,47 +111,6 @@ mod tests {
     use super::GeoJson;
 
     #[test]
-    fn parse_clone_and_stringify_geojson() {
-        let geojson = r#"{"type":"Point","coordinates":[1.0,2.0]}"#
-            .parse::<GeoJson>()
-            .expect("valid point GeoJSON should parse");
-        let cloned = geojson.clone();
-        let serialized = cloned.to_json_string().expect("valid GeoJSON should serialize");
-
-        assert!(serialized.contains(r#""Point""#));
-    }
-
-    #[test]
-    fn from_str_reports_invalid_geojson() {
-        assert!("not json".parse::<GeoJson>().is_err());
-    }
-
-    #[test]
-    fn from_str_drops_bbox_like_maplibre_native() {
-        let geojson = r#"{"type":"Point","bbox":[0,0,1,1],"coordinates":[1.0,2.0]}"#
-            .parse::<GeoJson>()
-            .expect("valid point GeoJSON should parse");
-
-        assert!(!geojson.to_json_string().expect("GeoJSON should serialize").contains("bbox"));
-    }
-
-    #[test]
-    fn from_str_drops_z_coordinates_like_maplibre_native() {
-        let geojson = r#"{"type":"Point","coordinates":[1.0,2.0,12345.6789]}"#
-            .parse::<GeoJson>()
-            .expect("valid 3D point GeoJSON should parse");
-        let serialized = geojson.to_json_string().expect("GeoJSON should serialize");
-        let json: serde_json::Value =
-            serde_json::from_str(&serialized).expect("serialized GeoJSON should parse as JSON");
-        let coordinates = json
-            .get("coordinates")
-            .and_then(serde_json::Value::as_array)
-            .expect("serialized point should have coordinate array");
-
-        assert_eq!(coordinates.len(), 2);
-    }
-
-    #[test]
     fn clone_survives_original_drop() {
         let cloned = {
             let geojson = r#"{"type":"Point","coordinates":[1.0,2.0]}"#
@@ -162,10 +119,12 @@ mod tests {
             geojson.clone()
         };
 
-        assert!(cloned
-            .to_json_string()
-            .expect("cloned GeoJSON should serialize")
-            .contains("Point"));
+        let _ = cloned.as_inner();
+    }
+
+    #[test]
+    fn from_str_reports_invalid_geojson() {
+        assert!("not json".parse::<GeoJson>().is_err());
     }
 
     #[cfg(feature = "geojson")]
@@ -177,9 +136,44 @@ mod tests {
         let converted = GeoJson::try_from(geojson)
             .expect("geojson crate value should convert to MapLibre GeoJSON");
 
-        assert!(converted
-            .to_json_string()
-            .expect("converted GeoJSON should serialize")
-            .contains(r#""Feature""#));
+        let _ = converted.as_inner();
     }
+
+    // TODO(maplibre-native#4345): can be restored once `GeoJson::to_json_string` is
+    // re-enabled (depends on a public `mbgl::*` GeoJSON serializer).
+    // #[test]
+    // fn parse_clone_and_stringify_geojson() {
+    //     let geojson = r#"{"type":"Point","coordinates":[1.0,2.0]}"#
+    //         .parse::<GeoJson>()
+    //         .expect("valid point GeoJSON should parse");
+    //     let cloned = geojson.clone();
+    //     let serialized = cloned.to_json_string().expect("valid GeoJSON should serialize");
+    //
+    //     assert!(serialized.contains(r#""Point""#));
+    // }
+    //
+    // #[test]
+    // fn from_str_drops_bbox_like_maplibre_native() {
+    //     let geojson = r#"{"type":"Point","bbox":[0,0,1,1],"coordinates":[1.0,2.0]}"#
+    //         .parse::<GeoJson>()
+    //         .expect("valid point GeoJSON should parse");
+    //
+    //     assert!(!geojson.to_json_string().expect("GeoJSON should serialize").contains("bbox"));
+    // }
+    //
+    // #[test]
+    // fn from_str_drops_z_coordinates_like_maplibre_native() {
+    //     let geojson = r#"{"type":"Point","coordinates":[1.0,2.0,12345.6789]}"#
+    //         .parse::<GeoJson>()
+    //         .expect("valid 3D point GeoJSON should parse");
+    //     let serialized = geojson.to_json_string().expect("GeoJSON should serialize");
+    //     let json: serde_json::Value =
+    //         serde_json::from_str(&serialized).expect("serialized GeoJSON should parse as JSON");
+    //     let coordinates = json
+    //         .get("coordinates")
+    //         .and_then(serde_json::Value::as_array)
+    //         .expect("serialized point should have coordinate array");
+    //
+    //     assert_eq!(coordinates.len(), 2);
+    // }
 }

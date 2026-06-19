@@ -88,11 +88,10 @@ fn multiple_renderers_render_on_single_thread() {
     let second_request =
         second.submit_render_static(&test_camera()).expect("second render should submit");
 
-    // Both requests are driven from the same thread-local run loop.
-    tick_until_ready(|| first_request.is_ready() && second_request.is_ready());
-
-    let first_image = first_request.finish().expect("first renderer should render");
-    let second_image = second_request.finish().expect("second renderer should render");
+    // Both requests are already submitted before waiting, so they are driven
+    // from the same thread-local run loop.
+    let first_image = first_request.wait().expect("first renderer should render");
+    let second_image = second_request.wait().expect("second renderer should render");
 
     assert_eq!(first_image.as_image().width(), 128);
     assert_eq!(first_image.as_image().height(), 128);
@@ -108,9 +107,8 @@ fn load_style_from_json_str_renders() {
 
     let request =
         renderer.submit_render_static(&test_camera()).expect("JSON style render should submit");
-    tick_until_ready(|| request.is_ready());
 
-    let image = request.finish().expect("JSON style should render");
+    let image = request.wait().expect("JSON style should render");
     assert_eq!(image.as_image().width(), 128);
     assert_eq!(image.as_image().height(), 128);
 }
@@ -150,9 +148,7 @@ fn tile_render_request_renders() {
 
     let request = renderer.submit_render_tile(0, 0, 0).expect("tile render should submit");
 
-    tick_until_ready(|| request.is_ready());
-
-    let image = request.finish().expect("tile renderer should render");
+    let image = request.wait().expect("tile renderer should render");
     assert_eq!(image.as_image().width(), 128);
     assert_eq!(image.as_image().height(), 128);
 }
@@ -171,9 +167,8 @@ fn camera_for_bounds_renders() {
     };
     let camera = renderer.camera_for_bounds(bounds, Some(EdgeInsets::all(8.0)), 0.0, 0.0);
     let request = renderer.submit_render_static(&camera).expect("bounds-fit render should submit");
-    tick_until_ready(|| request.is_ready());
 
-    let image = request.finish().expect("bounds-fit renderer should render");
+    let image = request.wait().expect("bounds-fit renderer should render");
     assert_eq!(image.as_image().width(), 128);
     assert_eq!(image.as_image().height(), 128);
 }
@@ -197,9 +192,8 @@ fn camera_for_lat_lngs_renders() {
         .expect("non-empty coordinates should produce a camera");
     let request =
         renderer.submit_render_static(&camera).expect("coordinates-fit render should submit");
-    tick_until_ready(|| request.is_ready());
 
-    let image = request.finish().expect("coordinates-fit renderer should render");
+    let image = request.wait().expect("coordinates-fit renderer should render");
     assert_eq!(image.as_image().width(), 128);
     assert_eq!(image.as_image().height(), 128);
 }
@@ -234,9 +228,8 @@ fn camera_for_geojson_renders() {
         .expect("non-empty geometry should produce a camera");
     let request =
         renderer.submit_render_static(&camera).expect("geometry-fit render should submit");
-    tick_until_ready(|| request.is_ready());
 
-    let image = request.finish().expect("geometry-fit renderer should render");
+    let image = request.wait().expect("geometry-fit renderer should render");
     assert_eq!(image.as_image().width(), 128);
     assert_eq!(image.as_image().height(), 128);
 }
@@ -282,8 +275,7 @@ fn camera_for_geojson_matches_bounds() {
 
     let render = |renderer: &mut ImageRenderer<Static>, camera: &CameraUpdate| {
         let request = renderer.submit_render_static(camera).expect("render should submit");
-        tick_until_ready(|| request.is_ready());
-        request.finish().expect("render should succeed").as_image().clone()
+        request.wait().expect("render should succeed").as_image().clone()
     };
 
     let geo_camera = renderer
