@@ -237,7 +237,16 @@ update-maplibre-native: (assert-cmd "curl") (assert-cmd "jq")
         echo "Updating Maplibre Native Core from $MLN_CORE_RELEASE_SHA to $LATEST_MLN_CORE_RELEASE_SHA"
         sed -i.tmp -E "/\[package\.metadata\.mln\]/,/^\[/{s/release\s*=\s*\"[^\"]+\"/release = \"$LATEST_MLN_CORE_RELEASE_SHA\"/}" Cargo.toml && \
         rm -f Cargo.toml.tmp
-        sed -i.tmp "s/const MLN_COMMIT: &str = \"[^\"]*\"/const MLN_COMMIT: \&str = \"$LATEST_MLN_CORE_RELEASE_SHA\"/" build.rs
+        # Only update the upstream (non-wgpu) MLN_COMMIT, i.e. the one right
+        # after `#[cfg(not(feature = "wgpu"))]`. The wgpu fork pin is managed
+        # separately and must not be overwritten with an upstream release tag.
+        # Split into multiple `-e` so the block works on both GNU and BSD sed.
+        sed -i.tmp -E \
+            -e "/#\[cfg\(not\(feature = \"wgpu\"\)\)\]/ {" \
+            -e "n" \
+            -e "s/const MLN_COMMIT: &str = \"[^\"]*\"/const MLN_COMMIT: \&str = \"$LATEST_MLN_CORE_RELEASE_SHA\"/" \
+            -e "}" \
+            build.rs
         rm -f build.rs.tmp
     fi
 

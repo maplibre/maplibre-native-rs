@@ -89,8 +89,15 @@ fn opengl_context(target_os: &str) -> OpenGlContext {
     }
 }
 
-/// Emits `cargo:warning` for redundant or unsupported feature combinations.
-fn warn_feature_combinations(target_os: &str) {
+/// Warns about (or rejects) redundant or unsupported feature combinations.
+fn check_feature_combinations(target_os: &str, precompiled: bool) {
+    // Precompiled cores ship one generic OpenGL amalgam, so the GLX/EGL context
+    // choice (a source-build cmake option) cannot apply. Fail loudly instead of
+    // silently ignoring `glx`.
+    assert!(
+        !(with_glx() && precompiled),
+        "Feature 'glx' is not supported with precompiled cores (MLN_PRECOMPILE): the OpenGL context is fixed by the prebuilt artifact. Build from source to use GLX, or drop the 'glx' feature."
+    );
     if with_glx() && target_os != "linux" {
         println!("cargo::warning=Feature 'glx' currently only affects Linux OpenGL builds.");
     }
@@ -622,7 +629,7 @@ fn build_mln() {
 
     // Add system library search paths for macOS
     let target_os = env::var("CARGO_CFG_TARGET_OS").expect("CARGO_CFG_TARGET_OS not set");
-    warn_feature_combinations(&target_os);
+    check_feature_combinations(&target_os, precompiled);
     if target_os == "macos" {
         // Check for Homebrew installation paths
         if let Ok(homebrew_prefix) = env::var("HOMEBREW_PREFIX") {
