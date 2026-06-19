@@ -169,7 +169,7 @@ fn determine_cargo_toml_information() -> CargoTomlInformation {
         panic!("Failed to read manifest at {}: {err}", manifest_path.display())
     });
 
-    let manifest: toml::Value = manifest_str.parse().unwrap_or_else(|err| {
+    let manifest: toml::Value = toml::from_str(&manifest_str).unwrap_or_else(|err| {
         panic!("Failed to parse manifest as TOML at {}: {err}", manifest_path.display())
     });
 
