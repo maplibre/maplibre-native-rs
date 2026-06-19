@@ -85,13 +85,16 @@ get-crate-field field package=main_crate:  (assert-cmd 'jq')
 # Get the minimum supported Rust version (MSRV) for the crate
 get-msrv package=main_crate:  (get-crate-field 'rust_version' package)
 
-# Install Linux dependencies (Ubuntu/Debian). Supports 'vulkan' and 'opengl' backends.
+# Install Linux dependencies (Ubuntu/Debian). Supports 'vulkan', 'opengl', and 'glx' backends.
 # fontconfig is required for the slint example
 [linux]
 install-dependencies backend='vulkan':
     sudo apt-get update
     sudo apt-get install -y \
-      {{if backend == 'opengl' {'libgl1-mesa-dev libglu1-mesa-dev libx11-dev xvfb'} else if backend == 'vulkan' {'mesa-vulkan-drivers glslang-dev'} else if backend == 'wgpu' {'libgl1-mesa-dev libegl1-mesa-dev'} else {''} }} \
+      {{if backend == 'glx' {'libgl1-mesa-dev libx11-dev xvfb'} else {''} }} \
+      {{if backend == 'opengl' {'libgl1-mesa-dev libegl1-mesa-dev libgl1-mesa-dri'} else {''} }} \
+      {{if backend == 'vulkan' {'mesa-vulkan-drivers glslang-dev'} else {''} }} \
+      {{if backend == 'wgpu' {'libgl1-mesa-dev libegl1-mesa-dev'} else {''} }} \
       build-essential \
       libcurl4-openssl-dev \
       libuv1-dev \
@@ -234,7 +237,16 @@ update-maplibre-native: (assert-cmd "curl") (assert-cmd "jq")
         echo "Updating Maplibre Native Core from $MLN_CORE_RELEASE_SHA to $LATEST_MLN_CORE_RELEASE_SHA"
         sed -i.tmp -E "/\[package\.metadata\.mln\]/,/^\[/{s/release\s*=\s*\"[^\"]+\"/release = \"$LATEST_MLN_CORE_RELEASE_SHA\"/}" Cargo.toml && \
         rm -f Cargo.toml.tmp
-        sed -i.tmp "s/const MLN_REVISION: &str = \"[^\"]*\"/const MLN_REVISION: \&str = \"$LATEST_MLN_CORE_RELEASE_SHA\"/" build.rs
+        # Only update the upstream (non-wgpu) MLN_COMMIT, i.e. the one right
+        # after `#[cfg(not(feature = "wgpu"))]`. The wgpu fork pin is managed
+        # separately and must not be overwritten with an upstream release tag.
+        # Split into multiple `-e` so the block works on both GNU and BSD sed.
+        sed -i.tmp -E \
+            -e "/#\[cfg\(not\(feature = \"wgpu\"\)\)\]/ {" \
+            -e "n" \
+            -e "s/const MLN_COMMIT: &str = \"[^\"]*\"/const MLN_COMMIT: \&str = \"$LATEST_MLN_CORE_RELEASE_SHA\"/" \
+            -e "}" \
+            build.rs
         rm -f build.rs.tmp
     fi
 

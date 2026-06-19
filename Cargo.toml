@@ -24,9 +24,15 @@ metal = []
 opengl = []
 vulkan = []
 wgpu = ["dep:webgpu-shim", "dep:wgpu"]
+
+# Use a GLX context for OpenGL (Linux)
+glx = ["opengl"]
+
 # Enables parsing style-spec layer JSON via `AnyLayer::from_json_str`/`from_json_value`.
 json = ["dep:serde_json"]
+# Interoperate with the `geojson` crate
 geojson = ["dep:geojson"]
+# Logging via the `log` crate.
 log = ["dep:log"]
 
 [dependencies]

@@ -19,14 +19,16 @@ Instructions for this are below.
 This crate supports multiple rendering backends:
 
 - `vulkan` (default on Linux/Windows): `cargo build --features vulkan`
-- `opengl` (cross-platform): `cargo build --features opengl`
 - `metal` (default on macOS/iOS): `cargo build --features metal`
+- `opengl` (Linux/Windows): `cargo build --features opengl`
 
-If no feature is specified, the crate will automatically select the platform-appropriate default backend.
+On Linux, OpenGL uses EGL by default for headless rendering. Use the `glx` feature only when you explicitly need rendering through GLX/X11.
 
-We also support the following other features:
+We also support the following other features (all enabled by default):
 
-- `log` logging via the [`log` library](https://lib.rs/log)
+- `json`: load styles and layers from JSON via [`serde_json`](https://lib.rs/serde_json)
+- `geojson`: interoperate with the [`geojson`](https://lib.rs/geojson) crate
+- `log`: logging via the [`log`](https://lib.rs/log) crate
 
 At its core, we work as follows:
 
@@ -75,7 +77,7 @@ The following platform and rendering-API combinations are supported and tested i
 ### Dependencies
 
 This command will install the required dependencies on Linux or macOS for the `vulkan` backend.
-You may also use it with `opengl` parameter on Linux.
+You may also use it with the `opengl` or `glx` parameter on Linux.
 It is OK to run this command multiple times for each backend.
 
 ```shell

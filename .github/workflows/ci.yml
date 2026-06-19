@@ -16,6 +16,13 @@ defaults:
   run:
     shell: bash
 
+env:
+  # Headless OpenGL EGL: render without an X server / display surface, and force
+  # the llvmpipe software rasterizer (CI runners have no GPU). Harmless for the
+  # other backends.
+  EGL_PLATFORM: surfaceless
+  LIBGL_ALWAYS_SOFTWARE: "1"
+
 jobs:
   lint:
     name: Lint
@@ -95,6 +102,10 @@ jobs:
             precompiled: 0
             amalgam: 0
           - runs-on: ubuntu-latest
+            backend: glx
+            precompiled: 0
+            amalgam: 0
+          - runs-on: ubuntu-latest
             backend: vulkan
             precompiled: 1 # also cover the prebuilt amalgam path
             amalgam: 1
@@ -139,11 +150,11 @@ jobs:
           echo "VK_ICD_FILENAMES=$(brew --prefix molten-vk)/etc/vulkan/icd.d/MoltenVK_icd.json" >> $GITHUB_ENV
           echo "DYLD_LIBRARY_PATH=$(brew --prefix vulkan-loader)/lib" >> $GITHUB_ENV
       - run: rustup update stable && rustup default stable
-      - name: Run CI tests (Linux OpenGL via Xvfb)
-        if: startsWith(matrix.runs-on, 'ubuntu') && matrix.backend == 'opengl'
+      - name: Run CI tests (Linux OpenGL GLX via Xvfb)
+        if: startsWith(matrix.runs-on, 'ubuntu') && matrix.backend == 'glx'
         run: xvfb-run -a --server-args="-screen 0 1280x1024x24" just ci-test ${{ matrix.backend }}
       - name: Run CI tests
-        if: ${{ !(startsWith(matrix.runs-on, 'ubuntu') && matrix.backend == 'opengl') }}
+        if: ${{ !(startsWith(matrix.runs-on, 'ubuntu') && matrix.backend == 'glx') }}
         run: just ci-test ${{ matrix.backend }}
 
   build-msrv:
