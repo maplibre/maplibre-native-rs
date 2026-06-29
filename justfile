@@ -26,7 +26,8 @@ check:
     cargo check --workspace --all-targets
 
 # Lint the project
-ci-lint: env-info test-fmt clippy
+ci-lint: env-info test-fmt
+    cargo clippy --workspace --all-targets --features vulkan,tokio -- -D warnings
 
 # Run all tests as expected by CI
 ci-test backend: (env-info) (build backend) (test backend) (test-doc backend) && assert-git-is-clean
@@ -163,7 +164,7 @@ semver *args:  (cargo-install 'cargo-semver-checks')
 
 # Run testcases against a specific backend
 test backend='vulkan':
-    cargo test --all-targets --features {{backend}} --workspace
+    cargo test --all-targets --features {{backend}},tokio --workspace
 
 # Build slint example outside workspace.
 build-example_slint:

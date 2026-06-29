@@ -28,7 +28,6 @@ macro_rules! callback {
         }
     };
 }
-pub(crate) use callback;
 
 callback!(VoidCallback, Fn());
 /// General callback with any argument
