@@ -31,8 +31,8 @@ namespace {
 // Shared state for one mbgl resource request.
 struct RequestState {
     mbgl::FileSource::Callback cb;
-    // Thread-local run loop that owns the mbgl request.
-    mbgl::util::RunLoop* loop = nullptr;
+    // Scheduler of the thread that issued the request.
+    mbgl::Scheduler* scheduler = nullptr;
     std::mutex mutex;
     std::atomic<bool> done{false};
     std::atomic<bool> cancelled{false};
@@ -166,9 +166,9 @@ RawResourceRequest toRustResourceRequest(const mbgl::Resource& resource, bool in
 }
 
 // MapLibre Native requires the request callback on the thread that issued request(),
-// so marshal it back via that thread's RunLoop rather than calling cb here.
+// so marshal it back to that thread's scheduler rather than calling cb here.
 void completeState(const std::shared_ptr<RequestState>& state, mbgl::Response response) {
-    mbgl::util::RunLoop* loop = nullptr;
+    mbgl::Scheduler* scheduler = nullptr;
     {
         std::lock_guard lock(state->mutex);
         if (state->cancelled.load()) {
@@ -178,10 +178,10 @@ void completeState(const std::shared_ptr<RequestState>& state, mbgl::Response re
         if (!state->done.compare_exchange_strong(expected, true)) {
             return;
         }
-        loop = state->loop;
+        scheduler = state->scheduler;
     }
 
-    loop->invoke([state, response = std::move(response)]() mutable {
+    scheduler->schedule([state, response = std::move(response)]() mutable {
         if (!state->cancelled.load()) {
             state->cb(std::move(response));
         }
@@ -244,7 +244,7 @@ public:
                                                 Callback cb) override {
         auto state = std::make_shared<RequestState>();
         state->cb = std::move(cb);
-        state->loop = mbgl::util::RunLoop::Get();
+        state->scheduler = mbgl::util::RunLoop::Get();
 
         // Extra owning ref held by Rust until completion or drop.
         auto token = makeToken(state);
