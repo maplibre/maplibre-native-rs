@@ -2,3 +2,8 @@
 dependencies_update = true
 git_release_name = "v{{ version }}"
 git_tag_name = "v{{ version }}"
+
+[[package]]
+name = "webgpu-shim"
+git_release_enable = false
+git_tag_enable = false
