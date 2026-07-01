@@ -7,3 +7,4 @@ git_tag_name = "v{{ version }}"
 name = "webgpu-shim"
 git_release_enable = false
 git_tag_enable = false
+git_tag_name = "webgpu-shim-v{{ version }}"
