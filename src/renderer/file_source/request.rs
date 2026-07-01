@@ -27,7 +27,7 @@ pub struct ResourceRequest {
     pub prior_modified: Option<SystemTime>,
     /// Previous `Expires` value from cache, if known.
     pub prior_expires: Option<SystemTime>,
-    /// Previous `ETag` value from cache, if known.
+    /// Previous `ETag`, if known.
     pub prior_etag: Option<String>,
     /// Previous body bytes from cache, if needed for a 304 response.
     pub prior_data: Option<Vec<u8>>,

@@ -844,7 +844,7 @@ pub mod file_source {
         fn request(
             self: &BoxedFileSource,
             request: &RawResourceRequest,
-            responder_token: usize,
+            responder: SharedPtr<RequestState>,
         ) -> Box<RequestHandleFfi>;
 
         /// Store a response into a cache source (`FileSource::forward`).
@@ -852,7 +852,7 @@ pub mod file_source {
             self: &BoxedFileSource,
             request: &RawResourceRequest,
             response: &RawResponse,
-            forward_token: usize,
+            completion: SharedPtr<ForwardState>,
         );
 
         /// Run the request's cancellation hook.
@@ -864,15 +864,23 @@ pub mod file_source {
         type ResourceKind;
         type ErrorReason;
         type FileSourceType;
+        /// Native per-request state, owned via `SharedPtr` and handed back to C++ on
+        /// completion/cancellation (replaces a raw pointer token).
+        type RequestState;
+        /// Native per-`forward` state, owned via `SharedPtr`.
+        type ForwardState;
 
         /// Register a Rust file source for `source_type`.
         fn register_rust_file_source(source_type: FileSourceType, source: Box<BoxedFileSource>);
 
-        /// Deliver a response for `token` (an error response if dropped uncompleted).
-        fn responder_complete(token: usize, response: &RawResponse);
+        /// Deliver a response for `state` (an error response if dropped uncompleted).
+        fn responder_complete(state: SharedPtr<RequestState>, response: &RawResponse);
+
+        /// Cancel `state` without delivering a response.
+        fn responder_cancel(state: SharedPtr<RequestState>);
 
         /// Notify mbgl that a cache `forward` call finished.
-        fn forward_complete(token: usize);
+        fn forward_complete(state: SharedPtr<ForwardState>);
     }
 }
 

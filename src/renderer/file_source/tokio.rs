@@ -1,4 +1,4 @@
-//! Thin adapter for registering `tokio`-native async file sources.
+//! Thin adapter for `tokio`-native async file sources.
 
 use std::{future::Future, sync::Arc};
 

@@ -13,13 +13,10 @@
 #include <mbgl/util/run_loop.hpp>
 
 #include <atomic>
-#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <memory>
-#include <mutex>
-#include <optional>
 #include <string>
 #include <utility>
 
@@ -28,46 +25,19 @@ namespace bridge {
 
 namespace {
 
-// Shared state for one mbgl resource request.
-struct RequestState {
-    mbgl::FileSource::Callback cb;
-    // Scheduler of the thread that issued the request.
-    mbgl::Scheduler* scheduler = nullptr;
-    std::mutex mutex;
-    std::atomic<bool> done{false};
-    std::atomic<bool> cancelled{false};
-};
-
-// Holds a forward's (cache-write) completion callback until `forward_complete`.
-struct ForwardState {
-    std::function<void()> cb;
-};
-
-// RawResponse -> mbgl::Response (response delivery).
-//
-// `error` and the other fields are independent and can coexist: a cache miss is
-// `error = NotFound` together with `noContent = true`, mirroring mbgl's own
-// `DatabaseFileSource`, so don't return early on an error.
 mbgl::Response buildResponse(const RawResponse& r) {
     mbgl::Response response;
     if (r.has_error) {
-        std::optional<mbgl::Timestamp> retryAfter;
-        if (r.has_retry_after) {
-            retryAfter = mbgl::Timestamp(mbgl::Seconds(r.retry_after_epoch_s));
-        }
         response.error = std::make_unique<mbgl::Response::Error>(
-            r.error_reason, std::string(r.error_message), std::move(retryAfter));
+            r.error_reason, std::string(r.error_message));
     }
     response.noContent = r.no_content;
-    response.notModified = r.not_modified;
-    response.mustRevalidate = r.must_revalidate;
     if (r.has_data) {
-        // Non-null data pointer even for empty bodies.
         response.data = std::make_shared<std::string>(
             reinterpret_cast<const char*>(r.data.data()), r.data.size());
     }
-    if (r.has_modified) {
-        response.modified = mbgl::Timestamp(mbgl::Seconds(r.modified_epoch_s));
+    if (r.has_expires) {
+        response.expires = mbgl::Timestamp(mbgl::Seconds(r.modified_epoch_s));
     }
     if (r.has_expires) {
         response.expires = mbgl::Timestamp(mbgl::Seconds(r.expires_epoch_s));
@@ -78,14 +48,12 @@ mbgl::Response buildResponse(const RawResponse& r) {
     return response;
 }
 
-// mbgl::Response -> RawResponse
 RawResponse toRustResponse(const mbgl::Response& response) {
     RawResponse out{};
     out.error_reason = ErrorReason::Success;
     if (response.error) {
         out.has_error = true;
         out.error_reason = response.error->reason;
-        // Lossy: a non-UTF-8 message must not throw across the FFI boundary.
         out.error_message = rust::String::lossy(response.error->message);
         if (response.error->retryAfter) {
             out.has_retry_after = true;
@@ -112,13 +80,11 @@ RawResponse toRustResponse(const mbgl::Response& response) {
     }
     if (response.etag) {
         out.has_etag = true;
-        // Lossy: a server-provided non-UTF-8 etag must not throw across the FFI.
         out.etag = rust::String::lossy(*response.etag);
     }
     return out;
 }
 
-// mbgl::Resource -> RawResourceRequest
 RawResourceRequest toRustResourceRequest(const mbgl::Resource& resource, bool include_prior_data) {
     RawResourceRequest out{};
     out.url = rust::String::lossy(resource.url);
@@ -168,39 +134,12 @@ RawResourceRequest toRustResourceRequest(const mbgl::Resource& resource, bool in
 // MapLibre Native requires the request callback on the thread that issued request(),
 // so marshal it back to that thread's scheduler rather than calling cb here.
 void completeState(const std::shared_ptr<RequestState>& state, mbgl::Response response) {
-    mbgl::Scheduler* scheduler = nullptr;
-    {
-        std::lock_guard lock(state->mutex);
-        if (state->cancelled.load()) {
-            return;
-        }
-        bool expected = false;
-        if (!state->done.compare_exchange_strong(expected, true)) {
-            return;
-        }
-        scheduler = state->scheduler;
-    }
-
+    auto* scheduler = state->scheduler;
     scheduler->schedule([state, response = std::move(response)]() mutable {
         if (!state->cancelled.load()) {
             state->cb(std::move(response));
         }
     });
-}
-
-// Hand an owning ref to Rust as an opaque token; reclaimed by takeToken().
-template <typename State>
-std::size_t makeToken(const std::shared_ptr<State>& state) {
-    return reinterpret_cast<std::size_t>(new std::shared_ptr<State>(state));
-}
-
-// Reclaim the owning ref Rust held, deleting the holder. Call exactly once.
-template <typename State>
-std::shared_ptr<State> takeToken(std::size_t token) {
-    auto* holder = reinterpret_cast<std::shared_ptr<State>*>(token);
-    std::shared_ptr<State> state = *holder;
-    delete holder;
-    return state;
 }
 
 void completeForwardState(const std::shared_ptr<ForwardState>& state) {
@@ -215,15 +154,8 @@ public:
         : handle_(std::move(handle)), state_(std::move(state)) {}
 
     ~RustAsyncRequest() override {
-        bool should_cancel = false;
-        {
-            std::lock_guard lock(state_->mutex);
-            state_->cancelled.store(true);
-            should_cancel = !state_->done.load();
-        }
-        if (should_cancel) {
-            handle_->cancel();
-        }
+        state_->cancelled.store(true);
+        handle_->cancel();
     }
 
 private:
@@ -246,11 +178,8 @@ public:
         state->cb = std::move(cb);
         state->scheduler = mbgl::util::RunLoop::Get();
 
-        // Extra owning ref held by Rust until completion or drop.
-        auto token = makeToken(state);
-
         auto request = toRustResourceRequest(resource, true);
-        rust::Box<RequestHandleFfi> handle = (**source_).request(request, token);
+        rust::Box<RequestHandleFfi> handle = (**source_).request(request, state);
         return std::make_unique<RustAsyncRequest>(std::move(handle), std::move(state));
     }
 
@@ -267,11 +196,8 @@ public:
             state->cb = mbgl::Scheduler::GetCurrent()->bindOnce(std::move(callback));
         }
 
-        // Extra owning ref held by Rust until the cache write completes.
-        auto token = makeToken(state);
-
         auto request = toRustResourceRequest(resource, true);
-        (**source_).forward(request, toRustResponse(response), token);
+        (**source_).forward(request, toRustResponse(response), std::move(state));
     }
 
     void setResourceOptions(mbgl::ResourceOptions options) override {
@@ -296,12 +222,16 @@ private:
 
 } // namespace
 
-void responder_complete(std::size_t token, const RawResponse& response) {
-    completeState(takeToken<RequestState>(token), buildResponse(response));
+void responder_complete(std::shared_ptr<RequestState> state, const RawResponse& response) {
+    completeState(state, buildResponse(response));
 }
 
-void forward_complete(std::size_t token) {
-    completeForwardState(takeToken<ForwardState>(token));
+void responder_cancel(std::shared_ptr<RequestState> state) {
+    state->cancelled.store(true);
+}
+
+void forward_complete(std::shared_ptr<ForwardState> state) {
+    completeForwardState(state);
 }
 
 void register_rust_file_source(FileSourceType source_type, rust::Box<BoxedFileSource> source) {
