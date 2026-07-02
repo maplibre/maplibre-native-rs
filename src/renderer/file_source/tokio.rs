@@ -9,6 +9,7 @@ use super::{
 
 /// An async, `tokio`-native file source.
 ///
+/// Prefer this trait for network-backed sources and other async resource loading.
 /// The adapter spawns each request and aborts the task on cancellation.
 pub trait TokioFileSource: Send + Sync + 'static {
     /// Whether this source can serve `request`.
@@ -19,10 +20,11 @@ pub trait TokioFileSource: Send + Sync + 'static {
 
     /// Store a response asynchronously (cache write).
     ///
-    /// MapLibre Native calls this only on a source registered as
-    /// [`FileSourceType::Database`](super::FileSourceType::Database).
-    /// The adapter completes MapLibre Native's cache-write callback
-    /// after this future finishes.
+    /// You only need to implement this when this source is registered as
+    /// [`FileSourceType::Database`](super::FileSourceType::Database). MapLibre
+    /// Native calls this on database sources to forward responses fetched from
+    /// another source into the cache. The adapter completes MapLibre Native's
+    /// cache-write callback after this future finishes.
     fn forward(
         &self,
         request: ResourceRequest,
@@ -67,7 +69,9 @@ impl<S: TokioFileSource> FileSource for Adapter<S> {
 
 /// Register a `tokio`-native file source using `handle`.
 ///
-/// Keep the runtime alive while renderers may use this source.
+/// Keep the Tokio runtime alive while renderers may use this source.
+/// Register before constructing renderers. Re-registering does not update
+/// already-cached MapLibre Native file source instances.
 pub fn register_tokio_file_source_with_handle<S: TokioFileSource>(
     source_type: FileSourceType,
     handle: ::tokio::runtime::Handle,
@@ -78,6 +82,10 @@ pub fn register_tokio_file_source_with_handle<S: TokioFileSource>(
 }
 
 /// Register a `tokio`-native file source using the current runtime.
+///
+/// Keep the Tokio runtime alive while renderers may use this source.
+/// Register before constructing renderers. Re-registering does not update
+/// already-cached MapLibre Native file source instances.
 ///
 /// # Panics
 ///

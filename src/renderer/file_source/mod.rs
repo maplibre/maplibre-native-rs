@@ -3,6 +3,10 @@
 //! Implement [`FileSource`] and register it for a [`FileSourceType`] — for
 //! example, [`Network`](FileSourceType::Network) to fetch resources or
 //! [`Database`](FileSourceType::Database) to cache them.
+//!
+//! For network-based or otherwise async sources, prefer `TokioFileSource`.
+//! Use [`FileSource`] directly for synchronous responses, custom runtimes,
+//! or explicit cancellation control.
 
 mod request;
 mod response;

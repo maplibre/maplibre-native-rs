@@ -31,7 +31,10 @@ pub trait FileSource: Send + Sync + 'static {
 
     /// Store `response` for `request` (cache write).
     ///
-    /// MapLibre Native calls this on [`FileSourceType::Database`] sources. Complete
+    /// You only need to implement this when this source is registered as
+    /// [`FileSourceType::Database`](super::FileSourceType::Database). MapLibre
+    /// Native calls this on database sources to forward responses fetched from
+    /// another source into the cache.
     /// `completion` when the write is done. The default ignores writes and
     /// completes immediately.
     fn forward(&self, request: ResourceRequest, response: Response, completion: ForwardCompletion) {
