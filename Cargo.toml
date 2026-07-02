@@ -34,6 +34,8 @@ json = ["dep:serde_json"]
 geojson = ["dep:geojson"]
 # Logging via the `log` crate.
 log = ["dep:log"]
+# Thin adapter to register `tokio`-native async file sources.
+tokio = ["dep:tokio", "tokio/rt"]
 
 [dependencies]
 cxx.workspace = true
@@ -42,6 +44,7 @@ image.workspace = true
 log = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }
 thiserror.workspace = true
+tokio = { workspace = true, optional = true }
 url.workspace = true
 webgpu-shim = { workspace = true, optional = true }
 wgpu = { workspace = true, optional = true }
@@ -62,6 +65,14 @@ futures.workspace = true
 insta = { workspace = true, features = ["json", "redactions"] }
 serde_json.workspace = true
 tokio = { workspace = true, features = ["macros", "sync", "rt-multi-thread"] }
+
+[[test]]
+name = "file_source_tokio"
+required-features = ["tokio"]
+
+[[test]]
+name = "file_source_cache"
+required-features = ["tokio"]
 
 ##########################################################
 ##########################################################
