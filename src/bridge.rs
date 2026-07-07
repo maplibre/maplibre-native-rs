@@ -813,6 +813,8 @@ pub mod file_source {
         pub kind: ResourceKind,
         pub loading_methods: u8,
         pub is_volatile: bool,
+        pub is_low_priority: bool,
+        pub is_offline: bool,
         pub has_tile: bool,
         pub tile_url_template: String,
         pub tile_pixel_ratio: u8,

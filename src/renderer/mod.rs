@@ -12,8 +12,8 @@ pub use builder::ImageRendererBuilder;
 pub use camera::CameraUpdate;
 pub use file_source::{
     register_file_source, CancelHook, FileSource, FileSourceType, ForwardCompletion,
-    LoadingMethods, RequestHandle, ResourceKind, ResourceRequest, Responder, StoragePolicy,
-    TileRequest,
+    LoadingMethods, Priority, RequestHandle, ResourceKind, ResourceRequest, Responder,
+    StoragePolicy, TileRequest, Usage,
 };
 #[cfg(feature = "tokio")]
 pub use file_source::{

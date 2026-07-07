@@ -91,6 +91,8 @@ RawResourceRequest toRustResourceRequest(const mbgl::Resource& resource, bool in
     out.kind = resource.kind;
     out.loading_methods = static_cast<std::uint8_t>(resource.loadingMethod);
     out.is_volatile = resource.storagePolicy == mbgl::Resource::StoragePolicy::Volatile;
+    out.is_low_priority = resource.priority == mbgl::Resource::Priority::Low;
+    out.is_offline = resource.usage == mbgl::Resource::Usage::Offline;
 
     if (resource.tileData) {
         out.has_tile = true;
