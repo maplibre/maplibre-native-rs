@@ -17,7 +17,7 @@ mod tokio;
 use std::time::{Duration, SystemTime};
 
 pub use crate::bridge::file_source::{ErrorReason, FileSourceType, ResourceKind};
-pub use request::{LoadingMethods, ResourceRequest, StoragePolicy, TileRequest};
+pub use request::{LoadingMethods, Priority, ResourceRequest, StoragePolicy, TileRequest, Usage};
 pub use response::{Error, Response};
 pub use source::{
     register_file_source, CancelHook, FileSource, ForwardCompletion, RequestHandle, Responder,

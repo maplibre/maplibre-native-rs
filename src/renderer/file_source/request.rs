@@ -19,6 +19,10 @@ pub struct ResourceRequest {
     pub loading_methods: LoadingMethods,
     /// Storage policy requested by MapLibre Native.
     pub storage_policy: StoragePolicy,
+    /// Priority requested by MapLibre Native.
+    pub priority: Priority,
+    /// Whether the request is made for online or offline use.
+    pub usage: Usage,
     /// Tile metadata, present for tile requests.
     pub tile: Option<TileRequest>,
     /// Requested inclusive byte range, present for partial reads.
@@ -46,6 +50,8 @@ impl ResourceRequest {
             } else {
                 StoragePolicy::Permanent
             },
+            priority: if raw.is_low_priority { Priority::Low } else { Priority::Regular },
+            usage: if raw.is_offline { Usage::Offline } else { Usage::Online },
             tile: raw.has_tile.then(|| TileRequest {
                 url_template: raw.tile_url_template.clone(),
                 pixel_ratio: raw.tile_pixel_ratio,
@@ -98,6 +104,26 @@ pub enum StoragePolicy {
     Permanent,
     /// The response should be treated as volatile.
     Volatile,
+}
+
+/// Priority for a resource request.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum Priority {
+    /// Regular priority.
+    Regular,
+    /// Low priority; the source may defer it or fetch it with less urgency.
+    Low,
+}
+
+/// Usage context for a resource request.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum Usage {
+    /// The resource is requested for online use.
+    Online,
+    /// The resource is requested for offline use, such as a region download.
+    Offline,
 }
 
 /// Tile metadata attached to tile resource requests.
