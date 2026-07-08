@@ -23,7 +23,7 @@ use std::process::Command;
 use std::{env, fs};
 
 const MLN_REPOSITORY_URL: &str = "https://github.com/maplibre/maplibre-native.git";
-const MLN_COMMIT: &str = "4cfc8a97f75b13f8474b3e5b038bb45b1326747f";
+const MLN_COMMIT: &str = "ad258ded1c4b0e8b2d68f63e90b6538eb02f795a";
 
 const BRIDGE_RS: &str = "src/bridge.rs";
 const BRIDGE_CPP_DIR: &str = "src/cpp";
