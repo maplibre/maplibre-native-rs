@@ -247,6 +247,8 @@ update-maplibre-native: (assert-cmd "curl") (assert-cmd "jq")
             -e "n" \
             -e "s/const MLN_COMMIT: &str = \"[^\"]*\"/const MLN_COMMIT: \&str = \"$LATEST_MLN_CORE_RELEASE_SHA\"/" \
             -e "}" \
+       sed -i.tmp -E \
+            -e "1,/const MLN_COMMIT: &str = \"[^\"]*\"/ s/const MLN_COMMIT: &str = \"[^\"]*\"/const MLN_COMMIT: \&str = \"$LATEST_MLN_CORE_RELEASE_SHA\"/" \
             build.rs
         rm -f build.rs.tmp
     fi
