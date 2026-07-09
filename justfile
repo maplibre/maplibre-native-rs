@@ -242,14 +242,9 @@ update-maplibre-native: (assert-cmd "curl") (assert-cmd "jq")
         # separate wgpu/non-wgpu pins. If build.rs instead has a single
         # unconditional MLN_COMMIT, update its first assignment.
         # Split into multiple `-e` so the block works on both GNU and BSD sed.
-        sed -i.tmp -E \
-            -e "/#\[cfg\(not\(feature = \"wgpu\"\)\)\]/ {" \
-            -e "n" \
-            -e "s/const MLN_COMMIT: &str = \"[^\"]*\"/const MLN_COMMIT: \&str = \"$LATEST_MLN_CORE_RELEASE_SHA\"/" \
-            -e "}" \
        sed -i.tmp -E \
             -e "1,/const MLN_COMMIT: &str = \"[^\"]*\"/ s/const MLN_COMMIT: &str = \"[^\"]*\"/const MLN_COMMIT: \&str = \"$LATEST_MLN_CORE_RELEASE_SHA\"/" \
-            build.rs
+           build.rs
         rm -f build.rs.tmp
     fi
 
