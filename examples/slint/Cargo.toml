@@ -10,8 +10,7 @@ edition = "2024"
 env_logger = "0.11"
 image = { version = "0.25" }
 maplibre_native = { path = "../..", features = ["wgpu"] }
-# next release after 1.16.1 this can be changed to release again
-slint = { git = "https://github.com/slint-ui/slint.git", rev = "055dfb65d608408eea1c64232e2647be550226e6", features = ["backend-android-activity-06", "renderer-femtovg-wgpu", "unstable-wgpu-29", "compat-1-2"] }
+slint = { version = "1.17.0", features = ["backend-android-activity-06", "renderer-femtovg-wgpu", "unstable-wgpu-29", "compat-1-2"] }
 
 [build-dependencies]
-slint-build = { git = "https://github.com/slint-ui/slint.git", rev = "055dfb65d608408eea1c64232e2647be550226e6" }
+slint-build = { version = "1.17.0" }
