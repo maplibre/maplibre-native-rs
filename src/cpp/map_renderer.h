@@ -28,7 +28,6 @@
 #include <cstdint>
 #include <cassert>
 #include <memory>
-#include <mutex>
 #include <optional>
 #include <vector>
 #include <stdexcept>
@@ -125,15 +124,6 @@ inline std::unique_ptr<std::string> encodeImage(mbgl::PremultipliedImage image) 
     return std::make_unique<std::string>(std::move(data));
 }
 
-// TODO: Remove this mutex once the upstream fix is released and `MLN_COMMIT` is
-// bumped: https://github.com/maplibre/maplibre-native/pull/4332
-#if MLN_RENDER_BACKEND_OPENGL
-inline std::mutex& headlessDisplayMutex() {
-    static std::mutex mutex;
-    return mutex;
-}
-#endif
-
 class MapRenderer {
 public:
     explicit MapRenderer(mbgl::MapMode mapMode,
@@ -142,17 +132,7 @@ public:
                          const mbgl::ResourceOptions& resourceOptions)
         : mapObserverInstance(std::make_shared<MapObserver>()) {
         bindThreadRunLoop();
-#if MLN_RENDER_BACKEND_OPENGL
-        {
-            // The GL display singleton is created lazily on the backend's first
-            // activate(), so force activation here under the lock to serialize it.
-            std::lock_guard<std::mutex> lock(headlessDisplayMutex());
-            frontend = std::make_unique<mbgl::HeadlessFrontend>(size, pixelRatio);
-            mbgl::gfx::BackendScope scope{*frontend->getBackend()};
-        }
-#else
         frontend = std::make_unique<mbgl::HeadlessFrontend>(size, pixelRatio);
-#endif
 
         mbgl::MapOptions mapOptions;
         mapOptions.withMapMode(mapMode).withSize(size).withPixelRatio(pixelRatio);
@@ -161,13 +141,6 @@ public:
         auto logObserver = std::make_unique<mln::bridge::RustLogObserver>();
         mbgl::Log::setObserver(std::move(logObserver));
         map = std::make_unique<mbgl::Map>(*frontend, *mapObserverInstance, mapOptions, resourceOptions);
-    }
-    ~MapRenderer() {
-#if MLN_RENDER_BACKEND_OPENGL
-        std::lock_guard<std::mutex> lock(headlessDisplayMutex());
-        map.reset();
-        frontend.reset();
-#endif
     }
 
     std::shared_ptr<MapObserver> observer() {
