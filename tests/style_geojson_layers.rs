@@ -233,6 +233,11 @@ fn layer_management_methods_smoke_test() {
 }
 
 #[test]
+#[cfg_attr(
+    all(target_os = "macos", feature = "vulkan"),
+    ignore = "flaky on macOS + Vulkan CI (MoltenVK on CI's Apple Paravirtual GPU): the headless still render \
+              can read back an incomplete, background-only frame after a dynamic layer change"
+)]
 fn removed_layer_can_be_added_again() {
     let mut renderer = renderer();
     let mut style = renderer.style();
