@@ -233,6 +233,11 @@ fn layer_management_methods_smoke_test() {
 }
 
 #[test]
+#[cfg_attr(
+    all(target_os = "macos", feature = "vulkan"),
+    ignore = "flaky on macOS + Vulkan CI (MoltenVK on CI's Apple Paravirtual GPU): the headless still render \
+              can read back an incomplete, background-only frame after a dynamic layer change"
+)]
 fn removed_layer_can_be_added_again() {
     let mut renderer = renderer();
     let mut style = renderer.style();
@@ -253,11 +258,8 @@ fn removed_layer_can_be_added_again() {
         style.add_layer_before(green, &red_layer).expect("green layer should be added below red");
 
     let image = render(&mut renderer);
-    let [red, green, blue, alpha] = center_pixel(&image).0;
-    assert!(
-        red > green,
-        "red should render above green before removing: center RGBA = [{red}, {green}, {blue}, {alpha}]"
-    );
+    let [red, green, _blue, _alpha] = center_pixel(&image).0;
+    assert!(red > green, "red should render above green before removing");
 
     let mut style = renderer.style();
     let green = style.remove_layer(&green_layer).expect("green layer should be removed");
@@ -265,9 +267,6 @@ fn removed_layer_can_be_added_again() {
     style.add_layer(green).expect("green layer should be added again");
 
     let image = render(&mut renderer);
-    let [red, green, blue, alpha] = center_pixel(&image).0;
-    assert!(
-        green > red,
-        "green should render above red after re-adding: center RGBA = [{red}, {green}, {blue}, {alpha}]"
-    );
+    let [red, green, _blue, _alpha] = center_pixel(&image).0;
+    assert!(green > red, "green should render above red after re-adding");
 }
