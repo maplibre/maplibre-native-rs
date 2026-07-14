@@ -30,7 +30,7 @@ ci-lint: env-info test-fmt
     cargo clippy --workspace --all-targets --features vulkan,tokio -- -D warnings
 
 # Run all tests as expected by CI
-ci-test backend: (env-info) (build backend) (test backend) (test-doc backend) && assert-git-is-clean
+ci-test backend: (env-info) (test backend) (test-doc backend) && assert-git-is-clean
 
 # Build with MSRV to ensure the crate compiles on the minimum supported Rust
 build-msrv backend: (build backend)
