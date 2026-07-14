@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.5](https://github.com/maplibre/maplibre-native-rs/compare/v0.8.4...v0.8.5) - 2026-07-14
+
+### Fixed
+
+- *(build)* fix WGPU source builds ([#257](https://github.com/maplibre/maplibre-native-rs/pull/257))
+- Handle single-constant `MLN_COMMIT` updates in `update-maplibre-native` ([#259](https://github.com/maplibre/maplibre-native-rs/pull/259))
+- *(renderer)* add missing priority and usage to ResourceRequest ([#260](https://github.com/maplibre/maplibre-native-rs/pull/260))
+
+### Other
+
+- update slint to stable release ([#252](https://github.com/maplibre/maplibre-native-rs/pull/252))
+- *(deps)* bump taiki-e/install-action from 2.82.9 to 2.83.2 in the all-actions-version-updates group ([#261](https://github.com/maplibre/maplibre-native-rs/pull/261))
+- *(renderer)* remove OpenGL display mutex workaround ([#262](https://github.com/maplibre/maplibre-native-rs/pull/262))
+- *(deps)* bump taiki-e/install-action from 2.82.5 to 2.82.9 in the all-actions-version-updates group ([#256](https://github.com/maplibre/maplibre-native-rs/pull/256))
+- now upstream maplibre-native can be used ([#258](https://github.com/maplibre/maplibre-native-rs/pull/258))
+
 ## [0.8.4](https://github.com/maplibre/maplibre-native-rs/compare/v0.8.3...v0.8.4) - 2026-07-02
 
 ### Added
