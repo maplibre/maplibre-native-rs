@@ -26,7 +26,8 @@ check:
     cargo check --workspace --all-targets
 
 # Lint the project
-ci-lint: env-info test-fmt clippy
+ci-lint: env-info test-fmt
+    cargo clippy --workspace --all-targets --features vulkan,tokio -- -D warnings
 
 # Run all tests as expected by CI
 ci-test backend: (env-info) (build backend) (test backend) (test-doc backend) && assert-git-is-clean
@@ -163,7 +164,7 @@ semver *args:  (cargo-install 'cargo-semver-checks')
 
 # Run testcases against a specific backend
 test backend='vulkan':
-    cargo test --all-targets --features {{backend}} --workspace
+    cargo test --all-targets --features {{backend}},tokio --workspace
 
 # Build slint example outside workspace.
 build-example_slint:
@@ -237,15 +238,8 @@ update-maplibre-native: (assert-cmd "curl") (assert-cmd "jq")
         echo "Updating Maplibre Native Core from $MLN_CORE_RELEASE_SHA to $LATEST_MLN_CORE_RELEASE_SHA"
         sed -i.tmp -E "/\[package\.metadata\.mln\]/,/^\[/{s/release\s*=\s*\"[^\"]+\"/release = \"$LATEST_MLN_CORE_RELEASE_SHA\"/}" Cargo.toml && \
         rm -f Cargo.toml.tmp
-        # Only update the upstream (non-wgpu) MLN_COMMIT, i.e. the one right
-        # after `#[cfg(not(feature = "wgpu"))]`. The wgpu fork pin is managed
-        # separately and must not be overwritten with an upstream release tag.
-        # Split into multiple `-e` so the block works on both GNU and BSD sed.
         sed -i.tmp -E \
-            -e "/#\[cfg\(not\(feature = \"wgpu\"\)\)\]/ {" \
-            -e "n" \
-            -e "s/const MLN_COMMIT: &str = \"[^\"]*\"/const MLN_COMMIT: \&str = \"$LATEST_MLN_CORE_RELEASE_SHA\"/" \
-            -e "}" \
+            -e "1,/const MLN_COMMIT: &str = \"[^\"]*\"/ s/const MLN_COMMIT: &str = \"[^\"]*\"/const MLN_COMMIT: \&str = \"$LATEST_MLN_CORE_RELEASE_SHA\"/" \
             build.rs
         rm -f build.rs.tmp
     fi

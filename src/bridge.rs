@@ -6,7 +6,7 @@ use crate::renderer::callbacks::{
     void_callback, CameraDidChangeCallback, FailingLoadingMapCallback,
     FinishRenderingFrameCallback, VoidCallback,
 };
-use crate::renderer::file_source::{fs_request_callback, FileSourceRequestCallback};
+use crate::renderer::file_source::{BoxedFileSource, RequestHandleFfi};
 
 // https://maplibre.org/maplibre-native/docs/book/design/ten-thousand-foot-view.html
 
@@ -712,7 +712,7 @@ pub mod map_observer {
     }
 }
 
-#[allow(clippy::borrow_as_ptr, unused_qualifications)]
+#[allow(clippy::borrow_as_ptr, clippy::unnecessary_box_returns, unused_qualifications)]
 #[cxx::bridge(namespace = "mln::bridge")]
 /// Rust-backed FileSource bridge. See `src/cpp/rust_file_source.{h,cpp}`
 /// for the C++ side.
@@ -744,7 +744,7 @@ pub mod file_source {
     #[repr(u8)]
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     /// Error reason categories — mirror of `mbgl::Response::Error::Reason`.
-    pub enum FsErrorReason {
+    pub enum ErrorReason {
         /// mbgl's "no error" sentinel; not a meaningful error category.
         Success = 1,
         /// Resource not found at the requested URL.
@@ -759,37 +759,130 @@ pub mod file_source {
         Other = 6,
     }
 
-    /// FFI shape for a resource-request response. `error_reason ==
-    /// FsErrorReason::Success` means no error; any other value is the
-    /// mbgl reason that gets attached to the `mbgl::Response::Error`.
-    /// `no_content == true` with `error_reason == Success` is a
-    /// well-formed miss (e.g. tile not present).
+    #[namespace = "mln::bridge"]
+    #[repr(u8)]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    /// MapLibre Native file source slot a Rust `FileSource` can serve.
+    ///
+    /// Discriminants mirror `mbgl::FileSourceType`.
+    pub enum FileSourceType {
+        /// Bundled asset source (`asset://`).
+        Asset = 0,
+        /// Database-backed source for cache/offline storage.
+        Database = 1,
+        /// Local filesystem source (`file://`).
+        FileSystem = 2,
+        /// Network (HTTP) source.
+        Network = 3,
+        /// `MBTiles` source.
+        Mbtiles = 4,
+        /// `PMTiles` source.
+        Pmtiles = 5,
+        /// Top-level resource loader.
+        ResourceLoader = 6,
+    }
+
+    /// Flat FFI shape mirroring `mbgl::Response`. Optional fields use a `has_*`
+    /// flag; timestamps are Unix epoch seconds. Used both for delivering a
+    /// response and for cache `forward`.
     #[derive(Debug)]
-    pub struct RustFsResponse {
-        pub data: Vec<u8>,
-        pub error_reason: FsErrorReason,
+    pub struct RawResponse {
+        pub has_error: bool,
+        pub error_reason: ErrorReason,
         pub error_message: String,
+        pub has_retry_after: bool,
+        pub retry_after_epoch_s: i64,
         pub no_content: bool,
+        pub not_modified: bool,
+        pub must_revalidate: bool,
+        pub has_data: bool,
+        pub data: Vec<u8>,
+        pub has_modified: bool,
+        pub modified_epoch_s: i64,
+        pub has_expires: bool,
+        pub expires_epoch_s: i64,
+        pub has_etag: bool,
+        pub etag: String,
+    }
+
+    /// Flat FFI shape mirroring the mbgl resource request metadata used by
+    /// Rust-backed file sources.
+    #[derive(Debug)]
+    pub struct RawResourceRequest {
+        pub url: String,
+        pub kind: ResourceKind,
+        pub loading_methods: u8,
+        pub is_volatile: bool,
+        pub is_low_priority: bool,
+        pub is_offline: bool,
+        pub has_tile: bool,
+        pub tile_url_template: String,
+        pub tile_pixel_ratio: u8,
+        pub tile_x: i32,
+        pub tile_y: i32,
+        pub tile_z: i8,
+        pub has_data_range: bool,
+        pub data_range_start: u64,
+        pub data_range_end: u64,
+        pub has_prior_modified: bool,
+        pub prior_modified_epoch_s: i64,
+        pub has_prior_expires: bool,
+        pub prior_expires_epoch_s: i64,
+        pub has_prior_etag: bool,
+        pub prior_etag: String,
+        pub has_prior_data: bool,
+        pub prior_data: Vec<u8>,
+        pub minimum_update_interval_ms: i64,
     }
 
     extern "Rust" {
-        type FileSourceRequestCallback;
+        type BoxedFileSource;
+        type RequestHandleFfi;
 
-        fn fs_request_callback(
-            callback: &FileSourceRequestCallback,
-            url: &str,
-            kind: ResourceKind,
-        ) -> RustFsResponse;
+        /// Whether this source can serve the resource.
+        fn can_request(self: &BoxedFileSource, request: &RawResourceRequest) -> bool;
+
+        /// Begin a request.
+        fn request(
+            self: &BoxedFileSource,
+            request: &RawResourceRequest,
+            responder: SharedPtr<RequestState>,
+        ) -> Box<RequestHandleFfi>;
+
+        /// Store a response into a cache source (`FileSource::forward`).
+        fn forward(
+            self: &BoxedFileSource,
+            request: &RawResourceRequest,
+            response: &RawResponse,
+            completion: SharedPtr<ForwardState>,
+        );
+
+        /// Run the request's cancellation hook.
+        fn cancel(self: &RequestHandleFfi);
     }
 
     unsafe extern "C++" {
         include!("rust_file_source.h");
         type ResourceKind;
-        type FsErrorReason;
+        type ErrorReason;
+        type FileSourceType;
+        /// Native per-request state, owned via `SharedPtr` and handed back to C++ on
+        /// completion/cancellation (replaces a raw pointer token).
+        type RequestState;
+        /// Native per-`forward` state, owned via `SharedPtr`.
+        type ForwardState;
 
-        /// Install the Rust closure as the `ResourceLoader` file source
-        /// factory. Process-global; replaces any previous callback.
-        fn register_rust_file_source_factory(callback: Box<FileSourceRequestCallback>);
+        /// Register a Rust file source for `source_type`.
+        fn register_rust_file_source(source_type: FileSourceType, source: Box<BoxedFileSource>);
+
+        /// Deliver a response for `state` (an error response if dropped uncompleted).
+        fn responder_complete(state: SharedPtr<RequestState>, response: &RawResponse);
+
+        /// Cancel `state` without delivering a response.
+        fn responder_cancel(state: SharedPtr<RequestState>);
+
+        /// Notify mbgl that a cache `forward` call finished.
+        fn forward_complete(state: SharedPtr<ForwardState>);
     }
 }
 

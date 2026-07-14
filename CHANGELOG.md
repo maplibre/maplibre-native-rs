@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.4](https://github.com/maplibre/maplibre-native-rs/compare/v0.8.3...v0.8.4) - 2026-07-02
+
+### Added
+
+- *(renderer)* Rework Rust-backed FileSource support ([#250](https://github.com/maplibre/maplibre-native-rs/pull/250))
+
+### Fixed
+
+- *(ci)* give webgpu-shim its own release-plz tag namespace ([#253](https://github.com/maplibre/maplibre-native-rs/pull/253))
+- *(ci)* stop tagging webgpu-shim releases ([#251](https://github.com/maplibre/maplibre-native-rs/pull/251))
+
+### Other
+
+- *(deps)* bump taiki-e/install-action from 2.82.2 to 2.82.5 in the all-actions-version-updates group ([#249](https://github.com/maplibre/maplibre-native-rs/pull/249))
+- *(deps)* bump the all-actions-version-updates group with 3 updates ([#247](https://github.com/maplibre/maplibre-native-rs/pull/247))
+
 ## [0.8.3](https://github.com/maplibre/maplibre-native-rs/compare/v0.8.2...v0.8.3) - 2026-06-19
 
 ### Added

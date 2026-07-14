@@ -22,15 +22,8 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::{env, fs};
 
-// We can upstream once https://github.com/maplibre/maplibre-native/pull/4272 is merged
-#[cfg(feature = "wgpu")]
-const MLN_REPOSITORY_URL: &str = "https://github.com/Murmele/maplibre-native.git";
-#[cfg(feature = "wgpu")]
-const MLN_COMMIT: &str = "a41aff6a54e01bcd7047561a2e24c0e0de8e4aa3";
-#[cfg(not(feature = "wgpu"))]
 const MLN_REPOSITORY_URL: &str = "https://github.com/maplibre/maplibre-native.git";
-#[cfg(not(feature = "wgpu"))]
-const MLN_COMMIT: &str = "35cf39b72f45cfea55a34ffe7358ade5c950a3c5";
+const MLN_COMMIT: &str = "f442c704b806d6f1e64242aa462a31c6f128cf47";
 
 const BRIDGE_RS: &str = "src/bridge.rs";
 const BRIDGE_CPP_DIR: &str = "src/cpp";

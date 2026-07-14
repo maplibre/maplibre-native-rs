@@ -1,49 +1,51 @@
 #pragma once
 
 // Rust-backed FileSource bridge.
-//
-// Installs an `mbgl::FileSource` factory for `FileSourceType::ResourceLoader`
-// that delegates every resource request to a Rust closure. This replaces the
-// default ResourceLoader (which composes Asset/Database/Network/Mbtiles/Pmtiles
-// sources) with a single Rust-supplied handler — letting callers serve
-// mbtiles://, file://, and custom schemes from Rust without running a sidecar
-// HTTP server or pre-extracting tiles.
-//
-// Factory registration is process-global (mbgl::FileSourceManager is a
-// singleton). Call `register_rust_file_source_factory` once before any
-// `mbgl::Map` is constructed.
-//
-// `FileSourceManager` *also* caches FileSource instances by `(type,
-// ResourceOptions)`; `registerFileSourceFactory` only swaps the factory
-// slot and never evicts the cache. A subsequent call therefore takes
-// effect only for `Map`s constructed with `ResourceOptions` that don't
-// already have a live cached FileSource — in practice, only after every
-// previously built renderer has been dropped, or by varying
-// `ResourceOptions` (e.g. a unique `platformContext`) per renderer. Two
-// concurrent renderers with different callbacks are not supported by
-// this layer.
 
 #include "rust/cxx.h"
+#include <mbgl/actor/scheduler.hpp>
+#include <mbgl/storage/file_source.hpp>
 #include <mbgl/storage/resource.hpp>
 #include <mbgl/storage/response.hpp>
+
+#include <atomic>
+#include <functional>
+#include <memory>
 
 namespace mln {
 namespace bridge {
 
-// cxx doesn't support nested enums directly, so flatten mbgl's
-// `Resource::Kind` and `Response::Error::Reason` into top-level aliases
-// the cxx::bridge can pick up. Same pattern as `MapObserverCameraChangeMode`
-// in src/cpp/map_observer.h. Names + discriminants must stay aligned with
-// the Rust-side enum declarations in src/bridge.rs; cxx codegen
-// validates the match at compile time.
 using ResourceKind = mbgl::Resource::Kind;
-using FsErrorReason = mbgl::Response::Error::Reason;
+using ErrorReason = mbgl::Response::Error::Reason;
+using FileSourceType = mbgl::FileSourceType;
 
-// Opaque Rust type — defined in src/renderer/file_source.rs.
-struct FileSourceRequestCallback;
+// Opaque Rust type (defined in the Rust `file_source` module) and the cxx
+// shared structs (defined in the generated bridge.rs.h)
+struct BoxedFileSource;
+struct RawResourceRequest;
+struct RawResponse;
 
-// Implementation in rust_file_source.cpp.
-void register_rust_file_source_factory(rust::Box<FileSourceRequestCallback> callback);
+// Native state for one in-flight request
+struct RequestState {
+  mbgl::FileSource::Callback cb;
+  mbgl::Scheduler *scheduler = nullptr;
+  std::atomic<bool> cancelled{false};
+};
+
+// Holds a forward's (cache-write) completion callback until `forward_complete`.
+struct ForwardState {
+  std::function<void()> cb;
+};
+
+void register_rust_file_source(FileSourceType source_type,
+                               rust::Box<BoxedFileSource> source);
+
+void responder_complete(std::shared_ptr<RequestState> state,
+                        const RawResponse &response);
+
+void responder_cancel(std::shared_ptr<RequestState> state);
+
+void forward_complete(std::shared_ptr<ForwardState> state);
 
 } // namespace bridge
 } // namespace mln

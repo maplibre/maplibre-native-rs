@@ -72,9 +72,8 @@ impl ImageRendererBuilder {
     ///
     /// Default: `1.0`
     #[must_use]
-    #[allow(clippy::needless_pass_by_value, reason = "false positive")]
-    pub fn with_pixel_ratio(mut self, pixel_ratio: impl Into<f32>) -> Self {
-        self.pixel_ratio = pixel_ratio.into();
+    pub fn with_pixel_ratio(mut self, pixel_ratio: f32) -> Self {
+        self.pixel_ratio = pixel_ratio;
         self
     }
 

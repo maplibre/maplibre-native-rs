@@ -1,6 +1,6 @@
 [package]
 name = "maplibre_native"
-version = "0.8.3"
+version = "0.8.4"
 description = "Rust bindings to the MapLibre Native map rendering engine"
 authors = ["Yuri Astrakhan <YuriAstrakhan@gmail.com>", "MapLibre contributors"]
 repository = "https://github.com/maplibre/maplibre-native-rs"
@@ -34,6 +34,8 @@ json = ["dep:serde_json"]
 geojson = ["dep:geojson"]
 # Logging via the `log` crate.
 log = ["dep:log"]
+# Thin adapter to register `tokio`-native async file sources.
+tokio = ["dep:tokio", "tokio/rt"]
 
 [dependencies]
 cxx.workspace = true
@@ -42,6 +44,7 @@ image.workspace = true
 log = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }
 thiserror.workspace = true
+tokio = { workspace = true, optional = true }
 url.workspace = true
 webgpu-shim = { workspace = true, optional = true }
 wgpu = { workspace = true, optional = true }
@@ -62,6 +65,14 @@ futures.workspace = true
 insta = { workspace = true, features = ["json", "redactions"] }
 serde_json.workspace = true
 tokio = { workspace = true, features = ["macros", "sync", "rt-multi-thread"] }
+
+[[test]]
+name = "file_source_tokio"
+required-features = ["tokio"]
+
+[[test]]
+name = "file_source_cache"
+required-features = ["tokio"]
 
 ##########################################################
 ##########################################################
@@ -92,7 +103,7 @@ geojson = "1.0.0"
 image = "0.25"
 insta = "1.43"
 log = "0.4"
-maplibre_native = { path = ".", version = "0.8.3" }
+maplibre_native = { path = ".", version = "0.8.4" }
 serde_json = "1.0"
 tar = "0.4.44"
 thiserror = "2.0.16"

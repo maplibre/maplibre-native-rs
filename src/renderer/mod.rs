@@ -10,7 +10,15 @@ pub mod tile_server_options;
 
 pub use builder::ImageRendererBuilder;
 pub use camera::CameraUpdate;
-pub use file_source::{register_file_source_callback, FileSourceRequestCallback, FsResponse};
+pub use file_source::{
+    register_file_source, CancelHook, FileSource, FileSourceType, ForwardCompletion,
+    LoadingMethods, Priority, RequestHandle, ResourceKind, ResourceRequest, Responder,
+    StoragePolicy, TileRequest, Usage,
+};
+#[cfg(feature = "tokio")]
+pub use file_source::{
+    register_tokio_file_source, register_tokio_file_source_with_handle, TokioFileSource,
+};
 pub use image_renderer::{
     Continuous, Image, ImageRenderer, RenderRequest, RenderingError, Static, StyleLoadError,
     StyleLoadRequest, Tile,
@@ -20,6 +28,5 @@ pub use resource_options::ResourceOptions;
 pub use run_loop::RunLoopHandle;
 
 pub use crate::bridge::ffi::{EdgeInsets, LatLng, LatLngBounds, MapDebugOptions, MapMode};
-pub use crate::bridge::file_source::{FsErrorReason, ResourceKind};
 pub use crate::bridge::map_observer::MapObserverCameraChangeMode;
 pub use crate::bridge::{set_log_thread_enabled, ScreenCoordinate, Size};
