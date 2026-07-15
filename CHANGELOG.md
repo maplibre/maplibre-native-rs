@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.6](https://github.com/maplibre/maplibre-native-rs/compare/v0.8.5...v0.8.6) - 2026-07-15
+
+### Fixed
+
+- *(renderer)* fix mysterious scheduling hang since v0.8.4 ([#264](https://github.com/maplibre/maplibre-native-rs/pull/264))
+
 ## [0.8.5](https://github.com/maplibre/maplibre-native-rs/compare/v0.8.4...v0.8.5) - 2026-07-14
 
 ### Fixed
