@@ -11,6 +11,8 @@
 #include <atomic>
 #include <functional>
 #include <memory>
+#include <mutex>
+#include <optional>
 
 namespace mln {
 namespace bridge {
@@ -28,7 +30,9 @@ struct RawResponse;
 // Native state for one in-flight request
 struct RequestState {
   mbgl::FileSource::Callback cb;
-  mbgl::Scheduler *scheduler = nullptr;
+  std::function<void()> dispatch;
+  std::mutex response_mutex;
+  std::optional<mbgl::Response> response;
   std::atomic<bool> cancelled{false};
 };
 

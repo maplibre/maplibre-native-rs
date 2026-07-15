@@ -10,13 +10,13 @@
 #include <mbgl/util/async_request.hpp>
 #include <mbgl/util/chrono.hpp>
 #include <mbgl/util/client_options.hpp>
-#include <mbgl/util/run_loop.hpp>
 
-#include <atomic>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <memory>
+#include <mutex>
+#include <optional>
 #include <string>
 #include <utility>
 
@@ -133,15 +133,16 @@ RawResourceRequest toRustResourceRequest(const mbgl::Resource& resource, bool in
     return out;
 }
 
-// MapLibre Native requires the request callback on the thread that issued request(),
-// so marshal it back to that thread's scheduler rather than calling cb here.
 void completeState(const std::shared_ptr<RequestState>& state, mbgl::Response response) {
-    auto* scheduler = state->scheduler;
-    scheduler->schedule([state, response = std::move(response)]() mutable {
-        if (!state->cancelled.load()) {
-            state->cb(std::move(response));
-        }
-    });
+    if (state->cancelled.load()) {
+        return;
+    }
+
+    {
+        std::scoped_lock lock(state->response_mutex);
+        state->response.emplace(std::move(response));
+    }
+    state->dispatch();
 }
 
 void completeForwardState(const std::shared_ptr<ForwardState>& state) {
@@ -178,7 +179,27 @@ public:
                                                 Callback cb) override {
         auto state = std::make_shared<RequestState>();
         state->cb = std::move(cb);
-        state->scheduler = mbgl::util::RunLoop::Get();
+
+        // FileSource callbacks must run on the thread that issued request().
+        // Capture the scheduler's weak binding while that scheduler is known to
+        // be alive. A late completion becomes a no-op after scheduler teardown.
+        std::weak_ptr<RequestState> weakState = state;
+        state->dispatch = mbgl::Scheduler::GetCurrent()->bindOnce([weakState]() mutable {
+            auto state = weakState.lock();
+            if (!state || state->cancelled.load()) {
+                return;
+            }
+
+            std::optional<mbgl::Response> response;
+            {
+                std::scoped_lock lock(state->response_mutex);
+                response = std::move(state->response);
+                state->response.reset();
+            }
+            if (response && !state->cancelled.load()) {
+                state->cb(std::move(*response));
+            }
+        });
 
         auto request = toRustResourceRequest(resource, true);
         rust::Box<RequestHandleFfi> handle = (**source_).request(request, state);
