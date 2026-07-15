@@ -315,7 +315,12 @@ fn resolve_mln_core() -> (PathBuf, Vec<PathBuf>) {
 }
 
 /// Gather include directories and build the C++ bridge using `cxx_build`.
-fn build_bridge(lib_name: &str, include_dirs: &[PathBuf], backend: GraphicsApi) {
+fn build_bridge(
+    lib_name: &str,
+    include_dirs: &[PathBuf],
+    backend: GraphicsApi,
+    core_uses_ndebug: bool,
+) {
     // println!("cargo:warning=Include_dirs: {:?}", include_dirs);
     let root = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
     let bridge_include_dirs: Vec<PathBuf> =
@@ -327,6 +332,12 @@ fn build_bridge(lib_name: &str, include_dirs: &[PathBuf], backend: GraphicsApi) 
         .flag_if_supported("-std=c++20")
         .warnings(true)
         .warnings_into_errors(true);
+
+    // Some public MLN types (notably RunLoop) have NDEBUG-dependent layouts.
+    // Compile inline bridge code with the same ABI layout as the linked core.
+    if core_uses_ndebug {
+        build.define("NDEBUG", None);
+    }
 
     if matches!(backend, GraphicsApi::OpenGl(_)) {
         build.define("MLN_RENDER_BACKEND_OPENGL", Some("1"));
@@ -683,7 +694,17 @@ fn build_mln() {
     };
 
     let backend = GraphicsApi::from_selected_features();
-    build_bridge(&info.lib_name, &info.include_dirs, backend);
+    let source_core_uses_ndebug = match env::var("OPT_LEVEL").as_deref() {
+        Ok("0") => false,
+        Ok("1" | "2" | "3" | "s" | "z") => true,
+        _ => env::var("PROFILE").as_deref() != Ok("debug"),
+    };
+    build_bridge(
+        &info.lib_name,
+        &info.include_dirs,
+        backend,
+        precompiled || source_core_uses_ndebug,
+    );
     let is_apple = target_os == "macos" || target_os == "ios";
     if !amalgam_lib {
         // The dependent libs are not bundled in the core lib, so we have to link manually
