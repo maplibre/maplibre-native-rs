@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.7](https://github.com/maplibre/maplibre-native-rs/compare/v0.8.6...v0.8.7) - 2026-07-16
+
+### Fixed
+
+- *(file_source)* pass missing response fields to mbgl ([#266](https://github.com/maplibre/maplibre-native-rs/pull/266))
+
 ## [0.8.6](https://github.com/maplibre/maplibre-native-rs/compare/v0.8.5...v0.8.6) - 2026-07-15
 
 ### Fixed
