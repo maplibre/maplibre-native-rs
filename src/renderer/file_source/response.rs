@@ -177,10 +177,13 @@ impl Response {
 mod tests {
     use std::time::{Duration, SystemTime};
 
+    use crate::bridge::file_source::roundtrip_response_for_test;
+
     use super::{ErrorReason, Response};
 
     fn roundtrip(response: Response) -> Response {
-        Response::from_ffi(&response.into_ffi())
+        let raw = roundtrip_response_for_test(&response.into_ffi());
+        Response::from_ffi(&raw)
     }
 
     #[test]
