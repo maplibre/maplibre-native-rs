@@ -881,6 +881,9 @@ pub mod file_source {
         /// Cancel `state` without delivering a response.
         fn responder_cancel(state: SharedPtr<RequestState>);
 
+        #[allow(dead_code)]
+        fn roundtrip_response_for_test(response: &RawResponse) -> RawResponse;
+
         /// Notify mbgl that a cache `forward` call finished.
         fn forward_complete(state: SharedPtr<ForwardState>);
     }

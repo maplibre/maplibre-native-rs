@@ -49,6 +49,8 @@ void responder_complete(std::shared_ptr<RequestState> state,
 
 void responder_cancel(std::shared_ptr<RequestState> state);
 
+RawResponse roundtrip_response_for_test(const RawResponse &response);
+
 void forward_complete(std::shared_ptr<ForwardState> state);
 
 } // namespace bridge
