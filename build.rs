@@ -642,6 +642,7 @@ fn build_local(
     name: &str,
     amalgam_lib: bool,
     target_os: &str,
+    android_config: &Option<AndroidConfig>,
 ) -> Result<Info, Box<dyn std::error::Error>> {
     const TARGET_NAME: &str = "mbgl-core";
     let maplibre_native_dir = respository_dir.join(name);
