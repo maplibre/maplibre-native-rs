@@ -22,8 +22,8 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::{env, fs};
 
-const MLN_REPOSITORY_URL: &str = "https://github.com/maplibre/maplibre-native.git";
-const MLN_COMMIT: &str = "f442c704b806d6f1e64242aa462a31c6f128cf47";
+const MLN_REPOSITORY_URL: &str = "https://github.com/Murmele/maplibre-native.git";
+const MLN_COMMIT: &str = "5b3181692867920692a8b76e9ee72244638a2a3f";
 
 const BRIDGE_RS: &str = "src/bridge.rs";
 const BRIDGE_CPP_DIR: &str = "src/cpp";
@@ -31,6 +31,58 @@ const BRIDGE_CPP_DIR: &str = "src/cpp";
 const BRIDGE_INCLUDE_DIRS: &[&str] = &["src/cpp"];
 
 const PRECOMPILED_VENDORED_INCLUDE_DIR: &str = "include";
+
+struct AndroidConfig {
+    ndk_root: PathBuf,
+    platform: String,
+    toolchain_file: PathBuf,
+    abi: String,
+    sysroot: PathBuf,
+    ndk_clang: PathBuf,
+    ndk_clangxx: PathBuf,
+}
+
+impl AndroidConfig {
+    fn new() -> Self {
+        println!("cargo:rerun-if-env-changed=ANDROID_NDK_ROOT");
+        println!("cargo:rerun-if-env-changed=ANDROID_PLATFORM");
+        println!("cargo:rerun-if-env-changed=ANDROID_NDK_SYSROOT");
+        let ndk_root =
+            PathBuf::from(env::var_os("ANDROID_NDK_ROOT").expect("ANDROID_NDK_ROOT is not set"));
+        let sysroot = PathBuf::from(
+            env::var_os("ANDROID_NDK_SYSROOT").expect("ANDROID_NDK_SYSROOT is not set"),
+        );
+        let platform = env::var("ANDROID_PLATFORM")
+            .expect("ANDROID_PLATFORM is not set. Example: 'android-33'");
+        println!("Android ndk root: {:?}", ndk_root);
+        let toolchain_file = ndk_root.join("build").join("cmake").join("android.toolchain.cmake");
+        if !toolchain_file.exists() {
+            panic!(
+                "The toolchain file does not exist: {}",
+                toolchain_file.as_os_str().to_str().unwrap()
+            )
+        }
+
+        let ndk_bin = ndk_root
+            .join("toolchains")
+            .join("llvm")
+            .join("prebuilt")
+            .join("linux-x86_64")
+            .join("bin");
+        let ndk_clang = ndk_bin.join("clang");
+        let ndk_clangxx = ndk_bin.join("clang++");
+
+        Self {
+            ndk_root,
+            platform,
+            toolchain_file,
+            abi: String::from("arm64-v8a"),
+            sysroot,
+            ndk_clang,
+            ndk_clangxx,
+        }
+    }
+}
 
 /// Supported graphics rendering APIs.
 #[derive(PartialEq, Eq, Clone, Copy)]
@@ -162,6 +214,8 @@ fn download_static(out_dir: &Path, revision: &str) -> (PathBuf, PathBuf) {
         "amalgam-linux-x64"
     } else if cfg!(all(target_os = "macos", target_arch = "aarch64")) {
         "amalgam-macos-arm64"
+    } else if cfg!(all(target_os = "android", target_arch = "aarch64")) {
+        "amalgam-android-arm64-v8a"
     } else {
         panic!(
             "unsupported target: only linux and macos are currently supported by maplibre-native"
@@ -460,6 +514,61 @@ fn configure_local_build(
         config.generator("Ninja");
     }
 
+    if let Some(android_config) = android_config {
+        // Pin toolchain compilers to avoid CMake cache churn when host wrappers (for example ccache)
+        // change between invocations. Cache churn can trigger an internal reconfigure that drops backend flags.
+        config.configure_arg(format!("-DCMAKE_C_COMPILER={}", android_config.ndk_clang.display()));
+        config.configure_arg(format!(
+            "-DCMAKE_CXX_COMPILER={}",
+            android_config.ndk_clangxx.display()
+        ));
+        config
+            .configure_arg(format!("-DCMAKE_ASM_COMPILER={}", android_config.ndk_clang.display()));
+
+        config.configure_arg(format!("-DANDROID_ABI={}", android_config.abi));
+        config.configure_arg(format!("-DANDROID_PLATFORM={}", android_config.platform));
+        config.configure_arg(format!(
+            "-DCMAKE_TOOLCHAIN_FILE={}",
+            android_config.toolchain_file.as_os_str().to_str().unwrap()
+        ));
+
+        build_external(&ExternalDependencies::libjpeg_turbo(), android_config).unwrap();
+        build_external(&ExternalDependencies::libwebp(), android_config).unwrap();
+
+        let android_api = android_config
+            .platform
+            .strip_prefix("android-")
+            .expect("ANDROID_PLATFORM must look like android-<api>");
+        let target_triple = env::var("TARGET").expect("TARGET is not set");
+        let zlib_include_dir = android_config.sysroot.join("usr").join("include");
+        let zlib_library = android_config
+            .sysroot
+            .join("usr")
+            .join("lib")
+            .join(target_triple)
+            .join(android_api)
+            .join("libz.so");
+        build_external(
+            &ExternalDependencies::libpng(zlib_include_dir, zlib_library),
+            android_config,
+        )
+        .unwrap();
+
+        build_external(
+            &ExternalDependencies {
+                name: "libuv".to_owned(),
+                git_url: "https://github.com/libuv/libuv.git".to_owned(),
+                revision: "v1.52.1".to_owned(),
+                use_branch: true,
+                additional_cmake_args: Vec::new(),
+                build_target: Some("uv_a".to_owned()),
+                additional_link_dirs: Vec::new(),
+            },
+            android_config,
+        )
+        .unwrap();
+    }
+
     match api {
         GraphicsApi::Metal => {
             config.configure_arg("-DMLN_WITH_METAL=ON");
@@ -661,6 +770,8 @@ fn build_mln() {
         }
     }
 
+    let android_config = if target_os == "android" { Some(AndroidConfig::new()) } else { None };
+
     let info = if precompiled {
         bundle_precompiled()
     } else if system_lib {
@@ -680,7 +791,13 @@ fn build_mln() {
             PathBuf::from(local_repository.clone()).parent().unwrap().to_path_buf()
         };
 
-        match build_local(&respository_dir, MAPLIBRE_NATIVE_DIR_NAME, amalgam_lib, &target_os) {
+        match build_local(
+            &respository_dir,
+            MAPLIBRE_NATIVE_DIR_NAME,
+            amalgam_lib,
+            &target_os,
+            &android_config,
+        ) {
             Err(e) => {
                 if respository_dir.join(MAPLIBRE_NATIVE_DIR_NAME).exists()
                     && local_repository.is_empty()
@@ -706,6 +823,7 @@ fn build_mln() {
         precompiled || source_core_uses_ndebug,
     );
     let is_apple = target_os == "macos" || target_os == "ios";
+    let is_android = target_os == "android";
     if !amalgam_lib {
         // The dependent libs are not bundled in the core lib, so we have to link manually
         // Required for mlt-cpp. Cpp root link search was already added above
@@ -719,15 +837,21 @@ fn build_mln() {
                 .join("cpp")
                 .display()
         );
-        println!("cargo:rustc-link-lib=mbgl-harfbuzz");
         println!("cargo:rustc-link-lib=mbgl-freetype");
         println!("cargo:rustc-link-lib=mbgl-vendor-parsedate");
         println!("cargo:rustc-link-lib=mbgl-vendor-csscolorparser");
         println!("cargo:rustc-link-lib=mlt-cpp"); // provided with maplibre-native
+        println!("cargo:rustc-link-lib=mbgl-harfbuzz");
         if is_apple {
             // darwin builds vendored ICU (system sqlite3 is linked below for all darwin builds)
+
             println!("cargo:rustc-link-lib=mbgl-vendor-icu");
+        } else if is_android {
+            println!("cargo:rustc-link-lib=mbgl-vendor-icu");
+            println!("cargo:rustc-link-lib=mbgl-vendor-sqlite");
+            // Harfbuzz // Already bound with skia in android
         } else {
+            println!("cargo:rustc-link-lib=mbgl-harfbuzz");
             println!("cargo:rustc-link-lib=mbgl-vendor-nunicode");
             println!("cargo:rustc-link-lib=mbgl-vendor-sqlite");
             // println!("cargo:rustc-link-lib=utf8proc"); // sudo dnf install utf8proc-devel
@@ -745,15 +869,22 @@ fn build_mln() {
             println!("cargo:rustc-link-lib=SPIRV-Tools-opt"); //sudo dnf install  spirv-tools-devel // Required by glslang spirv-tools-devel
             println!("cargo:rustc-link-lib=SPIRV-Tools"); //sudo dnf install  spirv-tools-devel // Required by glslang spirv-tools-devel
         }
-        println!("cargo:rustc-link-lib=png"); // sudo dnf install libpng-devel
+        if is_android {
+            println!("cargo:rustc-link-lib=png16");
+        } else {
+            println!("cargo:rustc-link-lib=png"); // sudo dnf install libpng-devel
+        }
         println!("cargo:rustc-link-lib=jpeg"); // sudo dnf install libjpeg-turbo-devel
         println!("cargo:rustc-link-lib=webp"); // sudo dnf install libwebp-devel
     }
     if !is_apple {
         println!("cargo:rustc-link-lib=uv"); // sudo dnf install libuv-devel
     }
-    println!("cargo:rustc-link-lib=curl");
     println!("cargo:rustc-link-lib=z");
+    if !is_android {
+        // Android doesn't need curl (uses Android's HTTP stack)
+        println!("cargo:rustc-link-lib=curl");
+    }
 
     if is_apple {
         println!("cargo:rustc-link-lib=framework=Foundation");
@@ -772,8 +903,16 @@ fn build_mln() {
                 OpenGlContext::Wgl => println!("cargo:rustc-link-lib=opengl32"),
                 // EGL-based context links libEGL alongside libGL.
                 OpenGlContext::Egl => {
-                    println!("cargo:rustc-link-lib=GL");
-                    println!("cargo:rustc-link-lib=EGL");
+                    if is_android {
+                        // Android system libraries for OpenGL ES
+                        println!("cargo:rustc-link-lib=android");
+                        println!("cargo:rustc-link-lib=log");
+                        println!("cargo:rustc-link-lib=EGL");
+                        println!("cargo:rustc-link-lib=GLESv3");
+                    } else {
+                        println!("cargo:rustc-link-lib=GL");
+                        println!("cargo:rustc-link-lib=EGL");
+                    }
                 }
                 OpenGlContext::Glx => println!("cargo:rustc-link-lib=GL"),
             }
@@ -790,8 +929,155 @@ fn build_mln() {
             println!("cargo:rustc-link-lib=framework=AppKit");
             println!("cargo:rustc-link-lib=framework=CoreLocation");
         }
-        GraphicsApi::Vulkan | GraphicsApi::WGPU => {}
+        GraphicsApi::Vulkan | GraphicsApi::WGPU => {
+            if is_android {
+                // Android system libraries for Vulkan
+                println!("cargo:rustc-link-lib=android");
+                println!("cargo:rustc-link-lib=log");
+            }
+        }
     }
+    if is_android {
+        // Required by Android bitmap helpers used by mbgl platform code.
+        println!("cargo:rustc-link-lib=jnigraphics");
+    }
+}
+
+struct ExternalDependencies {
+    name: String,
+    git_url: String,
+    revision: String,
+    use_branch: bool,
+    additional_cmake_args: Vec<String>,
+    build_target: Option<String>,
+    additional_link_dirs: Vec<String>,
+}
+
+impl ExternalDependencies {
+    fn libpng(zlib_include_dir: PathBuf, zlib_library: PathBuf) -> Self {
+        Self {
+            name: "libpng".to_owned(),
+            git_url: "https://github.com/pnggroup/libpng.git".to_owned(),
+            revision: "v1.6.58".to_owned(),
+            use_branch: true,
+            additional_cmake_args: vec![
+                "-DSKIP_INSTALL_ALL=1".to_owned(),
+                "-DPNG_INTEL_SSE_OPT=OFF".to_owned(),
+                format!("-DZLIB_INCLUDE_DIR={}", zlib_include_dir.display()),
+                format!("-DZLIB_LIBRARY={}", zlib_library.display()),
+            ],
+            build_target: Some("png_static".to_owned()),
+            additional_link_dirs: Vec::new(),
+        }
+    }
+
+    fn libjpeg_turbo() -> Self {
+        Self {
+            name: "libjpeg-turbo".to_owned(),
+            git_url: "https://github.com/libjpeg-turbo/libjpeg-turbo.git".to_owned(),
+            revision: "3.1.2".to_owned(),
+            use_branch: true,
+            additional_cmake_args: vec![
+                "-DENABLE_SHARED=OFF".to_owned(),
+                "-DENABLE_STATIC=ON".to_owned(),
+            ],
+            build_target: Some("jpeg-static".to_owned()),
+            additional_link_dirs: vec!["lib".to_owned()],
+        }
+    }
+
+    fn libwebp() -> Self {
+        Self {
+            name: "libwebp".to_owned(),
+            git_url: "https://chromium.googlesource.com/webm/libwebp".to_owned(),
+            revision: "v1.6.0".to_owned(),
+            use_branch: true,
+            additional_cmake_args: vec![
+                "-DBUILD_SHARED_LIBS=OFF".to_owned(),
+                "-DWEBP_BUILD_CWEBP=OFF".to_owned(),
+                "-DWEBP_BUILD_DWEBP=OFF".to_owned(),
+                "-DWEBP_BUILD_GIF2WEBP=OFF".to_owned(),
+                "-DWEBP_BUILD_IMG2WEBP=OFF".to_owned(),
+                "-DWEBP_BUILD_VWEBP=OFF".to_owned(),
+                "-DWEBP_BUILD_WEBPINFO=OFF".to_owned(),
+                "-DWEBP_BUILD_EXTRAS=OFF".to_owned(),
+            ],
+            build_target: Some("webp".to_owned()),
+            additional_link_dirs: vec!["lib".to_owned()],
+        }
+    }
+}
+
+fn build_external(
+    dep: &ExternalDependencies,
+    android_config: &AndroidConfig,
+) -> Result<(), Box<dyn Error>> {
+    let name = dep.name.as_str();
+    let root = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
+    let clone_dir = root.join("target");
+    let repository_dir = clone_dir.join(name);
+
+    // Clone Repository
+    if !repository_dir.exists() {
+        println!("cargo:warning=Cloning {name}.");
+        fs::create_dir_all(&clone_dir)?;
+        let mut args = vec!["clone", "--depth", "1"];
+        if dep.use_branch {
+            args.push("--branch");
+            args.push(dep.revision.as_str());
+        }
+        args.push(dep.git_url.as_str());
+        args.push(name);
+
+        let clone_status = Command::new("git").current_dir(clone_dir).args(args).status()?;
+        if !clone_status.success() {
+            return Err(format!("Failed to clone {name} repository: {clone_status}").into());
+        }
+
+        if !dep.use_branch {
+            let checkout_status = Command::new("git")
+                .current_dir(repository_dir.clone())
+                .args(["checkout", dep.revision.as_str()])
+                .status()?;
+            if !checkout_status.success() {
+                return Err(format!(
+                    "Failed to checkout {} for {name}: {checkout_status}",
+                    dep.revision
+                )
+                .into());
+            }
+        }
+    }
+
+    let mut config = cmake::Config::new(repository_dir.clone());
+    config.generator("Ninja");
+    config.configure_arg(format!("-DCMAKE_C_COMPILER={}", android_config.ndk_clang.display()));
+    config.configure_arg(format!("-DCMAKE_CXX_COMPILER={}", android_config.ndk_clangxx.display()));
+    config.configure_arg(format!("-DCMAKE_ASM_COMPILER={}", android_config.ndk_clang.display()));
+    config.configure_arg(format!("-DANDROID_ABI={}", android_config.abi));
+    config.configure_arg(format!("-DANDROID_PLATFORM={}", android_config.platform));
+    config.configure_arg(format!(
+        "-DCMAKE_TOOLCHAIN_FILE={}",
+        android_config.toolchain_file.as_os_str().to_str().unwrap()
+    ));
+    config.configure_arg(format!("-DCMAKE_SYSROOT={}", android_config.sysroot.display()));
+
+    for arg in &dep.additional_cmake_args {
+        config.configure_arg(arg);
+    }
+
+    config.configure_arg("-DCMAKE_BUILD_TYPE=Release");
+    config.out_dir(PathBuf::from(env::var_os("OUT_DIR").expect("OUT_DIR is not set")).join(name));
+    if let Some(target) = &dep.build_target {
+        config.build_target(target);
+    }
+    let dest = config.build();
+    println!("cargo:rustc-link-search=native={}", dest.join("build").display());
+    for link_dir in &dep.additional_link_dirs {
+        println!("cargo:rustc-link-search=native={}", dest.join(link_dir).display());
+    }
+
+    Ok(())
 }
 
 fn main() {

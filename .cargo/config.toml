@@ -1,0 +1,18 @@
+[env]
+ANDROID_NDK_ROOT = "/home/martin/Android/Sdk/ndk/29.0.14033849"
+
+[target.aarch64-linux-android]
+ar = "/home/martin/Android/Sdk/ndk/29.0.14033849/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar"
+linker = "/home/martin/Android/Sdk/ndk/29.0.14033849/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android23-clang"
+
+[target.armv7-linux-androideabi]
+ar = "/home/martin/Android/Sdk/ndk/29.0.14033849/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar"
+linker = "/home/martin/Android/Sdk/ndk/29.0.14033849/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi23-clang"
+
+[target.i686-linux-android]
+ar = "/home/martin/Android/Sdk/ndk/29.0.14033849/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar"
+linker = "/home/martin/Android/Sdk/ndk/29.0.14033849/toolchains/llvm/prebuilt/linux-x86_64/bin/i686-linux-android23-clang"
+
+[target.x86_64-linux-android]
+ar = "/home/martin/Android/Sdk/ndk/29.0.14033849/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar"
+linker = "/home/martin/Android/Sdk/ndk/29.0.14033849/toolchains/llvm/prebuilt/linux-x86_64/bin/x86_64-linux-android23-clang"

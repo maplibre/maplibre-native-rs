@@ -36,6 +36,7 @@ geojson = ["dep:geojson"]
 log = ["dep:log"]
 # Thin adapter to register `tokio`-native async file sources.
 tokio = ["dep:tokio", "tokio/rt"]
+ureq_http = ["dep:ureq"]
 
 [dependencies]
 cxx.workspace = true
@@ -48,6 +49,7 @@ tokio = { workspace = true, optional = true }
 url.workspace = true
 webgpu-shim = { workspace = true, optional = true }
 wgpu = { workspace = true, optional = true }
+ureq = { workspace = true, optional = true }
 
 [build-dependencies]
 cmake.workspace = true
@@ -113,6 +115,7 @@ url = "2.5.7"
 walkdir = "2.5.0"
 webgpu-shim = { path = "webgpu-shim", version = "0.1" }
 wgpu = { version = "29.0.0" }
+ureq = { version = "2.12", default-features = false, features = ["tls"], optional = true }
 
 [workspace.lints.rust]
 missing_debug_implementations = "warn"
