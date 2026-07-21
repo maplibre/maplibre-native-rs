@@ -141,7 +141,5 @@ impl MapLibre {
 }
 
 pub fn create_map(size: Size) -> Rc<RefCell<MapLibre>> {
-    let map_size =
-        if size.width > 0 && size.height > 0 { size } else { Size { width: 0, height: 0 } };
-    Rc::new(RefCell::new(MapLibre::new(map_size)))
+    Rc::new(RefCell::new(MapLibre::new(size)))
 }

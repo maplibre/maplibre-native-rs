@@ -583,6 +583,12 @@ impl ImageRenderer<Continuous> {
     ///
     /// Call this once per frame requested by the host UI for a renderer created with
     /// [`build_continuous_renderer`](crate::ImageRendererBuilder::build_continuous_renderer).
+    ///
+    /// It also advances MapLibre Native's run loop once so asynchronous work (style
+    /// and tile loading) can progress — except on macOS/iOS, where the Core
+    /// Foundation run loop is assumed to be driven by the host UI's main loop. A
+    /// continuous renderer on a dedicated Apple thread with no host loop must pump
+    /// it itself (see [`RunLoopHandle`]).
     pub fn render_once(&mut self) {
         self.instance.pin_mut().render_once();
     }
