@@ -330,6 +330,7 @@ fn build_bridge(
         .includes(&bridge_include_dirs)
         .includes(include_dirs)
         .flag_if_supported("-std=c++20")
+        .flag_if_supported("-fno-rtti")
         .warnings(true)
         .warnings_into_errors(true);
 

@@ -4,45 +4,89 @@ use maplibre_native::{
     CircleLayer, Color, FillLayer, GeoJson, GeoJsonSource, LineLayer, ScreenCoordinate,
     SymbolAnchor, SymbolLayer,
 };
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::path::Path;
 use std::rc::Rc;
 mod headless;
 pub use headless::{MapLibre, create_map};
 use slint::ComponentHandle;
 
-pub fn init(ui: &MainWindow, map: &Rc<RefCell<MapLibre>>) {
-    loop {
-        let mut borrow = map.borrow_mut();
-        borrow.renderer().render_once();
+/// Graphics context lifecycle.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Lifecycle {
+    Uninitialized,
+    Running,
+    Stopped,
+}
 
-        if let Some(error) = borrow.style_loading_error() {
-            panic!("Failed to load map: {}", error);
-        }
+fn queue_animating(ui: &slint::Weak<MainWindow>, animating: bool) {
+    let _ = ui.upgrade_in_event_loop(move |ui| {
+        ui.global::<MapAdapter>().set_animating(animating);
+    });
+}
 
-        if borrow.style_loaded() {
-            drop(borrow);
-            style(map);
-            break;
-        }
-    }
+pub fn init(
+    ui: &MainWindow,
+    map: &Rc<RefCell<MapLibre>>,
+    style_url: impl Into<String>,
+) -> Option<slint::Timer> {
+    let style_url = style_url.into();
+    let lifecycle = Rc::new(Cell::new(Lifecycle::Uninitialized));
 
     ui.window()
         .set_rendering_notifier({
             let map = Rc::downgrade(map);
-            move |state, graphics_api| {
-                if matches!(state, slint::RenderingState::RenderingSetup) {
-                    let slint::GraphicsAPI::WGPU29 { instance: _instance, device, queue, .. } =
-                        graphics_api
-                    else {
+            let lifecycle = lifecycle.clone();
+            let ui_weak = ui.as_weak();
+            move |state, graphics_api| match state {
+                slint::RenderingState::RenderingSetup => {
+                    if lifecycle.get() != Lifecycle::Uninitialized {
+                        eprintln!("graphics re-setup after teardown is unsupported");
+                        return;
+                    }
+                    let slint::GraphicsAPI::WGPU29 { device, queue, .. } = graphics_api else {
                         return;
                     };
-                    map.upgrade()
-                        .unwrap()
-                        .borrow_mut()
-                        .renderer()
-                        .set_device_queue(device.clone(), queue.clone());
+                    let ui = ui_weak.upgrade().unwrap();
+                    let map = map.upgrade().unwrap();
+                    let mut map = map.borrow_mut();
+
+                    // Build the renderer now that the pixel ratio (scale factor) is known.
+                    map.build_renderer(ui.window().scale_factor());
+                    map.renderer().set_device_queue(device.clone(), queue.clone());
+
+                    // MapLibre asks for a frame (input, transitions, async loads);
+                    // going idle stops the clock again.
+                    map.renderer().set_render_requested_callback({
+                        let lifecycle = lifecycle.clone();
+                        let ui = ui.as_weak();
+                        move || {
+                            if lifecycle.get() == Lifecycle::Running {
+                                queue_animating(&ui, true);
+                            }
+                        }
+                    });
+                    map.renderer().map_observer().set_did_become_idle_callback({
+                        let lifecycle = lifecycle.clone();
+                        let ui = ui.as_weak();
+                        move || {
+                            if lifecycle.get() == Lifecycle::Running {
+                                queue_animating(&ui, false);
+                            }
+                        }
+                    });
+
+                    map.renderer().load_style_from_url(
+                        &style_url.parse().expect("style URL should be valid"),
+                    );
+                    lifecycle.set(Lifecycle::Running);
+                    queue_animating(&ui_weak, true);
                 }
+                slint::RenderingState::RenderingTeardown => {
+                    lifecycle.set(Lifecycle::Stopped);
+                    queue_animating(&ui_weak, false);
+                }
+                _ => {}
             }
         })
         .unwrap();
@@ -61,12 +105,32 @@ pub fn init(ui: &MainWindow, map: &Rc<RefCell<MapLibre>>) {
     ui.global::<MapAdapter>().on_tick_map_loop({
         let map = Rc::downgrade(map);
         let ui_handle = ui.as_weak();
+        let styled = Cell::new(false);
+        let lifecycle = lifecycle.clone();
         move || {
+            if lifecycle.get() != Lifecycle::Running {
+                // Stop the frame clock if a stale wake arrives before init or after stop.
+                queue_animating(&ui_handle, false);
+                return;
+            }
+
             let map = map.upgrade().unwrap();
             let mut map = map.borrow_mut();
             map.renderer().render_once();
-            if map.updated()
-                && let Some(image) = map.renderer().take_texture()
+
+            if let Some(error) = map.style_loading_error() {
+                eprintln!("Failed to load map: {error}");
+                lifecycle.set(Lifecycle::Stopped);
+                queue_animating(&ui_handle, false);
+                return;
+            }
+
+            if map.style_loaded() && !styled.get() {
+                style(&mut map);
+                styled.set(true);
+            }
+
+            if let Some(image) = map.renderer().take_texture()
                 && let Ok(image) = image.try_into()
             {
                 ui_handle.upgrade().unwrap().global::<MapAdapter>().set_map_texture(image);
@@ -86,12 +150,19 @@ pub fn init(ui: &MainWindow, map: &Rc<RefCell<MapLibre>>) {
 
     ui.global::<MapAdapter>().on_mouse_move({
         let map = Rc::downgrade(map);
-        move |x: f32, y: f32, _z: bool| {
+        move |x: f32, y: f32, ctrl: bool| {
             let p = ScreenCoordinate { x: x.into(), y: y.into() };
             let map = map.upgrade().unwrap();
             let mut map = map.borrow_mut();
             let delta = p - map.position();
-            map.renderer().move_by(delta);
+            if ctrl {
+                const ROTATE_DEG_PER_PX: f64 = 0.5;
+                const PITCH_DEG_PER_PX: f64 = 0.5;
+                map.rotate_by((-delta.x * ROTATE_DEG_PER_PX) as f32);
+                map.renderer().pitch_by(delta.y * PITCH_DEG_PER_PX);
+            } else {
+                map.renderer().move_by(delta);
+            }
             map.set_position(p);
         }
     });
@@ -100,8 +171,9 @@ pub fn init(ui: &MainWindow, map: &Rc<RefCell<MapLibre>>) {
         let map = Rc::downgrade(map);
         move |x: f32, y: f32, delta: f32| {
             const STEP: f64 = 1.2;
+            const DELTA_PER_STEP: f64 = 60.0;
             let pos = ScreenCoordinate { x: x.into(), y: y.into() };
-            let scale = if delta > 0. { STEP } else { 1.0 / STEP };
+            let scale = STEP.powf(f64::from(delta) / DELTA_PER_STEP);
             map.upgrade().unwrap().borrow_mut().renderer().scale_by(scale, pos);
         }
     });
@@ -121,12 +193,25 @@ pub fn init(ui: &MainWindow, map: &Rc<RefCell<MapLibre>>) {
             map.upgrade().unwrap().borrow_mut().renderer().pitch_by(delta.into());
         }
     });
+
+    pump_run_loop_timer()
+}
+
+fn pump_run_loop_timer() -> Option<slint::Timer> {
+    // Slint drives Core Foundation, but libuv must be pumped explicitly.
+    if !maplibre_native::RunLoopHandle::uses_libuv() {
+        return None;
+    }
+    let timer = slint::Timer::default();
+    timer.start(slint::TimerMode::Repeated, std::time::Duration::from_millis(16), || {
+        maplibre_native::RunLoopHandle::current().tick();
+    });
+    Some(timer)
 }
 
 // Style the map and add a marker
-fn style(map: &Rc<RefCell<MapLibre>>) {
-    let mut map_borrow = map.borrow_mut();
-    let mut style = map_borrow.renderer().style();
+fn style(map: &mut MapLibre) {
+    let mut style = map.renderer().style();
 
     let image = ImageReader::open(
         Path::new(env!("CARGO_MANIFEST_DIR")).join("ui").join("icons").join("Marker.png"),

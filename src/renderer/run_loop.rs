@@ -21,6 +21,12 @@ impl RunLoopHandle {
         Self { _not_send: PhantomData }
     }
 
+    /// Whether MapLibre Native uses the libuv run-loop backend.
+    #[must_use]
+    pub fn uses_libuv() -> bool {
+        ffi::run_loop_uses_libuv()
+    }
+
     /// Ticks the current thread's run loop once (non-blocking).
     #[allow(clippy::unused_self, reason = "method syntax ties ticking to a run-loop handle")]
     pub fn tick(&self) {

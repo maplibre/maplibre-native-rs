@@ -536,6 +536,19 @@ impl ImagePtr {
 }
 
 impl ImageRenderer<Continuous> {
+    /// Sets the callback invoked when MapLibre Native requests a frame.
+    ///
+    /// The callback should schedule [`render_once`](Self::render_once) on the
+    /// renderer's thread using the host's display loop.
+    pub fn set_render_requested_callback<F>(&mut self, callback: F)
+    where
+        F: Fn() + 'static,
+    {
+        self.instance.pin_mut().setRenderRequestedCallback(Box::new(
+            crate::renderer::callbacks::RenderRequestedCallback::new(callback),
+        ));
+    }
+
     /// Applies a partial camera update immediately.
     ///
     /// See [this graphic](https://en.wikipedia.org/wiki/Degrees_of_freedom_(mechanics)#/media/File:Flight_dynamics_with_text.svg)
@@ -566,7 +579,10 @@ impl ImageRenderer<Continuous> {
         self.instance.pin_mut().rotateBy(&first, &second);
     }
 
-    /// Trigger render loop once (animations)
+    /// Renders the current map state into the texture.
+    ///
+    /// Call this once per frame requested by the host UI for a renderer created with
+    /// [`build_continuous_renderer`](crate::ImageRendererBuilder::build_continuous_renderer).
     pub fn render_once(&mut self) {
         self.instance.pin_mut().render_once();
     }

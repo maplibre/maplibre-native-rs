@@ -3,8 +3,8 @@ use std::ops::Sub;
 
 use crate::renderer::callbacks::{
     camera_did_change_callback, failing_loading_map_callback, finish_rendering_frame_callback,
-    void_callback, CameraDidChangeCallback, FailingLoadingMapCallback,
-    FinishRenderingFrameCallback, VoidCallback,
+    render_requested_callback, void_callback, CameraDidChangeCallback, FailingLoadingMapCallback,
+    FinishRenderingFrameCallback, RenderRequestedCallback, VoidCallback,
 };
 use crate::renderer::file_source::{BoxedFileSource, RequestHandleFfi};
 
@@ -1130,6 +1130,8 @@ pub mod ffi {
         /// In-flight render request.
         type RenderRequest;
 
+        /// Whether MapLibre Native uses the libuv run-loop backend.
+        fn run_loop_uses_libuv() -> bool;
         /// Ticks the current thread's MapLibre Native run loop once (non-blocking).
         fn currentThreadRunLoopTick();
         /// Blocks the calling thread, advancing the run loop until it is woken by
@@ -1157,6 +1159,11 @@ pub mod ffi {
         fn bufferLength(self: &BridgeImage) -> usize;
         /// Renders a single frame.
         fn render_once(self: Pin<&mut MapRenderer>);
+        /// Sets the callback invoked when MapLibre Native requests a frame.
+        fn setRenderRequestedCallback(
+            self: Pin<&mut MapRenderer>,
+            callback: Box<RenderRequestedCallback>,
+        );
         /// Submits a render request without waiting for completion.
         fn submitRender(self: Pin<&mut MapRenderer>) -> UniquePtr<RenderRequest>;
         /// Calculates camera options that fit geographic bounds.
@@ -1265,6 +1272,10 @@ pub mod ffi {
 
     // Declarations for C++ with implementations in Rust
     extern "Rust" {
+        type RenderRequestedCallback;
+
+        fn render_requested_callback(callback: &RenderRequestedCallback);
+
         /// Bridge logging from C++ to Rust log crate
         fn log_from_cpp(severity: EventSeverity, event: Event, code: i64, message: &str);
     }

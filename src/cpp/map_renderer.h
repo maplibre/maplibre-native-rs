@@ -50,6 +50,8 @@ namespace bridge {
 
 struct Texture;
 struct TextureView;
+struct RenderRequestedCallback;
+void render_requested_callback(const RenderRequestedCallback& callback) noexcept;
 
 constexpr size_t BYTES_PER_PIXEL = 4; // rgba
 
@@ -106,6 +108,14 @@ inline void currentThreadRunLoopStop() {
 #endif
 }
 
+inline bool run_loop_uses_libuv() noexcept {
+#if defined(__APPLE__) && !defined(MLN_DARWIN_USE_LIBUV)
+    return false;
+#else
+    return true;
+#endif
+}
+
 inline std::unique_ptr<std::string> encodeImage(mbgl::PremultipliedImage image) {
     auto unpremultipliedImage = mbgl::util::unpremultiply(std::move(image));
 
@@ -124,6 +134,31 @@ inline std::unique_ptr<std::string> encodeImage(mbgl::PremultipliedImage image) 
     return std::make_unique<std::string>(std::move(data));
 }
 
+class HostFrontend final : public mbgl::HeadlessFrontend {
+public:
+    HostFrontend(mbgl::Size size, float pixelRatio, bool invalidateOnUpdate)
+        : mbgl::HeadlessFrontend(size,
+                                 pixelRatio,
+                                 mbgl::gfx::HeadlessBackend::SwapBehaviour::NoFlush,
+                                 mbgl::gfx::ContextMode::Unique,
+                                 std::nullopt,
+                                 invalidateOnUpdate) {}
+
+    void setRenderRequestedCallback(rust::Box<RenderRequestedCallback> callback) {
+        renderRequestedCallback = std::move(callback);
+    }
+
+    void update(std::shared_ptr<mbgl::UpdateParameters> updateParameters) override {
+        mbgl::HeadlessFrontend::update(std::move(updateParameters));
+        if (renderRequestedCallback) {
+            render_requested_callback(*(*renderRequestedCallback));
+        }
+    }
+
+private:
+    std::optional<rust::Box<RenderRequestedCallback>> renderRequestedCallback;
+};
+
 class MapRenderer {
 public:
     explicit MapRenderer(mbgl::MapMode mapMode,
@@ -132,7 +167,9 @@ public:
                          const mbgl::ResourceOptions& resourceOptions)
         : mapObserverInstance(std::make_shared<MapObserver>()) {
         bindThreadRunLoop();
-        frontend = std::make_unique<mbgl::HeadlessFrontend>(size, pixelRatio);
+        // Continuous renderers are host-driven.
+        bool invalidateOnUpdate = mapMode != mbgl::MapMode::Continuous;
+        frontend = std::make_unique<HostFrontend>(size, pixelRatio, invalidateOnUpdate);
 
         mbgl::MapOptions mapOptions;
         mapOptions.withMapMode(mapMode).withSize(size).withPixelRatio(pixelRatio);
@@ -213,7 +250,14 @@ public:
     }
 
     void render_once() {
-        frontend->renderOnce(*map);
+#if !defined(__APPLE__) || defined(MLN_DARWIN_USE_LIBUV)
+        currentThreadRunLoopTick();
+#endif
+        frontend->renderFrame();
+    }
+
+    void setRenderRequestedCallback(rust::Box<RenderRequestedCallback> callback) {
+        frontend->setRenderRequestedCallback(std::move(callback));
     }
 
     std::unique_ptr<RenderRequest> submitRender();
@@ -276,7 +320,7 @@ public:
 public:
     // CXX bridge helpers below access these directly. Keep them alive here
     // because the frontend and observer are passed by reference to the map.
-    std::unique_ptr<mbgl::HeadlessFrontend> frontend;
+    std::unique_ptr<HostFrontend> frontend;
     std::shared_ptr<MapObserver> mapObserverInstance;
     std::unique_ptr<mbgl::Map> map;
 };

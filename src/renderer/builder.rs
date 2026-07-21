@@ -99,8 +99,12 @@ impl ImageRendererBuilder {
         ImageRenderer::new(MapMode::Tile, self)
     }
 
-    /// Builds a continuous renderer
-    /// Using the `MapObserver` it is possible to react on signals from the Map
+    /// Builds a continuous renderer.
+    ///
+    /// Frames are host-driven: use [`ImageRenderer::set_render_requested_callback`] to wake the
+    /// host UI's display loop, then call [`ImageRenderer::render_once`] for each scheduled frame.
+    ///
+    /// Use the `MapObserver` to react to signals from the map.
     #[must_use]
     pub fn build_continuous_renderer(self) -> ImageRenderer<Continuous> {
         ImageRenderer::new(MapMode::Continuous, self)

@@ -13,40 +13,85 @@ use maplibre_native::{
 struct Flags {
     loading_style_error: Option<MapLoadError>,
     style_loaded: bool,
-    map_idle: bool,
-    frame_updated: bool,
 }
 
 pub struct MapLibre {
     flags: Rc<RefCell<Flags>>,
-    renderer: ImageRenderer<Continuous>,
+    renderer: Option<ImageRenderer<Continuous>>,
     last_pos: ScreenCoordinate,
     map_size: Size,
 }
 
 impl MapLibre {
-    pub fn new(renderer: ImageRenderer<Continuous>, map_size: Size) -> Self {
-        Self { renderer, flags: Rc::default(), last_pos: ScreenCoordinate::default(), map_size }
+    pub fn new(map_size: Size) -> Self {
+        Self {
+            renderer: None,
+            flags: Rc::default(),
+            last_pos: ScreenCoordinate::default(),
+            map_size,
+        }
     }
 
-    #[allow(dead_code)]
+    /// Builds the renderer once the host's pixel ratio (scale factor) is known.
+    pub fn build_renderer(&mut self, pixel_ratio: f32) {
+        let resource_options = ResourceOptions::default()
+            .with_tile_server_options(&TileServerOptions::default())
+            // .with_api_key(api_key)
+            .with_cache_path(
+                Path::new(env!("CARGO_MANIFEST_DIR")).join("maplibre_database.sqlite"),
+            );
+
+        let mut builder = ImageRendererBuilder::new().with_pixel_ratio(pixel_ratio);
+        if self.map_size.width > 0 && self.map_size.height > 0 {
+            builder = builder.with_size(
+                NonZeroU32::new(self.map_size.width).unwrap(),
+                NonZeroU32::new(self.map_size.height).unwrap(),
+            );
+        }
+        let mut renderer =
+            builder.with_resource_options(resource_options).build_continuous_renderer();
+        renderer.update_camera(
+            &CameraUpdate::new()
+                .center(LatLng { lat: 0.0, lng: 0.0 })
+                .zoom(0.0)
+                .bearing(0.0)
+                .pitch(0.0),
+        );
+
+        let observer = renderer.map_observer();
+        observer.set_did_finish_loading_style_callback({
+            let flags = Rc::downgrade(&self.flags);
+            move || {
+                if let Some(flags) = flags.upgrade() {
+                    flags.borrow_mut().style_loaded = true;
+                }
+            }
+        });
+        observer.set_did_fail_loading_map_callback({
+            let flags = Rc::downgrade(&self.flags);
+            move |error| {
+                println!("Failed to load map: {}", error.message);
+                if let Some(flags) = flags.upgrade() {
+                    let mut flags = flags.borrow_mut();
+                    flags.style_loaded = false;
+                    flags.loading_style_error = Some(error);
+                }
+            }
+        });
+
+        self.renderer = Some(renderer);
+    }
+
     pub fn style_loaded(&self) -> bool {
         self.flags.borrow().style_loaded
     }
 
-    #[allow(dead_code)]
     pub fn style_loading_error(&self) -> Option<MapLoadError> {
         self.flags.borrow().loading_style_error.clone()
     }
 
-    pub fn updated(&mut self) -> bool {
-        let updated = self.flags.borrow().frame_updated;
-        self.flags.borrow_mut().frame_updated = false;
-        updated
-    }
-
-    pub fn renderer(&mut self) -> &mut ImageRenderer<Continuous> {
-        &mut self.renderer
+    pub(super) fn renderer(&mut self) -> &mut ImageRenderer<Continuous> {
+        self.renderer.as_mut().expect("renderer is built during RenderingSetup")
     }
 
     pub fn set_position(&mut self, pos: ScreenCoordinate) {
@@ -59,7 +104,9 @@ impl MapLibre {
 
     pub fn set_map_size(&mut self, size: Size) {
         self.map_size = size;
-        self.renderer.set_map_size(size);
+        if let Some(renderer) = self.renderer.as_mut() {
+            renderer.set_map_size(size);
+        }
     }
 
     // Inverse the map rotation logic from MapLibre's `Map::rotateBy` to convert a control+wheel delta into a synthetic drag gesture.
@@ -89,92 +136,12 @@ impl MapLibre {
             y: center.y + relative.x * angle.sin() + relative.y * angle.cos(),
         };
 
-        self.renderer.rotate_by(first, second);
+        self.renderer().rotate_by(first, second);
     }
 }
 
 pub fn create_map(size: Size) -> Rc<RefCell<MapLibre>> {
-    let resource_options = ResourceOptions::default()
-        .with_tile_server_options(&TileServerOptions::default())
-        // .with_api_key(api_key)
-        .with_cache_path(Path::new(env!("CARGO_MANIFEST_DIR")).join("maplibre_database.sqlite"));
-
-    let mut renderer = ImageRendererBuilder::new();
-    let mut map_size = Size { width: 0, height: 0 };
-    if size.width > 0 && size.height > 0 {
-        map_size = size;
-        renderer = renderer.with_size(
-            NonZeroU32::new(size.width as u32).unwrap(),
-            NonZeroU32::new(size.height as u32).unwrap(),
-        );
-    }
-    let mut renderer = renderer
-        .with_pixel_ratio(1.0)
-        .with_resource_options(resource_options)
-        .build_continuous_renderer();
-
-    // setting the camera is important, otherwise maplibre does nothing
-    // (no logs are coming and no map gets generated).
-    renderer.update_camera(
-        &CameraUpdate::new()
-            .center(LatLng { lat: 0.0, lng: 0.0 })
-            .zoom(0.0)
-            .bearing(0.0)
-            .pitch(0.0),
-    );
-
-    let map = Rc::new(RefCell::new(MapLibre::new(renderer, map_size)));
-
-    let map_observer = map.borrow_mut().renderer().map_observer();
-    map_observer.set_did_become_idle_callback({
-        let flags = Rc::downgrade(&map.borrow().flags);
-        move || {
-            flags.upgrade().inspect(|v| {
-                v.borrow_mut().map_idle = true;
-            });
-        }
-    });
-    map_observer.set_will_start_loading_map_callback({
-        let flags = Rc::downgrade(&map.borrow().flags);
-        move || {
-            println!("set_on_will_start_loading_map_callback");
-            flags.upgrade().inspect(|v| {
-                v.borrow_mut().map_idle = false;
-                v.borrow_mut().style_loaded = false;
-            });
-        }
-    });
-    map_observer.set_did_finish_loading_style_callback({
-        let flags = Rc::downgrade(&map.borrow().flags);
-        move || {
-            println!("set_on_did_finish_loading_style_callback");
-            flags.upgrade().inspect(|v| {
-                v.borrow_mut().style_loaded = true;
-            });
-        }
-    });
-    map_observer.set_did_fail_loading_map_callback({
-        let flags = Rc::downgrade(&map.borrow().flags);
-        move |error| {
-            println!("Failed to load map: {}", error.message);
-            flags.upgrade().inspect(|v| {
-                let mut borrow = v.borrow_mut();
-                borrow.style_loaded = false;
-                borrow.loading_style_error = Some(error);
-            });
-        }
-    });
-    map_observer.set_camera_changed_callback(|_mode| {});
-    map_observer.set_finish_rendering_frame_callback({
-        let flags = Rc::downgrade(&map.borrow().flags);
-        move |needs_repaint: bool, placement_changed: bool| {
-            if needs_repaint || placement_changed {
-                flags.upgrade().inspect(|v| {
-                    v.borrow_mut().frame_updated = true;
-                });
-            }
-        }
-    });
-
-    map
+    let map_size =
+        if size.width > 0 && size.height > 0 { size } else { Size { width: 0, height: 0 } };
+    Rc::new(RefCell::new(MapLibre::new(map_size)))
 }
