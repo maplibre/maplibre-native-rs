@@ -150,7 +150,11 @@ pub fn init(
 
     ui.global::<MapAdapter>().on_mouse_move({
         let map = Rc::downgrade(map);
+        let lifecycle = lifecycle.clone();
         move |x: f32, y: f32, ctrl: bool| {
+            if lifecycle.get() != Lifecycle::Running {
+                return;
+            }
             let p = ScreenCoordinate { x: x.into(), y: y.into() };
             let map = map.upgrade().unwrap();
             let mut map = map.borrow_mut();
@@ -169,7 +173,11 @@ pub fn init(
 
     ui.global::<MapAdapter>().on_wheel_zoom({
         let map = Rc::downgrade(map);
+        let lifecycle = lifecycle.clone();
         move |x: f32, y: f32, delta: f32| {
+            if lifecycle.get() != Lifecycle::Running {
+                return;
+            }
             const STEP: f64 = 1.2;
             const DELTA_PER_STEP: f64 = 60.0;
             let pos = ScreenCoordinate { x: x.into(), y: y.into() };
@@ -180,7 +188,11 @@ pub fn init(
 
     ui.global::<MapAdapter>().on_bearing_changed({
         let map = Rc::downgrade(map);
+        let lifecycle = lifecycle.clone();
         move |delta: f32| {
+            if lifecycle.get() != Lifecycle::Running {
+                return;
+            }
             // MapLibre's rotateBy API expects a gesture from one pointer position to another.
             // Control+wheel provides only a scalar delta, so convert it into a small synthetic drag.
             map.upgrade().unwrap().borrow_mut().rotate_by(delta);
@@ -189,7 +201,11 @@ pub fn init(
 
     ui.global::<MapAdapter>().on_pitch_changed({
         let map = Rc::downgrade(map);
+        let lifecycle = lifecycle.clone();
         move |delta: f32| {
+            if lifecycle.get() != Lifecycle::Running {
+                return;
+            }
             map.upgrade().unwrap().borrow_mut().renderer().pitch_by(delta.into());
         }
     });
