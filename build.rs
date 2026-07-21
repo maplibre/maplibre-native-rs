@@ -18,6 +18,7 @@
 //!     - `cargo install armerge`
 //!     - `sudo apt install llvm` llvm-objcopy required
 use downloader::{Download, Downloader};
+use std::error::Error;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::{env, fs};
@@ -507,6 +508,7 @@ fn configure_local_build(
     api: GraphicsApi,
     amalgam_lib: bool,
     target_os: &str,
+    android_config: &Option<AndroidConfig>,
 ) {
     // maplibre-native's platform/darwin/darwin.cmake calls enable_language(Swift),
     // which the default "Unix Makefiles" generator does not support. Switch to Ninja.
@@ -514,45 +516,38 @@ fn configure_local_build(
         config.generator("Ninja");
     }
 
-    if let Some(android_config) = android_config {
+    if let Some(android_cfg) = android_config {
         // Pin toolchain compilers to avoid CMake cache churn when host wrappers (for example ccache)
         // change between invocations. Cache churn can trigger an internal reconfigure that drops backend flags.
-        config.configure_arg(format!("-DCMAKE_C_COMPILER={}", android_config.ndk_clang.display()));
-        config.configure_arg(format!(
-            "-DCMAKE_CXX_COMPILER={}",
-            android_config.ndk_clangxx.display()
-        ));
-        config
-            .configure_arg(format!("-DCMAKE_ASM_COMPILER={}", android_config.ndk_clang.display()));
+        config.configure_arg(format!("-DCMAKE_C_COMPILER={}", android_cfg.ndk_clang.display()));
+        config.configure_arg(format!("-DCMAKE_CXX_COMPILER={}", android_cfg.ndk_clangxx.display()));
+        config.configure_arg(format!("-DCMAKE_ASM_COMPILER={}", android_cfg.ndk_clang.display()));
 
-        config.configure_arg(format!("-DANDROID_ABI={}", android_config.abi));
-        config.configure_arg(format!("-DANDROID_PLATFORM={}", android_config.platform));
+        config.configure_arg(format!("-DANDROID_ABI={}", android_cfg.abi));
+        config.configure_arg(format!("-DANDROID_PLATFORM={}", android_cfg.platform));
         config.configure_arg(format!(
             "-DCMAKE_TOOLCHAIN_FILE={}",
-            android_config.toolchain_file.as_os_str().to_str().unwrap()
+            android_cfg.toolchain_file.as_os_str().to_str().unwrap()
         ));
 
-        build_external(&ExternalDependencies::libjpeg_turbo(), android_config).unwrap();
-        build_external(&ExternalDependencies::libwebp(), android_config).unwrap();
+        build_external(&ExternalDependencies::libjpeg_turbo(), android_cfg).unwrap();
+        build_external(&ExternalDependencies::libwebp(), android_cfg).unwrap();
 
-        let android_api = android_config
+        let android_api = android_cfg
             .platform
             .strip_prefix("android-")
             .expect("ANDROID_PLATFORM must look like android-<api>");
         let target_triple = env::var("TARGET").expect("TARGET is not set");
-        let zlib_include_dir = android_config.sysroot.join("usr").join("include");
-        let zlib_library = android_config
+        let zlib_include_dir = android_cfg.sysroot.join("usr").join("include");
+        let zlib_library = android_cfg
             .sysroot
             .join("usr")
             .join("lib")
             .join(target_triple)
             .join(android_api)
             .join("libz.so");
-        build_external(
-            &ExternalDependencies::libpng(zlib_include_dir, zlib_library),
-            android_config,
-        )
-        .unwrap();
+        build_external(&ExternalDependencies::libpng(zlib_include_dir, zlib_library), android_cfg)
+            .unwrap();
 
         build_external(
             &ExternalDependencies {
@@ -564,7 +559,7 @@ fn configure_local_build(
                 build_target: Some("uv_a".to_owned()),
                 additional_link_dirs: Vec::new(),
             },
-            android_config,
+            android_cfg,
         )
         .unwrap();
     }
@@ -673,7 +668,7 @@ fn build_local(
     let mut config = cmake::Config::new(maplibre_native_dir.clone());
     config.build_target(TARGET_NAME);
     let api = GraphicsApi::from_selected_features();
-    configure_local_build(&mut config, api, amalgam_lib, target_os);
+    configure_local_build(&mut config, api, amalgam_lib, target_os, android_config);
 
     let dest = config.build();
     println!("cargo:rustc-link-search=native={}", dest.join("build").display());

@@ -84,71 +84,74 @@ unsafe extern "C" fn rust_http_bridge_request(
         }
     };
 
-    let request = ureq::get(url_str).set("User-Agent", "maplibre-native-rs-http-bridge");
-    match request.call() {
-        Ok(response) => {
-            let status = response.status();
-            if status == 204 {
-                ffi::http_response_set_no_content(out_response.as_mut(), true);
-                return true;
-            }
-            if status == 304 {
-                ffi::http_response_set_not_modified(out_response.as_mut(), true);
-                return true;
-            }
-            if let Some(etag) = response.header("ETag") {
-                ffi::http_response_set_etag(out_response.as_mut(), etag.as_bytes());
-            }
+    #[cfg(feature = "ureq_http")]
+    {
+        let request = ureq::get(url_str).set("User-Agent", "maplibre-native-rs-http-bridge");
+        match request.call() {
+            Ok(response) => {
+                let status = response.status();
+                if status == 204 {
+                    ffi::http_response_set_no_content(out_response.as_mut(), true);
+                    return true;
+                }
+                if status == 304 {
+                    ffi::http_response_set_not_modified(out_response.as_mut(), true);
+                    return true;
+                }
+                if let Some(etag) = response.header("ETag") {
+                    ffi::http_response_set_etag(out_response.as_mut(), etag.as_bytes());
+                }
 
-            let mut bytes = Vec::new();
-            let mut reader = response.into_reader();
-            if let Err(err) = reader.read_to_end(&mut bytes) {
+                let mut bytes = Vec::new();
+                let mut reader = response.into_reader();
+                if let Err(err) = reader.read_to_end(&mut bytes) {
+                    set_error(
+                        out_response.as_mut(),
+                        Reason::Connection,
+                        format!("Failed reading HTTP response body: {err}"),
+                    );
+                    return true;
+                }
+
+                if !bytes.is_empty() {
+                    ffi::http_response_set_data(out_response.as_mut(), &bytes);
+                }
+
+                true
+            }
+            Err(ureq::Error::Status(status, response)) => {
+                let reason = if status == 404 {
+                    Reason::NotFound
+                } else if status == 429 {
+                    Reason::RateLimit
+                } else if status >= 500 {
+                    Reason::Server
+                } else {
+                    Reason::Other
+                };
+
+                if status == 404 {
+                    ffi::http_response_set_no_content(out_response.as_mut(), true);
+                }
+
+                let status_text = response.status_text();
+                let message = if status_text.is_empty() {
+                    format!("HTTP status {status}")
+                } else {
+                    format!("HTTP status {status}: {status_text}")
+                };
+                set_error(out_response.as_mut(), reason, message);
+
+                true
+            }
+            Err(ureq::Error::Transport(err)) => {
                 set_error(
                     out_response.as_mut(),
                     Reason::Connection,
-                    format!("Failed reading HTTP response body: {err}"),
+                    format!("HTTP transport error: {err}"),
                 );
-                return true;
+                true
             }
-
-            if !bytes.is_empty() {
-                ffi::http_response_set_data(out_response.as_mut(), &bytes);
-            }
-
-            true
-        }
-        Err(ureq::Error::Status(status, response)) => {
-            let reason = if status == 404 {
-                Reason::NotFound
-            } else if status == 429 {
-                Reason::RateLimit
-            } else if status >= 500 {
-                Reason::Server
-            } else {
-                Reason::Other
-            };
-
-            if status == 404 {
-                ffi::http_response_set_no_content(out_response.as_mut(), true);
-            }
-
-            let status_text = response.status_text();
-            let message = if status_text.is_empty() {
-                format!("HTTP status {status}")
-            } else {
-                format!("HTTP status {status}: {status_text}")
-            };
-            set_error(out_response.as_mut(), reason, message);
-
-            true
-        }
-        Err(ureq::Error::Transport(err)) => {
-            set_error(
-                out_response.as_mut(),
-                Reason::Connection,
-                format!("HTTP transport error: {err}"),
-            );
-            true
         }
     }
 }
