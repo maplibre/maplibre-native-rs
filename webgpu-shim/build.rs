@@ -10,6 +10,7 @@ const WEBGPU_H_SHA256_SUM: &str =
 fn main() {
     println!("cargo:rerun-if-changed=wgpu.h");
     println!("cargo:rerun-if-changed=dep/webgpu-headers/webgpu.h");
+    println!("cargo:rerun-if-env-changed=BINDGEN_EXTRA_CLANG_ARGS");
 
     let webgpu_h_download_dir = download_webgpu_header();
 
@@ -49,7 +50,69 @@ fn main() {
         .size_t_is_usize(true)
         .ignore_functions()
         .layout_tests(true)
-        .clang_macro_fallback();
+        .clang_macro_fallback()
+        // bindgen's automatic include-path detection shells out to a `clang`
+        // binary and appends its reported system include paths as redundant
+        // `-isystem` flags on top of what libclang already resolves via
+        // LIBCLANG_PATH. For cross-compiled (Android) targets those duplicate
+        // paths corrupt stdint.h/stddef.h parsing (e.g. "unknown type name
+        // 'uint32_t'"/'size_t'"), so rely solely on the explicit --sysroot/
+        // --target flags below instead.
+        .detect_include_paths(false);
+
+    // Add extra clang arguments for cross-compilation (e.g., Android)
+    // Try common Android targets first since TARGET in build scripts is the host
+    let possible_targets = [
+        "aarch64_linux_android",
+        "aarch64-linux-android",
+        "armv7_linux_androideabi",
+        "armv7-linux-androideabi",
+        "i686_linux_android",
+        "i686-linux-android",
+        "x86_64_linux_android",
+        "x86_64-linux-android",
+    ];
+
+    let mut found = false;
+    for target in possible_targets.iter() {
+        let clang_args_env = format!("BINDGEN_EXTRA_CLANG_ARGS_{}", target);
+        println!("cargo:rerun-if-env-changed={}", clang_args_env);
+        if let Ok(extra_args) = env::var(&clang_args_env) {
+            for arg in extra_args.split_whitespace() {
+                builder = builder.clang_arg(arg);
+            }
+            found = true;
+            break;
+        }
+    }
+
+    // Fall back to generic BINDGEN_EXTRA_CLANG_ARGS
+    if !found {
+        println!("cargo:rerun-if-env-changed=BINDGEN_EXTRA_CLANG_ARGS");
+        if let Ok(extra_args) = env::var("BINDGEN_EXTRA_CLANG_ARGS") {
+            for arg in extra_args.split_whitespace() {
+                builder = builder.clang_arg(arg);
+            }
+        }
+    }
+
+    // When cross-compiling, libclang's own resource-dir auto-detection
+    // (relied on for stdint.h/stddef.h builtins) has proven unreliable
+    // depending on which build unit (host vs. target) this build script runs
+    // as. Since LIBCLANG_PATH points at the toolchain's libclang, derive its
+    // sibling `clang/<version>` resource directory explicitly instead of
+    // trusting auto-detection.
+    println!("cargo:rerun-if-env-changed=LIBCLANG_PATH");
+    if found {
+        if let Ok(libclang_path) = env::var("LIBCLANG_PATH") {
+            let clang_dir = PathBuf::from(&libclang_path).join("clang");
+            if let Ok(entries) = fs::read_dir(&clang_dir) {
+                if let Some(version_dir) = entries.filter_map(|e| e.ok()).map(|e| e.path()).find(|p| p.is_dir()) {
+                    builder = builder.clang_arg(format!("-resource-dir={}", version_dir.display()));
+                }
+            }
+        }
+    }
 
     for (old_name, new_name) in types_to_rename {
         let line = format!("pub type {old_name} = *const crate::{new_name};");
