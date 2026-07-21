@@ -107,7 +107,9 @@ fn main() {
         if let Ok(libclang_path) = env::var("LIBCLANG_PATH") {
             let clang_dir = PathBuf::from(&libclang_path).join("clang");
             if let Ok(entries) = fs::read_dir(&clang_dir) {
-                if let Some(version_dir) = entries.filter_map(|e| e.ok()).map(|e| e.path()).find(|p| p.is_dir()) {
+                if let Some(version_dir) =
+                    entries.filter_map(|e| e.ok()).map(|e| e.path()).find(|p| p.is_dir())
+                {
                     builder = builder.clang_arg(format!("-resource-dir={}", version_dir.display()));
                 }
             }

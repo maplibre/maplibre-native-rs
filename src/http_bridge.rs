@@ -24,7 +24,7 @@ mod ffi {
         Glyphs,
         SpriteImage,
         SpriteJSON,
-        Image
+        Image,
     }
 
     #[namespace = "mln::bridge"]
@@ -41,7 +41,11 @@ mod ffi {
         fn http_response_set_etag(response: Pin<&mut HttpResponse>, etag: &[u8]);
         fn http_response_set_no_content(response: Pin<&mut HttpResponse>, no_content: bool);
         fn http_response_set_not_modified(response: Pin<&mut HttpResponse>, not_modified: bool);
-        fn http_response_set_error(response: Pin<&mut HttpResponse>, reason: Reason, error_message: &str);
+        fn http_response_set_error(
+            response: Pin<&mut HttpResponse>,
+            reason: Reason,
+            error_message: &str,
+        );
     }
 }
 
@@ -51,7 +55,9 @@ use ffi::{HttpResponse, Kind, Reason};
 #[cfg(feature = "wgpu")]
 unsafe extern "C" {
     fn mbgl_rust_http_set_bridge(
-        request_fn: Option<unsafe extern "C" fn(*const cxx::CxxString, Kind, *mut HttpResponse) -> bool>,
+        request_fn: Option<
+            unsafe extern "C" fn(*const cxx::CxxString, Kind, *mut HttpResponse) -> bool,
+        >,
     );
 }
 
