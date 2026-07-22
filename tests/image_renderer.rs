@@ -8,7 +8,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use maplibre_native::{
-    CameraUpdate, Color, EdgeInsets, FillLayer, GeoJson, GeoJsonSource, ImageRenderer,
+    CameraUpdate, Color, Continuous, EdgeInsets, FillLayer, GeoJson, GeoJsonSource, ImageRenderer,
     ImageRendererBuilder, LatLng, LatLngBounds, MapLoadErrorKind, RunLoopHandle, Static, Tile,
 };
 
@@ -47,6 +47,22 @@ fn tick_until_ready(mut ready: impl FnMut() -> bool) {
         assert!(Instant::now() < deadline, "request did not complete within {RENDER_TIMEOUT:?}");
         run_loop.tick();
     }
+}
+
+#[test]
+fn continuous_renderer_requests_frame_after_update() {
+    let mut renderer: ImageRenderer<Continuous> = ImageRendererBuilder::new()
+        .with_size(NonZeroU32::new(128).unwrap(), NonZeroU32::new(128).unwrap())
+        .with_pixel_ratio(1.0)
+        .build_continuous_renderer();
+    let requested = Rc::new(Cell::new(false));
+    renderer.set_render_requested_callback({
+        let requested = requested.clone();
+        move || requested.set(true)
+    });
+
+    renderer.update_camera(&CameraUpdate::new().zoom(1.0));
+    tick_until_ready(|| requested.get());
 }
 
 #[test]

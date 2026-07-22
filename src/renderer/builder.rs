@@ -99,8 +99,19 @@ impl ImageRendererBuilder {
         ImageRenderer::new(MapMode::Tile, self)
     }
 
-    /// Builds a continuous renderer
-    /// Using the `MapObserver` it is possible to react on signals from the Map
+    /// Builds a continuous renderer.
+    ///
+    /// Frames are host-driven: use [`ImageRenderer::<Continuous>::set_render_requested_callback`] to wake the
+    /// host UI's display loop, then call [`ImageRenderer::<Continuous>::render_once`] for each scheduled frame.
+    ///
+    /// Use the `MapObserver` to react to signals from the map.
+    ///
+    /// # Breaking change
+    ///
+    /// This renderer no longer self-invalidates (MapLibre Native used to schedule
+    /// its own renders on update). The signature is unchanged, so existing callers
+    /// keep compiling but stop producing frames until they drive
+    /// [`render_once`](ImageRenderer::<Continuous>::render_once) themselves.
     #[must_use]
     pub fn build_continuous_renderer(self) -> ImageRenderer<Continuous> {
         ImageRenderer::new(MapMode::Continuous, self)

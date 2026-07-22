@@ -1,6 +1,3 @@
-import { Button, VerticalBox, ComboBox, HorizontalBox, Slider } from "std-widgets.slint";
-
-
 // Define a struct to hold window size
 export struct Size {
     width: length,
@@ -10,16 +7,9 @@ export struct Size {
 // TODO: make this not global, because then it can be used only for one instance!
 export global MapAdapter {
     in-out property <image> map_texture;
-    callback tick_map_loop();
     callback mouse_press(x: float, y: float);
-    callback mouse_release(x: float, y: float);
     callback mouse_move(x: float, y: float, bool);
-    callback style_changed(style: string);
-    callback double_click_with_shift(x: float, y: float, shift_pressed: bool);
     callback wheel_zoom(x: float, y: float, zoom_delta: float); // Positive delta_y: zoom out; Negative: zoom in
-    callback fly_to(location: string);
-    callback pitch_changed(float);
-    callback bearing_changed(float);
 }
 
 component MapWidget {
@@ -33,52 +23,29 @@ component MapWidget {
         map-size-changed(map-size);
     }
 
-    Timer {
-        interval: 16ms;
-        running: true;
-        triggered => {
-            MapAdapter.tick_map_loop();
-        }
-    }
-
     VerticalLayout {
         spacing: 0px;
 
         map := Image {
             source: MapAdapter.map_texture;
-            image-fit: preserve; // Otherwise the mouse move is not correctly
+            image-fit: fill;
             vertical-alignment: center;
             horizontal-alignment: center;
 
             touch := TouchArea {
-                // Track last seen Shift modifier state from pointer events
-                property <bool> last-shift: false;
                 mouse-cursor: self.pressed ? grabbing : grab;
 
-                // Handle all pointer events properly
                 pointer-event(e) => {
-                    self.last-shift = e.modifiers.shift;
-
                     if (e.kind == PointerEventKind.down) {
                         MapAdapter.mouse_press(self.mouse-x / 1px, self.mouse-y / 1px);
-                    } else if (e.kind == PointerEventKind.up) {
-                        MapAdapter.mouse_release(self.mouse-x / 1px, self.mouse-y / 1px);
                     } else if (e.kind == PointerEventKind.move && self.pressed) {
-                        MapAdapter.mouse_move(self.mouse-x / 1px, self.mouse-y / 1px, true);
+                        MapAdapter.mouse_move(self.mouse-x / 1px, self.mouse-y / 1px, e.modifiers.control);
                     }
                 }
 
                 // Mouse-wheel / trackpad scroll to zoom
                 scroll-event(event) => {
-                    if event.modifiers.shift {
-                        MapAdapter.pitch_changed(event.delta_y / 10px);
-                    } else if event.modifiers.control {
-                        MapAdapter.bearing_changed(event.delta_y / 10px);
-                    } else {
-                        MapAdapter.wheel_zoom(self.mouse-x / 1px,
-                                        self.mouse-y / 1px,
-                                        event.delta_y / 1px);
-                    }
+                    MapAdapter.wheel_zoom(self.mouse-x / 1px, self.mouse-y / 1px, event.delta_y / 1px);
                     return accept;
                 }
             }

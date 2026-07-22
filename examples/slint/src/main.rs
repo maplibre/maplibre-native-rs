@@ -25,11 +25,8 @@ fn main() {
         width: DEFAULT_WIDTH,
         height: DEFAULT_HEIGHT,
     });
-    map.borrow_mut()
-        .renderer()
-        .load_style_from_url(&"https://tiles.openfreemap.org/styles/liberty".parse().unwrap());
-
-    maplibre::init(&ui, &map);
+    // Keep the returned run-loop pump timer alive for the app's lifetime.
+    let _pump_timer = maplibre::init(&ui, &map, "https://tiles.openfreemap.org/styles/liberty");
 
     ui.run().unwrap();
 }

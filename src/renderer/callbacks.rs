@@ -35,6 +35,12 @@ pub fn void_callback(callback: &VoidCallback) {
     (callback.0)();
 }
 
+callback!(RenderRequestedCallback, Fn());
+/// Invoke a render-request callback.
+pub fn render_requested_callback(callback: &RenderRequestedCallback) {
+    (callback.0)();
+}
+
 callback!(FinishRenderingFrameCallback, Fn(bool, bool));
 /// `finish_rendering_frame_callback`
 pub fn finish_rendering_frame_callback(

@@ -330,6 +330,10 @@ fn build_bridge(
         .includes(&bridge_include_dirs)
         .includes(include_dirs)
         .flag_if_supported("-std=c++20")
+        // mbgl-core defaults to no RTTI (CMake `MLN_WITH_RTTI=OFF` adds `-fno-rtti` on GCC/Clang).
+        // The bridge uses no `dynamic_cast`/`typeid`, so `-fno-rtti` is safe.
+        // (MSVC keeps RTTI on both sides)
+        .flag_if_supported("-fno-rtti")
         .warnings(true)
         .warnings_into_errors(true);
 
