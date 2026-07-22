@@ -19,10 +19,9 @@ enum Lifecycle {
     Stopped,
 }
 
-fn queue_animating(ui: &slint::Weak<MainWindow>, animating: bool) {
-    let _ = ui.upgrade_in_event_loop(move |ui| {
-        ui.global::<MapAdapter>().set_animating(animating);
-    });
+fn queue_frame(ui: &slint::Weak<MainWindow>, frame_requested: &Cell<bool>) {
+    frame_requested.set(true);
+    let _ = ui.upgrade_in_event_loop(|ui| ui.window().request_redraw());
 }
 
 pub fn init(
@@ -32,12 +31,15 @@ pub fn init(
 ) -> Option<slint::Timer> {
     let style_url = style_url.into();
     let lifecycle = Rc::new(Cell::new(Lifecycle::Uninitialized));
+    let frame_requested = Rc::new(Cell::new(false));
 
     ui.window()
         .set_rendering_notifier({
             let map = Rc::downgrade(map);
             let lifecycle = lifecycle.clone();
+            let frame_requested = frame_requested.clone();
             let ui_weak = ui.as_weak();
+            let styled = Cell::new(false);
             move |state, graphics_api| match state {
                 slint::RenderingState::RenderingSetup => {
                     if lifecycle.get() != Lifecycle::Uninitialized {
@@ -55,23 +57,13 @@ pub fn init(
                     map.build_renderer(ui.window().scale_factor());
                     map.renderer().set_device_queue(device.clone(), queue.clone());
 
-                    // MapLibre asks for a frame (input, transitions, async loads);
-                    // going idle stops the clock again.
                     map.renderer().set_render_requested_callback({
                         let lifecycle = lifecycle.clone();
+                        let frame_requested = frame_requested.clone();
                         let ui = ui.as_weak();
                         move || {
                             if lifecycle.get() == Lifecycle::Running {
-                                queue_animating(&ui, true);
-                            }
-                        }
-                    });
-                    map.renderer().map_observer().set_did_become_idle_callback({
-                        let lifecycle = lifecycle.clone();
-                        let ui = ui.as_weak();
-                        move || {
-                            if lifecycle.get() == Lifecycle::Running {
-                                queue_animating(&ui, false);
+                                queue_frame(&ui, &frame_requested);
                             }
                         }
                     });
@@ -80,11 +72,43 @@ pub fn init(
                         &style_url.parse().expect("style URL should be valid"),
                     );
                     lifecycle.set(Lifecycle::Running);
-                    queue_animating(&ui_weak, true);
+                    queue_frame(&ui_weak, &frame_requested);
+                }
+                slint::RenderingState::BeforeRendering => {
+                    if lifecycle.get() != Lifecycle::Running
+                        || !frame_requested.replace(false)
+                    {
+                        return;
+                    }
+
+                    let map = map.upgrade().unwrap();
+                    let mut map = map.borrow_mut();
+                    map.renderer().render_once();
+
+                    if let Some(error) = map.style_loading_error() {
+                        eprintln!("Failed to load map: {error}");
+                        lifecycle.set(Lifecycle::Stopped);
+                        return;
+                    }
+
+                    if map.style_loaded() && !styled.get() {
+                        style(&mut map);
+                        styled.set(true);
+                    }
+
+                    if let Some(image) = map.renderer().take_texture()
+                        && let Ok(image) = image.try_into()
+                    {
+                        ui_weak
+                            .upgrade()
+                            .unwrap()
+                            .global::<MapAdapter>()
+                            .set_map_texture(image);
+                    }
                 }
                 slint::RenderingState::RenderingTeardown => {
                     lifecycle.set(Lifecycle::Stopped);
-                    queue_animating(&ui_weak, false);
+                    frame_requested.set(false);
                 }
                 _ => {}
             }
@@ -98,42 +122,6 @@ pub fn init(
                 let size =
                     maplibre_native::Size { width: size.width as u32, height: size.height as u32 };
                 map.upgrade().unwrap().borrow_mut().set_map_size(size);
-            }
-        }
-    });
-
-    ui.global::<MapAdapter>().on_tick_map_loop({
-        let map = Rc::downgrade(map);
-        let ui_handle = ui.as_weak();
-        let styled = Cell::new(false);
-        let lifecycle = lifecycle.clone();
-        move || {
-            if lifecycle.get() != Lifecycle::Running {
-                // Stop the frame clock if a stale wake arrives before init or after stop.
-                queue_animating(&ui_handle, false);
-                return;
-            }
-
-            let map = map.upgrade().unwrap();
-            let mut map = map.borrow_mut();
-            map.renderer().render_once();
-
-            if let Some(error) = map.style_loading_error() {
-                eprintln!("Failed to load map: {error}");
-                lifecycle.set(Lifecycle::Stopped);
-                queue_animating(&ui_handle, false);
-                return;
-            }
-
-            if map.style_loaded() && !styled.get() {
-                style(&mut map);
-                styled.set(true);
-            }
-
-            if let Some(image) = map.renderer().take_texture()
-                && let Ok(image) = image.try_into()
-            {
-                ui_handle.upgrade().unwrap().global::<MapAdapter>().set_map_texture(image);
             }
         }
     });
@@ -183,30 +171,6 @@ pub fn init(
             let pos = ScreenCoordinate { x: x.into(), y: y.into() };
             let scale = STEP.powf(f64::from(delta) / DELTA_PER_STEP);
             map.upgrade().unwrap().borrow_mut().renderer().scale_by(scale, pos);
-        }
-    });
-
-    ui.global::<MapAdapter>().on_bearing_changed({
-        let map = Rc::downgrade(map);
-        let lifecycle = lifecycle.clone();
-        move |delta: f32| {
-            if lifecycle.get() != Lifecycle::Running {
-                return;
-            }
-            // MapLibre's rotateBy API expects a gesture from one pointer position to another.
-            // Control+wheel provides only a scalar delta, so convert it into a small synthetic drag.
-            map.upgrade().unwrap().borrow_mut().rotate_by(delta);
-        }
-    });
-
-    ui.global::<MapAdapter>().on_pitch_changed({
-        let map = Rc::downgrade(map);
-        let lifecycle = lifecycle.clone();
-        move |delta: f32| {
-            if lifecycle.get() != Lifecycle::Running {
-                return;
-            }
-            map.upgrade().unwrap().borrow_mut().renderer().pitch_by(delta.into());
         }
     });
 
