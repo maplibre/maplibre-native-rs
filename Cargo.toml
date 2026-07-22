@@ -112,7 +112,7 @@ toml = "1.1"
 url = "2.5.7"
 walkdir = "2.5.0"
 webgpu-shim = { path = "webgpu-shim", version = "0.1" }
-wgpu = { version = "29.0.0" }
+wgpu = { version = "30.0.0" }
 
 [workspace.lints.rust]
 missing_debug_implementations = "warn"
