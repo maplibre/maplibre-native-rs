@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0](https://github.com/maplibre/maplibre-native-rs/compare/v0.8.7...v0.9.0) - 2026-07-22
+
+### Added
+
+- *(renderer)* [**breaking**] make continuous rendering host-driven ([#271](https://github.com/maplibre/maplibre-native-rs/pull/271))
+
+### Other
+
+- *(deps)* bump the all-actions-version-updates group with 2 updates ([#268](https://github.com/maplibre/maplibre-native-rs/pull/268))
+
 ## [0.8.7](https://github.com/maplibre/maplibre-native-rs/compare/v0.8.6...v0.8.7) - 2026-07-16
 
 ### Fixed
