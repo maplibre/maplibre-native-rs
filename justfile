@@ -189,6 +189,25 @@ test-fmt: (fmt-toml '--check' '--check-format')
 test-miri backend='vulkan':
     MIRIFLAGS="" cargo miri test --all-targets --features {{backend}} --workspace
 
+# Run tests under an LLVM sanitizer ('address', 'leak', 'thread' or 'undefined'; requires nightly Rust). Instruments the Rust side, the C++ bridge and a from-source MapLibre Native build.
+test-sanitizer sanitizer='address' backend='vulkan':
+    #!/usr/bin/env bash
+    set -euo pipefail
+    # An explicit --target keeps build scripts and proc macros uninstrumented.
+    host="$(rustc +nightly -vV | sed -n 's/^host: //p')"
+    export RUSTFLAGS="${RUSTFLAGS:-} -Zsanitizer={{sanitizer}}"
+    # Keep the address lane focused on memory errors; leaks are the leak lane's job.
+    export ASAN_OPTIONS="${ASAN_OPTIONS:-detect_leaks=0}"
+    # Leak checking is link-time only, so the C++ side needs no instrumentation.
+    # On macOS, Apple clang's sanitizer runtime ABI does not match the runtime
+    # rustc links (___asan_version_mismatch_check_apple_clang_*), so the C++
+    # side stays uninstrumented there too; the Rust side and the sanitizer's
+    # malloc interposition still check every heap allocation.
+    if [ "{{sanitizer}}" != "leak" ] && [ "$(uname -s)" != "Darwin" ]; then
+        export MLN_SANITIZER="{{sanitizer}}"
+    fi
+    cargo +nightly test --target "$host" --all-targets --features {{backend}},tokio --workspace
+
 test-publishing:
     cargo publish --dry-run
 

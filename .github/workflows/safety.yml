@@ -1,0 +1,73 @@
+name: Safety
+
+# Runs the test suite under LLVM sanitizers to catch memory errors on the
+# C++ boundary (see issue #34). Miri cannot cover this crate: it does not
+# support calling foreign functions (rust-lang/miri#11).
+#
+# The whole stack is instrumented: the Rust side via `-Zsanitizer`, the C++
+# bridge and the from-source MapLibre Native build via `MLN_SANITIZER`
+# (which maps to maplibre-native's own MLN_WITH_SANITIZER option).
+
+on:
+  pull_request:
+    branches: [main]
+  schedule:
+    # Weekly, so a toolchain or upstream regression surfaces without a PR.
+    - cron: "37 5 * * 1"
+  workflow_dispatch:
+
+# Cancel superseded runs on the same PR
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  # Headless OpenGL EGL: render without an X server / display surface, and force
+  # the llvmpipe software rasterizer (CI runners have no GPU). Harmless for the
+  # other backends.
+  EGL_PLATFORM: surfaceless
+  LIBGL_ALWAYS_SOFTWARE: "1"
+
+jobs:
+  sanitizer:
+    name: ${{ matrix.sanitizer }} sanitizer
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        sanitizer: [address, leak]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          submodules: true
+      - if: github.event_name != 'workflow_dispatch'
+        uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        with:
+          key: ${{ matrix.sanitizer }}
+      - uses: hendrikmuhs/ccache-action@d62db5f07c26379fc4b4e0916f098a92573c3b03 # v1.2.23
+        with:
+          max-size: 2G
+          key: safety-${{ matrix.sanitizer }}
+      - run: echo "MLN_CMAKE_CXX_LAUNCHER=ccache" >> $GITHUB_ENV
+      - run: echo "MLN_PRECOMPILE=0" >> $GITHUB_ENV
+      - run: echo "MLN_CORE_LIBRARY_USE_AMALGAM=0" >> $GITHUB_ENV
+      # clang, not gcc: the C++ objects must use the same AddressSanitizer ABI
+      # as the runtime that rustc links. llvm provides llvm-symbolizer for
+      # readable reports.
+      - run: sudo apt-get update && sudo apt-get install -y clang llvm
+      - run: |
+          echo "CC=clang" >> $GITHUB_ENV
+          echo "CXX=clang++" >> $GITHUB_ENV
+      - uses: taiki-e/install-action@41049aa56687c35e0afa74eed4f09cec4f9afabf # v2.85.2
+        with: { tool: "just" }
+      - run: just env-info install-dependencies 'vulkan'
+      - run: rustup toolchain install nightly
+      - name: Run tests under the ${{ matrix.sanitizer }} sanitizer
+        run: just test-sanitizer ${{ matrix.sanitizer }} vulkan

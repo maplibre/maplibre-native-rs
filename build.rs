@@ -343,6 +343,19 @@ fn build_bridge(
         build.define("NDEBUG", None);
     }
 
+    // Instrument the C++ bridge to match `-Zsanitizer=...` on the Rust side.
+    // The same variable is forwarded to a from-source MapLibre Native build in
+    // `configure_local_build`. The flags mirror maplibre-native's own
+    // MLN_WITH_SANITIZER handling.
+    println!("cargo:rerun-if-env-changed=MLN_SANITIZER");
+    if let Ok(sanitizer) = env::var("MLN_SANITIZER") {
+        if !sanitizer.trim().is_empty() {
+            build.flag(format!("-fsanitize={}", sanitizer.trim()));
+            build.flag_if_supported("-fno-omit-frame-pointer");
+            build.flag_if_supported("-fno-optimize-sibling-calls");
+        }
+    }
+
     if matches!(backend, GraphicsApi::OpenGl(_)) {
         build.define("MLN_RENDER_BACKEND_OPENGL", Some("1"));
     }
@@ -520,6 +533,14 @@ fn configure_local_build(
 
     // We only build the `mbgl-core` target, so skip configuring the GLFW demo app.
     config.configure_arg("-DMLN_WITH_GLFW=OFF");
+
+    // Build MapLibre Native itself with sanitizer instrumentation, using its
+    // own MLN_WITH_SANITIZER option (accepts address|thread|undefined). Always
+    // pass a value: CMake caches variables, so merely omitting the define
+    // would keep a previously configured sanitizer alive in the build dir.
+    let sanitizer = env::var("MLN_SANITIZER").unwrap_or_default();
+    let sanitizer = sanitizer.trim();
+    config.define("MLN_WITH_SANITIZER", if sanitizer.is_empty() { "OFF" } else { sanitizer });
 
     // Forward an optional compiler launcher (sccache/ccache) so downstream CI can
     // cache the C++ objects without patching this crate.
