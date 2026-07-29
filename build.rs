@@ -8,6 +8,8 @@
 //!
 //! Set `MLN_CMAKE_CXX_LAUNCHER` to forward a compiler launcher (e.g. `ccache`/`sccache`) to `CMAKE_CXX_COMPILER_LAUNCHER` when building from source.
 //!
+//! Set `MLN_SANITIZER` to an LLVM sanitizer (e.g. `address`) to instrument the C++ bridge and, when building from source, MapLibre Native itself via `MLN_WITH_SANITIZER` (`just test-sanitizer` sets this).
+//!
 //! Required libraries:
 //! Fedora:
 //!     - `sudo dnf install libicu-devel libglslang-devel spirv-tools-devel libpng-devel libjpeg-turbo-devel libuv-devel libwebp-devel`
