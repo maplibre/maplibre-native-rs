@@ -1,0 +1,8 @@
+# LeakSanitizer suppressions, loaded by `just test-sanitizer` via LSAN_OPTIONS.
+#
+# One-time allocation inside the Vulkan loader / Mesa ICD while enumerating
+# physical devices (observed on CI with llvmpipe: 128 bytes realloc'd below
+# vkEnumeratePhysicalDevices, all owning frames in the since-unloaded driver
+# module). Not reachable from this crate's code, so it cannot be fixed here,
+# and the unloaded module means it cannot be matched by library name either.
+leak:enumeratePhysicalDevices

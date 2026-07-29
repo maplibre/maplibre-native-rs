@@ -202,6 +202,9 @@ test-sanitizer sanitizer='address' backend='vulkan':
     export RUSTFLAGS="${RUSTFLAGS:-} -Zsanitizer={{sanitizer}}"
     # Keep the address lane focused on memory errors; leaks are the leak lane's job.
     export ASAN_OPTIONS="${ASAN_OPTIONS:-detect_leaks=0}"
+    # Known leaks inside GPU drivers and loaders are suppressed; they are not
+    # reachable from this crate's code.
+    export LSAN_OPTIONS="${LSAN_OPTIONS:-suppressions={{justfile_directory()}}/.lsan-suppressions.txt}"
     # Leak checking is link-time only, so the C++ side needs no instrumentation.
     # On macOS, Apple clang's sanitizer runtime ABI does not match the runtime
     # rustc links (___asan_version_mismatch_check_apple_clang_*), so the C++
