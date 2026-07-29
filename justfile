@@ -193,6 +193,10 @@ test-miri backend='vulkan':
 test-sanitizer sanitizer='address' backend='vulkan':
     #!/usr/bin/env bash
     set -euo pipefail
+    # Sanitizers must see the whole stack, so build the core from source
+    # instead of linking an uninstrumented precompiled amalgam.
+    export MLN_PRECOMPILE=0
+    export MLN_CORE_LIBRARY_USE_AMALGAM=0
     # An explicit --target keeps build scripts and proc macros uninstrumented.
     host="$(rustc +nightly -vV | sed -n 's/^host: //p')"
     export RUSTFLAGS="${RUSTFLAGS:-} -Zsanitizer={{sanitizer}}"
@@ -205,6 +209,10 @@ test-sanitizer sanitizer='address' backend='vulkan':
     # malloc interposition still check every heap allocation.
     if [ "{{sanitizer}}" != "leak" ] && [ "$(uname -s)" != "Darwin" ]; then
         export MLN_SANITIZER="{{sanitizer}}"
+        # The C++ objects must use the same sanitizer runtime ABI as the one
+        # rustc links, which means compiling them with (non-Apple) clang.
+        export CC=clang
+        export CXX=clang++
     fi
     cargo +nightly test --target "$host" --all-targets --features {{backend}},tokio --workspace
 

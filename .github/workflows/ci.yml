@@ -205,10 +205,51 @@ jobs:
       - name: Build with MSRV
         run: just ci_mode=0 build-msrv ${{ matrix.backend }} # Ignore warnings in MSRV
 
+  # Miri cannot cover this crate — it does not support calling foreign
+  # functions (rust-lang/miri#11) — so memory errors on the C++ boundary are
+  # caught with LLVM sanitizers instead (see issue #34). The whole stack is
+  # instrumented: the Rust side via `-Zsanitizer`, the C++ bridge and the
+  # from-source MapLibre Native build via `MLN_SANITIZER` (which maps to
+  # maplibre-native's own MLN_WITH_SANITIZER option).
+  sanitizer:
+    name: Test ${{ matrix.sanitizer }} sanitizer
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        sanitizer: [address, leak]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          submodules: true
+      - if: github.event_name != 'release' && github.event_name != 'workflow_dispatch'
+        uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        with:
+          key: ${{ matrix.sanitizer }}
+      - if: github.event_name == 'pull_request'
+        uses: hendrikmuhs/ccache-action@d62db5f07c26379fc4b4e0916f098a92573c3b03 # v1.2.23
+        with:
+          max-size: 2G
+          key: sanitizer-${{ matrix.sanitizer }}
+      - if: github.event_name == 'pull_request'
+        run: echo "MLN_CMAKE_CXX_LAUNCHER=ccache" >> $GITHUB_ENV
+      # clang is used by `just test-sanitizer` (matching sanitizer runtime
+      # ABIs); llvm provides llvm-symbolizer for readable reports.
+      - run: sudo apt-get update && sudo apt-get install -y clang llvm
+      - uses: taiki-e/install-action@41049aa56687c35e0afa74eed4f09cec4f9afabf # v2.85.2
+        with: { tool: "just" }
+      - run: just env-info install-dependencies 'vulkan'
+      - run: rustup toolchain install nightly
+      - name: Run tests under the ${{ matrix.sanitizer }} sanitizer
+        run: just test-sanitizer ${{ matrix.sanitizer }} vulkan
+
   # This final step is needed to mark the whole workflow as successful
   # Don't change its name - it is used by the merge protection rules
   ci-passed:
-    needs: [lint, test, build-msrv, slint-example]
+    needs: [lint, test, build-msrv, slint-example, sanitizer]
     if: always()
     runs-on: ubuntu-latest
     permissions: {}
