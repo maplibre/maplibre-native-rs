@@ -230,6 +230,8 @@ jobs:
           key: sanitizer-${{ matrix.sanitizer }}
       - if: github.event_name == 'pull_request'
         run: echo "MLN_CMAKE_CXX_LAUNCHER=ccache" >> $GITHUB_ENV
+      - run: echo "MLN_PRECOMPILE=0" >> $GITHUB_ENV
+      - run: echo "MLN_CORE_LIBRARY_USE_AMALGAM=0" >> $GITHUB_ENV
       - run: sudo apt-get update && sudo apt-get install -y clang llvm
       - uses: taiki-e/install-action@41049aa56687c35e0afa74eed4f09cec4f9afabf # v2.85.2
         with: { tool: "just" }
