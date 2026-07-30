@@ -8,7 +8,7 @@
 //!
 //! Set `MLN_CMAKE_CXX_LAUNCHER` to forward a compiler launcher (e.g. `ccache`/`sccache`) to `CMAKE_CXX_COMPILER_LAUNCHER` when building from source.
 //!
-//! Set `MLN_SANITIZER` to an LLVM sanitizer (e.g. `address`) to instrument the C++ bridge and, when building from source, MapLibre Native itself via `MLN_WITH_SANITIZER` (`just test-sanitizer` sets this).
+//! Set `MLN_SANITIZER` to an LLVM sanitizer (e.g. `address`) to instrument the C++ bridge and a from-source MapLibre Native build.
 //!
 //! Required libraries:
 //! Fedora:
@@ -345,10 +345,6 @@ fn build_bridge(
         build.define("NDEBUG", None);
     }
 
-    // Instrument the C++ bridge to match `-Zsanitizer=...` on the Rust side.
-    // The same variable is forwarded to a from-source MapLibre Native build in
-    // `configure_local_build`. The flags mirror maplibre-native's own
-    // MLN_WITH_SANITIZER handling.
     println!("cargo:rerun-if-env-changed=MLN_SANITIZER");
     if let Ok(sanitizer) = env::var("MLN_SANITIZER") {
         if !sanitizer.trim().is_empty() {
@@ -536,10 +532,7 @@ fn configure_local_build(
     // We only build the `mbgl-core` target, so skip configuring the GLFW demo app.
     config.configure_arg("-DMLN_WITH_GLFW=OFF");
 
-    // Build MapLibre Native itself with sanitizer instrumentation, using its
-    // own MLN_WITH_SANITIZER option (accepts address|thread|undefined). Always
-    // pass a value: CMake caches variables, so merely omitting the define
-    // would keep a previously configured sanitizer alive in the build dir.
+    // Always pass a value; CMake caches variables between configure runs.
     let sanitizer = env::var("MLN_SANITIZER").unwrap_or_default();
     let sanitizer = sanitizer.trim();
     config.define("MLN_WITH_SANITIZER", if sanitizer.is_empty() { "OFF" } else { sanitizer });

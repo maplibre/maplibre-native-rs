@@ -189,31 +189,19 @@ test-fmt: (fmt-toml '--check' '--check-format')
 test-miri backend='vulkan':
     MIRIFLAGS="" cargo miri test --all-targets --features {{backend}} --workspace
 
-# Run tests under an LLVM sanitizer ('address', 'leak', 'thread' or 'undefined'; requires nightly Rust). Instruments the Rust side, the C++ bridge and a from-source MapLibre Native build.
+# Run tests under an LLVM sanitizer: 'address', 'leak', 'thread' or 'undefined' (nightly-only -Zsanitizer)
 test-sanitizer sanitizer='address' backend='vulkan':
     #!/usr/bin/env bash
     set -euo pipefail
-    # Sanitizers must see the whole stack, so build the core from source
-    # instead of linking an uninstrumented precompiled amalgam.
     export MLN_PRECOMPILE=0
     export MLN_CORE_LIBRARY_USE_AMALGAM=0
-    # An explicit --target keeps build scripts and proc macros uninstrumented.
     host="$(rustc +nightly -vV | sed -n 's/^host: //p')"
     export RUSTFLAGS="${RUSTFLAGS:-} -Zsanitizer={{sanitizer}}"
-    # Keep the address lane focused on memory errors; leaks are the leak lane's job.
     export ASAN_OPTIONS="${ASAN_OPTIONS:-detect_leaks=0}"
-    # Known leaks inside GPU drivers and loaders are suppressed; they are not
-    # reachable from this crate's code.
     export LSAN_OPTIONS="${LSAN_OPTIONS:-suppressions={{justfile_directory()}}/.lsan-suppressions.txt}"
-    # Leak checking is link-time only, so the C++ side needs no instrumentation.
-    # On macOS, Apple clang's sanitizer runtime ABI does not match the runtime
-    # rustc links (___asan_version_mismatch_check_apple_clang_*), so the C++
-    # side stays uninstrumented there too; the Rust side and the sanitizer's
-    # malloc interposition still check every heap allocation.
+    # leak checking is link-time only; Apple clang's sanitizer runtime does not match rustc's
     if [ "{{sanitizer}}" != "leak" ] && [ "$(uname -s)" != "Darwin" ]; then
         export MLN_SANITIZER="{{sanitizer}}"
-        # The C++ objects must use the same sanitizer runtime ABI as the one
-        # rustc links, which means compiling them with (non-Apple) clang.
         export CC=clang
         export CXX=clang++
     fi
