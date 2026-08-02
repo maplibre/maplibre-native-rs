@@ -189,6 +189,25 @@ test-fmt: (fmt-toml '--check' '--check-format')
 test-miri backend='vulkan':
     MIRIFLAGS="" cargo miri test --all-targets --features {{backend}} --workspace
 
+# Run tests under an LLVM sanitizer: 'address', 'leak', 'thread' or 'undefined' (nightly-only -Zsanitizer)
+test-sanitizer sanitizer='address' backend='vulkan':
+    #!/usr/bin/env bash
+    set -euo pipefail
+    export MLN_PRECOMPILE=0
+    export MLN_CORE_LIBRARY_USE_AMALGAM=0
+    host="$(rustc +nightly -vV | sed -n 's/^host: //p')"
+    export RUSTFLAGS="${RUSTFLAGS:-} -Zsanitizer={{sanitizer}}"
+    export ASAN_OPTIONS="${ASAN_OPTIONS:-detect_leaks=0}"
+    # without this the loader dlcloses the ICD and layers, unmapping the globals LSan roots from
+    export VK_LOADER_DISABLE_DYNAMIC_LIBRARY_UNLOADING="${VK_LOADER_DISABLE_DYNAMIC_LIBRARY_UNLOADING-1}"
+    # leak checking is link-time only; Apple clang's sanitizer runtime does not match rustc's
+    if [ "{{sanitizer}}" != "leak" ] && [ "$(uname -s)" != "Darwin" ]; then
+        export MLN_SANITIZER="{{sanitizer}}"
+        export CC=clang
+        export CXX=clang++
+    fi
+    cargo +nightly test --target "$host" --all-targets --features {{backend}},tokio --workspace
+
 test-publishing:
     cargo publish --dry-run
 
