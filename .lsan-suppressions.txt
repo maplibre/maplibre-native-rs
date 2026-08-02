@@ -1,2 +1,0 @@
-# One-time allocation in the Vulkan loader, not reachable from this crate
-leak:enumeratePhysicalDevices

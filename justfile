@@ -198,7 +198,8 @@ test-sanitizer sanitizer='address' backend='vulkan':
     host="$(rustc +nightly -vV | sed -n 's/^host: //p')"
     export RUSTFLAGS="${RUSTFLAGS:-} -Zsanitizer={{sanitizer}}"
     export ASAN_OPTIONS="${ASAN_OPTIONS:-detect_leaks=0}"
-    export LSAN_OPTIONS="${LSAN_OPTIONS:-suppressions={{justfile_directory()}}/.lsan-suppressions.txt}"
+    # without this the loader dlcloses the ICD and layers, unmapping the globals LSan roots from
+    export VK_LOADER_DISABLE_DYNAMIC_LIBRARY_UNLOADING="${VK_LOADER_DISABLE_DYNAMIC_LIBRARY_UNLOADING-1}"
     # leak checking is link-time only; Apple clang's sanitizer runtime does not match rustc's
     if [ "{{sanitizer}}" != "leak" ] && [ "$(uname -s)" != "Darwin" ]; then
         export MLN_SANITIZER="{{sanitizer}}"
