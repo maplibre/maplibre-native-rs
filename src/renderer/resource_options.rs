@@ -51,7 +51,7 @@ impl ResourceOptions {
         self
     }
 
-    /// Set maximum cache size in bytes
+    /// Set the ambient cache maximum size in bytes (0 disables)
     #[must_use]
     pub fn with_maximum_cache_size(mut self, max_cache_size: u64) -> Self {
         resource_options::withMaximumCacheSize(self.ptr.pin_mut(), max_cache_size);
