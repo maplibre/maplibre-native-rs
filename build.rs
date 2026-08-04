@@ -311,6 +311,7 @@ fn resolve_mln_core() -> (PathBuf, Vec<PathBuf>) {
         deps.join("geometry.hpp").join("include"),
         deps.join("geojson.hpp").join("include"),
         deps.join("variant").join("include"),
+        extracted_path.join("vendor").join("expected-lite").join("include"),
         extracted_path.join("include"),
     ];
     (library_file, include_dirs)
