@@ -51,7 +51,11 @@ impl ResourceOptions {
         self
     }
 
-    /// Set maximum cache size in bytes
+    /// Set the ambient cache maximum size in bytes (0 disables)
+    ///
+    /// Only applies to the default [`Database`](crate::FileSourceType::Database)
+    /// file source. It has no effect once that source is replaced with
+    /// [`register_file_source`](crate::register_file_source).
     #[must_use]
     pub fn with_maximum_cache_size(mut self, max_cache_size: u64) -> Self {
         resource_options::withMaximumCacheSize(self.ptr.pin_mut(), max_cache_size);

@@ -44,6 +44,8 @@ struct ForwardState {
 void register_rust_file_source(FileSourceType source_type,
                                rust::Box<BoxedFileSource> source);
 
+bool has_rust_database_file_source() noexcept;
+
 void responder_complete(std::shared_ptr<RequestState> state,
                         const RawResponse &response);
 

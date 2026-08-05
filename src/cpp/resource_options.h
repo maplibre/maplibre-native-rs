@@ -4,6 +4,7 @@
 #include <memory>
 
 namespace mbgl {
+    class FileSource;
     class ResourceOptions;
     class TileServerOptions;
 }
@@ -16,5 +17,8 @@ void withCachePath(mbgl::ResourceOptions &resource_options, rust::Slice<const ui
 void withApiKey(mbgl::ResourceOptions &resource_options, rust::Str key);
 void withMaximumCacheSize(mbgl::ResourceOptions &resource_options, uint64_t max_cache_size);
 void withTileServerOptions(mbgl::ResourceOptions &resource_options, const mbgl::TileServerOptions& tile_server_options);
+
+// The caller must keep the returned source alive; the manager holds only a weak reference.
+std::shared_ptr<mbgl::FileSource> applyMaximumAmbientCacheSize(const mbgl::ResourceOptions &resource_options);
 
 }

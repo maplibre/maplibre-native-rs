@@ -16,6 +16,7 @@
 #include <mbgl/util/premultiply.hpp>
 #include <mbgl/util/tile_server_options.hpp>
 #include <mbgl/util/size.hpp>
+#include <mbgl/storage/file_source.hpp>
 #include <mbgl/storage/resource_options.hpp>
 
 #if defined(MLN_WEBGPU_IMPL_FFI)
@@ -34,6 +35,7 @@
 #include "rust/cxx.h"
 #include "rust_log_observer.h"
 #include "map_observer.h"
+#include "resource_options.h"
 #include "sources/sources.h"
 
 #if (!defined(__APPLE__) || defined(MLN_DARWIN_USE_LIBUV)) && __has_include(<uv.h>)
@@ -177,6 +179,7 @@ public:
         // Set up logging observer for Rust bridge
         auto logObserver = std::make_unique<mln::bridge::RustLogObserver>();
         mbgl::Log::setObserver(std::move(logObserver));
+        databaseFileSource = resource_options::applyMaximumAmbientCacheSize(resourceOptions);
         map = std::make_unique<mbgl::Map>(*frontend, *mapObserverInstance, mapOptions, resourceOptions);
     }
 
@@ -322,6 +325,8 @@ public:
     // because the frontend and observer are passed by reference to the map.
     std::unique_ptr<HostFrontend> frontend;
     std::shared_ptr<MapObserver> mapObserverInstance;
+    // Declared before `map` so the map never outlives it.
+    std::shared_ptr<mbgl::FileSource> databaseFileSource;
     std::unique_ptr<mbgl::Map> map;
 };
 

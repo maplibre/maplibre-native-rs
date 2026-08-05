@@ -267,7 +267,18 @@ void forward_complete(std::shared_ptr<ForwardState> state) {
     completeForwardState(state);
 }
 
+namespace {
+std::atomic<bool> rust_database_source_registered{false};
+} // namespace
+
+bool has_rust_database_file_source() noexcept {
+    return rust_database_source_registered.load(std::memory_order_acquire);
+}
+
 void register_rust_file_source(FileSourceType source_type, rust::Box<BoxedFileSource> source) {
+    if (source_type == FileSourceType::Database) {
+        rust_database_source_registered.store(true, std::memory_order_release);
+    }
     auto shared_source = std::make_shared<rust::Box<BoxedFileSource>>(std::move(source));
     mbgl::FileSourceManager::get()->registerFileSourceFactory(
         source_type,

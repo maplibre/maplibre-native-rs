@@ -67,6 +67,10 @@ serde_json.workspace = true
 tokio = { workspace = true, features = ["macros", "sync", "rt-multi-thread"] }
 
 [[test]]
+name = "ambient_cache"
+required-features = ["tokio"]
+
+[[test]]
 name = "file_source_tokio"
 required-features = ["tokio"]
 
