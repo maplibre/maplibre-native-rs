@@ -27,6 +27,9 @@ pub trait FileSource: Send + Sync + 'static {
     /// Deliver the [`Response`] through `responder` — inline, or later from
     /// another thread. Return [`RequestHandle::Done`] when completed inline, or
     /// [`RequestHandle::pending`] with a cancel hook while work is in flight.
+    ///
+    /// For network requests, a 304 returns the cached body from
+    /// [`prior_data`](ResourceRequest::prior_data).
     fn request(&self, request: ResourceRequest, responder: Responder) -> RequestHandle;
 
     /// Store `response` for `request` (cache write).
