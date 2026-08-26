@@ -2,6 +2,7 @@
 
 use std::{
     collections::HashMap,
+    future::Future,
     num::NonZeroU32,
     sync::{
         atomic::{AtomicUsize, Ordering},
@@ -72,9 +73,9 @@ impl TokioFileSource for DatabaseSource {
             && !request.url.starts_with("file://")
     }
 
-    async fn request(&self, request: ResourceRequest) -> Response {
+    fn request(&self, request: ResourceRequest) -> impl Future<Output = Response> {
         let cached = self.store.lock().unwrap().get(&request.url).cloned();
-        if let Some(response) = cached {
+        std::future::ready(if let Some(response) = cached {
             self.hits.fetch_add(1, Ordering::SeqCst);
             response
         } else {
@@ -82,7 +83,7 @@ impl TokioFileSource for DatabaseSource {
             let mut miss = Response::error(ErrorReason::NotFound, "cache miss");
             miss.no_content = true;
             miss
-        }
+        })
     }
 
     async fn forward(&self, request: ResourceRequest, response: Response) {
