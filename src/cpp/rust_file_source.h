@@ -13,6 +13,7 @@
 #include <memory>
 #include <mutex>
 #include <optional>
+#include <string>
 
 namespace mln {
 namespace bridge {
@@ -34,6 +35,8 @@ struct RequestState {
   std::mutex response_mutex;
   std::optional<mbgl::Response> response;
   std::atomic<bool> cancelled{false};
+  // Cached body held until revalidation completes.
+  std::shared_ptr<const std::string> withheld_prior_body;
 };
 
 // Holds a forward's (cache-write) completion callback until `forward_complete`.

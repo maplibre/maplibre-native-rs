@@ -6,6 +6,7 @@
  * Licensed under the Apache License, Version 2.0 or the MIT License, at your option.
  */
 
+#![recursion_limit = "256"]
 #![allow(missing_docs)]
 #![allow(dead_code)]
 #![allow(non_camel_case_types)]
