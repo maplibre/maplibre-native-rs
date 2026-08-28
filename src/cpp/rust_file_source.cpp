@@ -146,6 +146,12 @@ void completeState(const std::shared_ptr<RequestState>& state, mbgl::Response re
 
     {
         std::scoped_lock lock(state->response_mutex);
+        // Match OnlineFileSource: priorData means native withheld the cached
+        // representation, so a 304 must deliver it to complete the load.
+        if (response.notModified && state->withheld_prior_body) {
+            response.data = std::move(state->withheld_prior_body);
+            response.notModified = false;
+        }
         state->response.emplace(std::move(response));
     }
     state->dispatch();
@@ -175,9 +181,11 @@ private:
 class RustFileSource final : public mbgl::FileSource {
 public:
     RustFileSource(std::shared_ptr<rust::Box<BoxedFileSource>> source,
+                   bool materializeNotModified,
                    mbgl::ResourceOptions resourceOpts,
                    mbgl::ClientOptions clientOpts)
         : source_(std::move(source)),
+          materializeNotModified_(materializeNotModified),
           resourceOpts_(std::move(resourceOpts)),
           clientOpts_(std::move(clientOpts)) {}
 
@@ -185,6 +193,9 @@ public:
                                                 Callback cb) override {
         auto state = std::make_shared<RequestState>();
         state->cb = std::move(cb);
+        if (materializeNotModified_) {
+            state->withheld_prior_body = resource.priorData;
+        }
 
         // FileSource callbacks must run on the thread that issued request().
         // Capture the scheduler's weak binding while that scheduler is known to
@@ -245,6 +256,7 @@ public:
 
 private:
     std::shared_ptr<rust::Box<BoxedFileSource>> source_;
+    bool materializeNotModified_;
     mbgl::ResourceOptions resourceOpts_;
     mbgl::ClientOptions clientOpts_;
 };
@@ -280,11 +292,14 @@ void register_rust_file_source(FileSourceType source_type, rust::Box<BoxedFileSo
         rust_database_source_registered.store(true, std::memory_order_release);
     }
     auto shared_source = std::make_shared<rust::Box<BoxedFileSource>>(std::move(source));
+    const bool materialize_not_modified = source_type == FileSourceType::Network;
     mbgl::FileSourceManager::get()->registerFileSourceFactory(
         source_type,
-        [shared_source](const mbgl::ResourceOptions& ro, const mbgl::ClientOptions& co)
+        [shared_source, materialize_not_modified](const mbgl::ResourceOptions& ro,
+                                                  const mbgl::ClientOptions& co)
             -> std::unique_ptr<mbgl::FileSource> {
-            return std::make_unique<RustFileSource>(shared_source, ro.clone(), co.clone());
+            return std::make_unique<RustFileSource>(
+                shared_source, materialize_not_modified, ro.clone(), co.clone());
         });
 }
 
