@@ -1,7 +1,7 @@
 #pragma once
 
 #include "rust/cxx.h"
-#include <mbgl/map/map_observer.hpp>
+#include <mln/map/map_observer.hpp>
 #include <memory>
 #include <optional>
 
@@ -9,13 +9,13 @@ namespace mln {
 namespace bridge {
 
     // Forward declarations
-    using MapObserverCameraChangeMode = mbgl::MapObserver::CameraChangeMode; // Required, because enum nested in class is not supported by cxx
+    using MapObserverCameraChangeMode = mln::MapObserver::CameraChangeMode; // Required, because enum nested in class is not supported by cxx
 
     struct VoidCallback;
     void void_callback(VoidCallback const& callback) noexcept;
 
     struct FailingLoadingMapCallback;
-    void failing_loading_map_callback(FailingLoadingMapCallback const& callback, mbgl::MapLoadError error, const rust::Str what) noexcept;
+    void failing_loading_map_callback(FailingLoadingMapCallback const& callback, mln::MapLoadError error, const rust::Str what) noexcept;
 
     struct CameraDidChangeCallback;
     void camera_did_change_callback(CameraDidChangeCallback const& callback, MapObserverCameraChangeMode mode) noexcept;
@@ -23,7 +23,7 @@ namespace bridge {
     struct FinishRenderingFrameCallback;
     void finish_rendering_frame_callback(FinishRenderingFrameCallback const& callback, bool needsRepaint, bool placementChanged) noexcept;
 
-    class MapObserver: public mbgl::MapObserver {
+    class MapObserver: public mln::MapObserver {
         public:
             void setWillStartLoadingMapCallback(rust::Box<VoidCallback> callback) const {
                 willStartLoadingMapCallback = std::optional<rust::Box<VoidCallback>>{std::move(callback)};
@@ -66,7 +66,7 @@ namespace bridge {
                 }
             }
 
-            void onDidFailLoadingMap(mbgl::MapLoadError error, const std::string& what) override {
+            void onDidFailLoadingMap(mln::MapLoadError error, const std::string& what) override {
                 if (failLoadingMapCallback.has_value()) {
                     failing_loading_map_callback(*(*failLoadingMapCallback), error, what);
                 }
@@ -77,9 +77,9 @@ namespace bridge {
                     camera_did_change_callback(*(*cameraDidChangeCallback), mode);
                 }
             }
-            // void onSourceChanged(mbgl::style::Source&) override;
+            // void onSourceChanged(mln::style::Source&) override;
 
-            void onDidFinishRenderingFrame(const mbgl::MapObserver::RenderFrameStatus& status) override {
+            void onDidFinishRenderingFrame(const mln::MapObserver::RenderFrameStatus& status) override {
                 if (finishRenderingFrameCallback.has_value()) {
                     finish_rendering_frame_callback(*(*finishRenderingFrameCallback), status.needsRepaint, status.placementChanged);
                 }
