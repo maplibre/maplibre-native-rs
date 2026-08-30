@@ -761,8 +761,9 @@ fn build_mln() {
         println!("cargo:rustc-link-lib=mbgl-freetype");
         println!("cargo:rustc-link-lib=mbgl-vendor-parsedate");
         println!("cargo:rustc-link-lib=mbgl-vendor-csscolorparser");
-        println!("cargo:rustc-link-lib=mlt-cpp"); // provided with maplibre-native
-        // `mlt-cpp` calls into FastPFor; it must follow `mlt-cpp` on the link line.
+        // provided with maplibre-native; `mlt-cpp` calls into FastPFor, so
+        // `fastpfor-lib` must follow it on the link line.
+        println!("cargo:rustc-link-lib=mlt-cpp");
         println!("cargo:rustc-link-lib=fastpfor-lib");
         if is_apple {
             // darwin builds vendored ICU (system sqlite3 is linked below for all darwin builds)
