@@ -45,7 +45,7 @@ jobs:
       - run: echo "MLN_PRECOMPILE=0" >> $GITHUB_ENV
       - run: echo "MLN_CORE_LIBRARY_USE_AMALGAM=0" >> $GITHUB_ENV
       - run: rustup update stable && rustup default stable && rustup component add rustfmt && rustup component add clippy
-      - uses: taiki-e/install-action@6c6fd71fe4fb72c3697d269963d0e15df8adedad # v2.85.10
+      - uses: taiki-e/install-action@37f7c5781271959fb65b6b35224e28652ff2b63d # v2.87.0
         with: { tool: "just" }
       - run: just env-info install-dependencies 'vulkan'
       - run: just ci-lint
@@ -78,7 +78,7 @@ jobs:
           submodules: true
       - if: github.event_name != 'release' && github.event_name != 'workflow_dispatch'
         uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
-      - uses: taiki-e/install-action@6c6fd71fe4fb72c3697d269963d0e15df8adedad # v2.85.10
+      - uses: taiki-e/install-action@37f7c5781271959fb65b6b35224e28652ff2b63d # v2.87.0
         with: { tool: "just" }
       - run: echo "MLN_PRECOMPILE=${{ matrix.precompiled }}" >> $GITHUB_ENV
       - run: echo "MLN_CORE_LIBRARY_USE_AMALGAM=${{ matrix.amalgam }}" >> $GITHUB_ENV
@@ -140,7 +140,7 @@ jobs:
           max-size: 2G
       - if: github.event_name == 'pull_request'
         run: echo "MLN_CMAKE_CXX_LAUNCHER=ccache" >> $GITHUB_ENV
-      - uses: taiki-e/install-action@6c6fd71fe4fb72c3697d269963d0e15df8adedad # v2.85.10
+      - uses: taiki-e/install-action@37f7c5781271959fb65b6b35224e28652ff2b63d # v2.87.0
         with: { tool: "just" }
       - run: echo "MLN_PRECOMPILE=${{ matrix.precompiled }}" >> $GITHUB_ENV
       - run: echo "MLN_CORE_LIBRARY_USE_AMALGAM=${{ matrix.amalgam }}" >> $GITHUB_ENV
@@ -190,7 +190,7 @@ jobs:
           max-size: 2G
       - if: github.event_name == 'pull_request'
         run: echo "MLN_CMAKE_CXX_LAUNCHER=ccache" >> $GITHUB_ENV
-      - uses: taiki-e/install-action@6c6fd71fe4fb72c3697d269963d0e15df8adedad # v2.85.10
+      - uses: taiki-e/install-action@37f7c5781271959fb65b6b35224e28652ff2b63d # v2.87.0
         with: { tool: "just" }
       - run: echo "MLN_PRECOMPILE=${{ matrix.precompiled }}" >> $GITHUB_ENV
       - run: echo "MLN_CORE_LIBRARY_USE_AMALGAM=${{ matrix.amalgam }}" >> $GITHUB_ENV
@@ -233,7 +233,7 @@ jobs:
       - run: echo "MLN_PRECOMPILE=0" >> $GITHUB_ENV
       - run: echo "MLN_CORE_LIBRARY_USE_AMALGAM=0" >> $GITHUB_ENV
       - run: sudo apt-get update && sudo apt-get install -y clang llvm
-      - uses: taiki-e/install-action@6c6fd71fe4fb72c3697d269963d0e15df8adedad # v2.85.10
+      - uses: taiki-e/install-action@37f7c5781271959fb65b6b35224e28652ff2b63d # v2.87.0
         with: { tool: "just" }
       - run: just env-info install-dependencies 'vulkan'
       - run: rustup toolchain install nightly
