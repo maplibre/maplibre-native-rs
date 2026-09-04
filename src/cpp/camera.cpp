@@ -1,8 +1,8 @@
 #include "maplibre_native/src/bridge.rs.h"
 
 #include "geojson/geojson.h"
-#include <mbgl/util/geojson.hpp>
-#include <mbgl/util/geometry.hpp>
+#include <mln/util/geojson.hpp>
+#include <mln/util/geometry.hpp>
 #include <mapbox/geojson.hpp>
 #include <vector>
 
@@ -12,13 +12,13 @@ namespace {
 
 // Reduces a GeoJSON value (geometry / feature / feature collection) to a single
 // geometry suitable for `Map::cameraForGeometry`.
-mbgl::Geometry<double> toGeometry(const mbgl::GeoJSON& geojson) {
+mln::Geometry<double> toGeometry(const mln::GeoJSON& geojson) {
     return geojson.match(
-        [](const mapbox::geojson::geometry& geometry) -> mbgl::Geometry<double> { return geometry; },
-        [](const mapbox::geojson::feature& feature) -> mbgl::Geometry<double> {
+        [](const mapbox::geojson::geometry& geometry) -> mln::Geometry<double> { return geometry; },
+        [](const mapbox::geojson::feature& feature) -> mln::Geometry<double> {
             return feature.geometry;
         },
-        [](const mapbox::geojson::feature_collection& features) -> mbgl::Geometry<double> {
+        [](const mapbox::geojson::feature_collection& features) -> mln::Geometry<double> {
             mapbox::geometry::geometry_collection<double> collection;
             collection.reserve(features.size());
             for (const auto& feature : features) {
@@ -28,13 +28,13 @@ mbgl::Geometry<double> toGeometry(const mbgl::GeoJSON& geojson) {
         });
 }
 
-mbgl::CameraOptions toCameraOptions(const FfiCameraOptions& camera) {
-    mbgl::CameraOptions options;
+mln::CameraOptions toCameraOptions(const FfiCameraOptions& camera) {
+    mln::CameraOptions options;
     if (camera.has_center) {
-        options.withCenter(mbgl::LatLng{camera.center.lat, camera.center.lng});
+        options.withCenter(mln::LatLng{camera.center.lat, camera.center.lng});
     }
     if (camera.has_padding) {
-        options.withPadding(mbgl::EdgeInsets{
+        options.withPadding(mln::EdgeInsets{
             camera.padding.top,
             camera.padding.left,
             camera.padding.bottom,
@@ -56,7 +56,7 @@ mbgl::CameraOptions toCameraOptions(const FfiCameraOptions& camera) {
     return options;
 }
 
-FfiCameraOptions fromCameraOptions(const mbgl::CameraOptions& options) {
+FfiCameraOptions fromCameraOptions(const mln::CameraOptions& options) {
     FfiCameraOptions camera{};
     if (options.center) {
         camera.has_center = true;
@@ -96,36 +96,36 @@ FfiCameraOptions MapRenderer::cameraForLatLngBounds(const LatLngBounds& bounds,
                                                    const EdgeInsets& padding,
                                                    double bearing,
                                                    double pitch) {
-    const mbgl::LatLngBounds mbglBounds = mbgl::LatLngBounds::hull(
+    const mln::LatLngBounds mlnBounds = mln::LatLngBounds::hull(
         {bounds.southwest.lat, bounds.southwest.lng},
         {bounds.northeast.lat, bounds.northeast.lng});
-    const mbgl::EdgeInsets mbglPadding{padding.top, padding.left, padding.bottom, padding.right};
+    const mln::EdgeInsets mlnPadding{padding.top, padding.left, padding.bottom, padding.right};
 
-    return fromCameraOptions(map->cameraForLatLngBounds(mbglBounds, mbglPadding, bearing, pitch));
+    return fromCameraOptions(map->cameraForLatLngBounds(mlnBounds, mlnPadding, bearing, pitch));
 }
 
 FfiCameraOptions MapRenderer::cameraForLatLngs(rust::Slice<const LatLng> latLngs,
                                                const EdgeInsets& padding,
                                                double bearing,
                                                double pitch) {
-    std::vector<mbgl::LatLng> mbglLatLngs;
-    mbglLatLngs.reserve(latLngs.size());
+    std::vector<mln::LatLng> mlnLatLngs;
+    mlnLatLngs.reserve(latLngs.size());
     for (const auto& latLng : latLngs) {
-        mbglLatLngs.emplace_back(latLng.lat, latLng.lng);
+        mlnLatLngs.emplace_back(latLng.lat, latLng.lng);
     }
 
-    const mbgl::EdgeInsets mbglPadding{padding.top, padding.left, padding.bottom, padding.right};
-    return fromCameraOptions(map->cameraForLatLngs(mbglLatLngs, mbglPadding, bearing, pitch));
+    const mln::EdgeInsets mlnPadding{padding.top, padding.left, padding.bottom, padding.right};
+    return fromCameraOptions(map->cameraForLatLngs(mlnLatLngs, mlnPadding, bearing, pitch));
 }
 
 FfiCameraOptions MapRenderer::cameraForGeoJson(const mln::bridge::geojson::GeoJson& geojson,
                                                const EdgeInsets& padding,
                                                double bearing,
                                                double pitch) {
-    const mbgl::EdgeInsets mbglPadding{padding.top, padding.left, padding.bottom, padding.right};
+    const mln::EdgeInsets mlnPadding{padding.top, padding.left, padding.bottom, padding.right};
 
     return fromCameraOptions(
-        map->cameraForGeometry(toGeometry(geojson.get()), mbglPadding, bearing, pitch));
+        map->cameraForGeometry(toGeometry(geojson.get()), mlnPadding, bearing, pitch));
 }
 
 void MapRenderer::jumpTo(const FfiCameraOptions& cameraOptions) {

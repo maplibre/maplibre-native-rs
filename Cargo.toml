@@ -16,7 +16,7 @@ repo = "maplibre/maplibre-native"
 # This version is used only if maplibre-native-rs is build with prebuilt
 # maplibre-native binaries. It is not used when building maplibre-native from source.
 # When building from source, the version of maplibre-native is specified in the `build.rs` file
-release = "core-fa8a9c8e3261ce64940127aecc1d52f540c21c57"
+release = "core-be3f03b86ec5dffc9ecb09ba1478fac84e9f66d0"
 
 [features]
 default = ["log", "json", "geojson"]

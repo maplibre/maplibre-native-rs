@@ -25,14 +25,12 @@ use std::process::Command;
 use std::{env, fs};
 
 const MLN_REPOSITORY_URL: &str = "https://github.com/maplibre/maplibre-native.git";
-const MLN_COMMIT: &str = "f442c704b806d6f1e64242aa462a31c6f128cf47";
+const MLN_COMMIT: &str = "core-be3f03b86ec5dffc9ecb09ba1478fac84e9f66d0";
 
 const BRIDGE_RS: &str = "src/bridge.rs";
 const BRIDGE_CPP_DIR: &str = "src/cpp";
 
 const BRIDGE_INCLUDE_DIRS: &[&str] = &["src/cpp"];
-
-const PRECOMPILED_VENDORED_INCLUDE_DIR: &str = "include";
 
 /// Supported graphics rendering APIs.
 #[derive(PartialEq, Eq, Clone, Copy)]
@@ -313,6 +311,9 @@ fn resolve_mln_core() -> (PathBuf, Vec<PathBuf>) {
         deps.join("variant").join("include"),
         extracted_path.join("vendor").join("expected-lite").join("include"),
         extracted_path.join("include"),
+        // `platform/default/` headers (e.g. `mln/gfx/headless_frontend.hpp`)
+        // ship in their own include root.
+        extracted_path.join("platform").join("default").join("include"),
     ];
     (library_file, include_dirs)
 }
@@ -399,14 +400,7 @@ struct Info {
 }
 
 fn bundle_precompiled() -> Info {
-    let (cpp_root, mut include_dirs) = resolve_mln_core();
-
-    // The precompiled headers tarball omits `platform/default/` headers
-    // (e.g. `mbgl/gfx/headless_frontend.hpp`), so add vendored fallbacks.
-    let root = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
-    include_dirs.push(root.join(PRECOMPILED_VENDORED_INCLUDE_DIR));
-    // Editing a vendored fallback header must trigger a rebuild of the bridge.
-    println!("cargo:rerun-if-changed={PRECOMPILED_VENDORED_INCLUDE_DIR}");
+    let (cpp_root, include_dirs) = resolve_mln_core();
 
     println!(
         "cargo:warning=Using precompiled maplibre-native static library from {}",
@@ -563,9 +557,32 @@ fn build_local(
     let has_required_checkout_files = maplibre_native_dir.join("CMakeLists.txt").is_file()
         && maplibre_native_dir.join("include").is_dir();
 
-    if maplibre_native_dir.exists() && !has_required_checkout_files {
+    // A cached checkout from a previous `MLN_COMMIT` would be reused with the
+    // current bridge sources, so treat a revision mismatch as unusable too.
+    let is_expected_revision = || -> bool {
+        Command::new("git")
+            .current_dir(&maplibre_native_dir)
+            .args(["rev-parse", "HEAD"])
+            .output()
+            .ok()
+            .filter(|out| out.status.success())
+            .is_some_and(|out| {
+                let head = String::from_utf8_lossy(&out.stdout).trim().to_string();
+                // `MLN_COMMIT` may be a tag, so resolve it through the checkout too.
+                head == MLN_COMMIT
+                    || Command::new("git")
+                        .current_dir(&maplibre_native_dir)
+                        .args(["rev-parse", &format!("{MLN_COMMIT}^{{commit}}")])
+                        .output()
+                        .ok()
+                        .filter(|out| out.status.success())
+                        .is_some_and(|out| String::from_utf8_lossy(&out.stdout).trim() == head)
+            })
+    };
+
+    if maplibre_native_dir.exists() && (!has_required_checkout_files || !is_expected_revision()) {
         println!(
-            "cargo:warning=Removing incomplete cached maplibre-native checkout at {}",
+            "cargo:warning=Removing stale or incomplete cached maplibre-native checkout at {}",
             maplibre_native_dir.display()
         );
         fs::remove_dir_all(&maplibre_native_dir)?;
@@ -744,7 +761,10 @@ fn build_mln() {
         println!("cargo:rustc-link-lib=mbgl-freetype");
         println!("cargo:rustc-link-lib=mbgl-vendor-parsedate");
         println!("cargo:rustc-link-lib=mbgl-vendor-csscolorparser");
-        println!("cargo:rustc-link-lib=mlt-cpp"); // provided with maplibre-native
+        // provided with maplibre-native; `mlt-cpp` calls into FastPFor, so
+        // `fastpfor-lib` must follow it on the link line.
+        println!("cargo:rustc-link-lib=mlt-cpp");
+        println!("cargo:rustc-link-lib=fastpfor-lib");
         if is_apple {
             // darwin builds vendored ICU (system sqlite3 is linked below for all darwin builds)
             println!("cargo:rustc-link-lib=mbgl-vendor-icu");

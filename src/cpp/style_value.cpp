@@ -1,8 +1,8 @@
 #include "style_value.h"
 
-#include <mbgl/style/conversion/geojson.hpp>
-#include <mbgl/style/conversion/layer.hpp>
-#include <mbgl/style/conversion/source.hpp>
+#include <mln/style/conversion/geojson.hpp>
+#include <mln/style/conversion/layer.hpp>
+#include <mln/style/conversion/source.hpp>
 
 #include <iomanip>
 #include <locale>
@@ -144,10 +144,10 @@ void object_insert(StyleValue& obj, rust::Str key, std::unique_ptr<StyleValue> c
     obj.insert(std::string(key), std::move(child));
 }
 
-std::unique_ptr<mbgl::style::Layer> layer_from_value(const StyleValue& value, rust::String& error_message) {
-    mbgl::style::conversion::Error error;
-    auto result = mbgl::style::conversion::Converter<std::unique_ptr<mbgl::style::Layer>>()(
-        mbgl::style::conversion::Convertible(&value), error);
+std::unique_ptr<mln::style::Layer> layer_from_value(const StyleValue& value, rust::String& error_message) {
+    mln::style::conversion::Error error;
+    auto result = mln::style::conversion::Converter<std::unique_ptr<mln::style::Layer>>()(
+        mln::style::conversion::Convertible(&value), error);
     if (!result) {
         error_message = rust::String(error.message);
         return nullptr;
@@ -155,12 +155,12 @@ std::unique_ptr<mbgl::style::Layer> layer_from_value(const StyleValue& value, ru
     return std::move(*result);
 }
 
-std::unique_ptr<mbgl::style::Source> source_from_value(rust::Str id,
+std::unique_ptr<mln::style::Source> source_from_value(rust::Str id,
                                                        const StyleValue& value,
                                                        rust::String& error_message) {
-    mbgl::style::conversion::Error error;
-    auto result = mbgl::style::conversion::Converter<std::unique_ptr<mbgl::style::Source>>()(
-        mbgl::style::conversion::Convertible(&value), error, std::string(id));
+    mln::style::conversion::Error error;
+    auto result = mln::style::conversion::Converter<std::unique_ptr<mln::style::Source>>()(
+        mln::style::conversion::Convertible(&value), error, std::string(id));
     if (!result) {
         error_message = rust::String(error.message);
         return nullptr;
@@ -168,10 +168,10 @@ std::unique_ptr<mbgl::style::Source> source_from_value(rust::Str id,
     return std::move(*result);
 }
 
-std::optional<mbgl::GeoJSON> style_value_to_geojson(const StyleValue& value,
-                                                    mbgl::style::conversion::Error& error) {
+std::optional<mln::GeoJSON> style_value_to_geojson(const StyleValue& value,
+                                                    mln::style::conversion::Error& error) {
     try {
-        return mbgl::style::conversion::parseGeoJSON(stringify_style_value(value), error);
+        return mln::style::conversion::parseGeoJSON(stringify_style_value(value), error);
     } catch (const std::exception& ex) {
         error.message = ex.what();
         return std::nullopt;
