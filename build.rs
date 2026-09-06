@@ -580,7 +580,12 @@ fn build_local(
             })
     };
 
-    if maplibre_native_dir.exists() && (!has_required_checkout_files || !is_expected_revision()) {
+    let is_managed_checkout =
+        env::var_os("MLN_LOCAL_REPOSITORY").is_none_or(|path| path.is_empty());
+    if is_managed_checkout
+        && maplibre_native_dir.exists()
+        && (!has_required_checkout_files || !is_expected_revision())
+    {
         println!(
             "cargo:warning=Removing stale or incomplete cached maplibre-native checkout at {}",
             maplibre_native_dir.display()
