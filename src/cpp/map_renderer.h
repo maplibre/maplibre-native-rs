@@ -1,28 +1,28 @@
 #pragma once
 
-#include <mbgl/actor/scheduler.hpp>
-#include <mbgl/gfx/backend_scope.hpp>
-#include <mbgl/gfx/headless_frontend.hpp>
-#include <mbgl/gfx/renderer_backend.hpp>
-#include <mbgl/style/image.hpp>
-#include <mbgl/style/layer.hpp>
-#include <mbgl/map/map.hpp>
-#include <mbgl/map/map_observer.hpp>
-#include <mbgl/map/map_options.hpp>
-#include <mbgl/style/style.hpp>
-#include <mbgl/style/source.hpp>
-#include <mbgl/util/image.hpp>
-#include <mbgl/util/run_loop.hpp>
-#include <mbgl/util/premultiply.hpp>
-#include <mbgl/util/tile_server_options.hpp>
-#include <mbgl/util/size.hpp>
-#include <mbgl/storage/file_source.hpp>
-#include <mbgl/storage/resource_options.hpp>
+#include <mln/actor/scheduler.hpp>
+#include <mln/gfx/backend_scope.hpp>
+#include <mln/gfx/headless_frontend.hpp>
+#include <mln/gfx/renderer_backend.hpp>
+#include <mln/style/image.hpp>
+#include <mln/style/layer.hpp>
+#include <mln/map/map.hpp>
+#include <mln/map/map_observer.hpp>
+#include <mln/map/map_options.hpp>
+#include <mln/style/style.hpp>
+#include <mln/style/source.hpp>
+#include <mln/util/image.hpp>
+#include <mln/util/run_loop.hpp>
+#include <mln/util/premultiply.hpp>
+#include <mln/util/tile_server_options.hpp>
+#include <mln/util/size.hpp>
+#include <mln/storage/file_source.hpp>
+#include <mln/storage/resource_options.hpp>
 
 #if defined(MLN_WEBGPU_IMPL_FFI)
-#include <mbgl/webgpu/texture2d.hpp>
-#include <mbgl/webgpu/renderer_backend.hpp>
-#include <mbgl/webgpu/headless_backend.hpp>
+#include <mln/webgpu/texture2d.hpp>
+#include <mln/webgpu/renderer_backend.hpp>
+#include <mln/webgpu/headless_backend.hpp>
 #endif
 
 
@@ -67,15 +67,15 @@ namespace geojson {
 class GeoJson;
 }
 
-inline mbgl::util::RunLoop& threadRunLoop() {
+inline mln::util::RunLoop& threadRunLoop() {
     // MapLibre Native's RunLoop is thread-affine. Keep one private loop per
     // renderer-owning thread and share it between renderers on that thread.
-    thread_local mbgl::util::RunLoop loop(mbgl::util::RunLoop::Type::New);
+    thread_local mln::util::RunLoop loop(mln::util::RunLoop::Type::New);
     return loop;
 }
 
 inline void bindThreadRunLoop() {
-    mbgl::Scheduler::SetCurrent(&threadRunLoop());
+    mln::Scheduler::SetCurrent(&threadRunLoop());
 }
 
 inline void currentThreadRunLoopTick() {
@@ -100,7 +100,7 @@ inline void currentThreadRunLoopWait() {
     // busy-spin in a wait loop; UV_RUN_DEFAULT would instead wait for *all*
     // handles to drain, which hangs while network handles stay active.)
     bindThreadRunLoop();
-    uv_run(static_cast<uv_loop_t*>(mbgl::util::RunLoop::getLoopHandle()), UV_RUN_ONCE);
+    uv_run(static_cast<uv_loop_t*>(mln::util::RunLoop::getLoopHandle()), UV_RUN_ONCE);
 #endif
 }
 
@@ -118,8 +118,8 @@ inline bool run_loop_uses_libuv() noexcept {
 #endif
 }
 
-inline std::unique_ptr<std::string> encodeImage(mbgl::PremultipliedImage image) {
-    auto unpremultipliedImage = mbgl::util::unpremultiply(std::move(image));
+inline std::unique_ptr<std::string> encodeImage(mln::PremultipliedImage image) {
+    auto unpremultipliedImage = mln::util::unpremultiply(std::move(image));
 
     const size_t pixelCount = unpremultipliedImage.size.width * unpremultipliedImage.size.height;
     std::string data;
@@ -136,13 +136,13 @@ inline std::unique_ptr<std::string> encodeImage(mbgl::PremultipliedImage image) 
     return std::make_unique<std::string>(std::move(data));
 }
 
-class HostFrontend final : public mbgl::HeadlessFrontend {
+class HostFrontend final : public mln::HeadlessFrontend {
 public:
-    HostFrontend(mbgl::Size size, float pixelRatio, bool invalidateOnUpdate)
-        : mbgl::HeadlessFrontend(size,
+    HostFrontend(mln::Size size, float pixelRatio, bool invalidateOnUpdate)
+        : mln::HeadlessFrontend(size,
                                  pixelRatio,
-                                 mbgl::gfx::HeadlessBackend::SwapBehaviour::NoFlush,
-                                 mbgl::gfx::ContextMode::Unique,
+                                 mln::gfx::HeadlessBackend::SwapBehaviour::NoFlush,
+                                 mln::gfx::ContextMode::Unique,
                                  std::nullopt,
                                  invalidateOnUpdate) {}
 
@@ -150,8 +150,8 @@ public:
         renderRequestedCallback = std::move(callback);
     }
 
-    void update(std::shared_ptr<mbgl::UpdateParameters> updateParameters) override {
-        mbgl::HeadlessFrontend::update(std::move(updateParameters));
+    void update(std::shared_ptr<mln::UpdateParameters> updateParameters) override {
+        mln::HeadlessFrontend::update(std::move(updateParameters));
         if (renderRequestedCallback) {
             render_requested_callback(*(*renderRequestedCallback));
         }
@@ -163,24 +163,24 @@ private:
 
 class MapRenderer {
 public:
-    explicit MapRenderer(mbgl::MapMode mapMode,
-                         mbgl::Size size,
+    explicit MapRenderer(mln::MapMode mapMode,
+                         mln::Size size,
                          float pixelRatio,
-                         const mbgl::ResourceOptions& resourceOptions)
+                         const mln::ResourceOptions& resourceOptions)
         : mapObserverInstance(std::make_shared<MapObserver>()) {
         bindThreadRunLoop();
         // Continuous renderers are host-driven.
-        bool invalidateOnUpdate = mapMode != mbgl::MapMode::Continuous;
+        bool invalidateOnUpdate = mapMode != mln::MapMode::Continuous;
         frontend = std::make_unique<HostFrontend>(size, pixelRatio, invalidateOnUpdate);
 
-        mbgl::MapOptions mapOptions;
+        mln::MapOptions mapOptions;
         mapOptions.withMapMode(mapMode).withSize(size).withPixelRatio(pixelRatio);
 
         // Set up logging observer for Rust bridge
         auto logObserver = std::make_unique<mln::bridge::RustLogObserver>();
-        mbgl::Log::setObserver(std::move(logObserver));
+        mln::Log::setObserver(std::move(logObserver));
         databaseFileSource = resource_options::applyMaximumAmbientCacheSize(resourceOptions);
-        map = std::make_unique<mbgl::Map>(*frontend, *mapObserverInstance, mapOptions, resourceOptions);
+        map = std::make_unique<mln::Map>(*frontend, *mapObserverInstance, mapOptions, resourceOptions);
     }
 
     std::shared_ptr<MapObserver> observer() {
@@ -188,9 +188,9 @@ public:
     }
 
     #if defined(MLN_WEBGPU_IMPL_FFI)
-    std::shared_ptr<mbgl::webgpu::Texture2D> takeTexture() {
-        auto backend = static_cast<mbgl::webgpu::HeadlessBackend*>(this->frontend->getBackend());
-        auto ptr = std::static_pointer_cast<mbgl::webgpu::Texture2D>(backend->takeTexture());
+    std::shared_ptr<mln::webgpu::Texture2D> takeTexture() {
+        auto backend = static_cast<mln::webgpu::HeadlessBackend*>(this->frontend->getBackend());
+        auto ptr = std::static_pointer_cast<mln::webgpu::Texture2D>(backend->takeTexture());
         assert(ptr);
         return ptr;
     }
@@ -198,12 +198,12 @@ public:
 
     void style_add_image(rust::Str id,
                          rust::Slice<const unsigned char> data,
-                         mbgl::Size size,
+                         mln::Size size,
                          float pixel_ratio,
                          bool signed_distance_field) {
-        mbgl::PremultipliedImage image(size, data.data(), data.size());
+        mln::PremultipliedImage image(size, data.data(), data.size());
 
-        map->getStyle().addImage(std::make_unique<mbgl::style::Image>(
+        map->getStyle().addImage(std::make_unique<mln::style::Image>(
             std::string(id), std::move(image), pixel_ratio, signed_distance_field));
     }
 
@@ -211,7 +211,7 @@ public:
         map->getStyle().removeImage(std::string(id));
     }
 
-    void style_add_source(std::unique_ptr<mbgl::style::Source> source) {
+    void style_add_source(std::unique_ptr<mln::style::Source> source) {
         map->getStyle().addSource(std::move(source));
     }
 
@@ -227,14 +227,14 @@ public:
         map->getStyle().removeSource(std::string(id));
     }
 
-    void style_add_layer(std::unique_ptr<mbgl::style::Layer> layer, rust::Str before_id) {
+    void style_add_layer(std::unique_ptr<mln::style::Layer> layer, rust::Str before_id) {
         // An empty before_id string means no before layer was specified.
         map->getStyle().addLayer(
             std::move(layer),
             before_id.empty() ? std::nullopt : std::optional<std::string>{std::string(before_id)});
     }
 
-    std::unique_ptr<mbgl::style::Layer> style_remove_layer(rust::Str id) {
+    std::unique_ptr<mln::style::Layer> style_remove_layer(rust::Str id) {
         return map->getStyle().removeLayer(std::string(id));
     }
 
@@ -248,7 +248,7 @@ public:
 
     std::unique_ptr<BridgeImage> readStillImage() {
         auto image = frontend->readStillImage();
-        auto unpremultipliedImage = mbgl::util::unpremultiply(std::move(image));
+        auto unpremultipliedImage = mln::util::unpremultiply(std::move(image));
         return std::make_unique<BridgeImage>(std::move(unpremultipliedImage.data), unpremultipliedImage.size);
     }
 
@@ -284,24 +284,24 @@ public:
         return encodeImage(frontend->readStillImage());
     }
 
-    void setSize(const mbgl::Size& size) {
+    void setSize(const mln::Size& size) {
         if (size.width == 0 || size.height == 0)
             return;
         frontend->setSize(size);
         map->setSize(size);
     }
 
-    void setDebugFlags(mbgl::MapDebugOptions debugFlags) {
+    void setDebugFlags(mln::MapDebugOptions debugFlags) {
         map->setDebug(debugFlags);
     }
 
     void jumpTo(const FfiCameraOptions& cameraOptions);
 
-    void moveBy(const mbgl::ScreenCoordinate& delta) {
+    void moveBy(const mln::ScreenCoordinate& delta) {
         map->moveBy(delta);
     }
 
-    void scaleBy(double scale, const mbgl::ScreenCoordinate& pos) {
+    void scaleBy(double scale, const mln::ScreenCoordinate& pos) {
         map->scaleBy(scale, pos);
     }
 
@@ -309,15 +309,15 @@ public:
         map->pitchBy(pitch);
     }
 
-    void rotateBy(const mbgl::ScreenCoordinate& first, const mbgl::ScreenCoordinate& second) {
+    void rotateBy(const mln::ScreenCoordinate& first, const mln::ScreenCoordinate& second) {
         map->rotateBy(first, second);
     }
 
     // Set the wgpu device and queue required for rendering when using the wgpu ffi backend
     #if defined(MLN_WEBGPU_IMPL_FFI)
     void setDeviceAndQueue(WGPUDevice device, WGPUQueue queue) {
-        static_cast<mbgl::webgpu::RendererBackend*>(frontend->getBackend())->setDevice(device);
-        static_cast<mbgl::webgpu::RendererBackend*>(frontend->getBackend())->setQueue(queue);
+        static_cast<mln::webgpu::RendererBackend*>(frontend->getBackend())->setDevice(device);
+        static_cast<mln::webgpu::RendererBackend*>(frontend->getBackend())->setQueue(queue);
     }
     #endif
 public:
@@ -326,8 +326,8 @@ public:
     std::unique_ptr<HostFrontend> frontend;
     std::shared_ptr<MapObserver> mapObserverInstance;
     // Declared before `map` so the map never outlives it.
-    std::shared_ptr<mbgl::FileSource> databaseFileSource;
-    std::unique_ptr<mbgl::Map> map;
+    std::shared_ptr<mln::FileSource> databaseFileSource;
+    std::unique_ptr<mln::Map> map;
 };
 
 class RenderRequest {
@@ -410,19 +410,19 @@ inline std::unique_ptr<RenderRequest> MapRenderer::submitRender() {
 }
 
 inline std::unique_ptr<MapRenderer> MapRenderer_new(
-            mbgl::MapMode mapMode,
+            mln::MapMode mapMode,
             uint32_t width,
             uint32_t height,
             float pixelRatio,
-            const mbgl::ResourceOptions& resourceOptions
+            const mln::ResourceOptions& resourceOptions
 ) {
-    mbgl::Size size = {width, height};
+    mln::Size size = {width, height};
     return std::make_unique<MapRenderer>(mapMode, size, pixelRatio, resourceOptions);
 }
 
 struct BridgeImage {
     public:
-        BridgeImage(std::unique_ptr<uint8_t[]> data, mbgl::Size size): mSize(size), mData(std::move(data)) {}
+        BridgeImage(std::unique_ptr<uint8_t[]> data, mln::Size size): mSize(size), mData(std::move(data)) {}
 
         const uint8_t* get() const {
             return mData.get();
@@ -433,12 +433,12 @@ struct BridgeImage {
             return pixelCount * BYTES_PER_PIXEL;
         }
 
-        mbgl::Size size() const {
+        mln::Size size() const {
             return mSize;
         }
 
     private:
-        mbgl::Size mSize;
+        mln::Size mSize;
         std::unique_ptr<uint8_t[]> mData;
 };
 

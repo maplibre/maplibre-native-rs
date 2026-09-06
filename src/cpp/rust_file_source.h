@@ -3,10 +3,10 @@
 // Rust-backed FileSource bridge.
 
 #include "rust/cxx.h"
-#include <mbgl/actor/scheduler.hpp>
-#include <mbgl/storage/file_source.hpp>
-#include <mbgl/storage/resource.hpp>
-#include <mbgl/storage/response.hpp>
+#include <mln/actor/scheduler.hpp>
+#include <mln/storage/file_source.hpp>
+#include <mln/storage/resource.hpp>
+#include <mln/storage/response.hpp>
 
 #include <atomic>
 #include <functional>
@@ -18,9 +18,9 @@
 namespace mln {
 namespace bridge {
 
-using ResourceKind = mbgl::Resource::Kind;
-using ErrorReason = mbgl::Response::Error::Reason;
-using FileSourceType = mbgl::FileSourceType;
+using ResourceKind = mln::Resource::Kind;
+using ErrorReason = mln::Response::Error::Reason;
+using FileSourceType = mln::FileSourceType;
 
 // Opaque Rust type (defined in the Rust `file_source` module) and the cxx
 // shared structs (defined in the generated bridge.rs.h)
@@ -30,10 +30,10 @@ struct RawResponse;
 
 // Native state for one in-flight request
 struct RequestState {
-  mbgl::FileSource::Callback cb;
+  mln::FileSource::Callback cb;
   std::function<void()> dispatch;
   std::mutex response_mutex;
-  std::optional<mbgl::Response> response;
+  std::optional<mln::Response> response;
   std::atomic<bool> cancelled{false};
   // Cached body held until revalidation completes.
   std::shared_ptr<const std::string> withheld_prior_body;

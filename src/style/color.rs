@@ -38,7 +38,7 @@ impl Color {
 }
 
 unsafe impl cxx::ExternType for Color {
-    type Id = cxx::type_id!("mbgl::Color");
+    type Id = cxx::type_id!("mln::Color");
     type Kind = cxx::kind::Trivial;
 }
 

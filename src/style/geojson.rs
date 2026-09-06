@@ -140,7 +140,7 @@ mod tests {
     }
 
     // TODO(maplibre-native#4345): can be restored once `GeoJson::to_json_string` is
-    // re-enabled (depends on a public `mbgl::*` GeoJSON serializer).
+    // re-enabled (depends on a public `mln::*` GeoJSON serializer).
     // #[test]
     // fn parse_clone_and_stringify_geojson() {
     //     let geojson = r#"{"type":"Point","coordinates":[1.0,2.0]}"#

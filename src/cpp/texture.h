@@ -2,11 +2,11 @@
 
 #if defined(MLN_WEBGPU_IMPL_FFI)
 
-#include <mbgl/webgpu/texture2d.hpp>
+#include <mln/webgpu/texture2d.hpp>
 #include <cstdint>
 
 namespace mln::bridge::texture {
-    WGPUTexture getWGPUTexture(const std::shared_ptr<mbgl::webgpu::Texture2D>&);
+    WGPUTexture getWGPUTexture(const std::shared_ptr<mln::webgpu::Texture2D>&);
 }
 
 #endif // #if defined(MLN_WEBGPU_IMPL_FFI)

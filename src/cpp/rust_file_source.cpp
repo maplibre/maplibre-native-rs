@@ -1,15 +1,15 @@
 #include "rust_file_source.h"
 #include "maplibre_native/src/bridge.rs.h"
 
-#include <mbgl/actor/scheduler.hpp>
-#include <mbgl/storage/file_source.hpp>
-#include <mbgl/storage/file_source_manager.hpp>
-#include <mbgl/storage/resource.hpp>
-#include <mbgl/storage/resource_options.hpp>
-#include <mbgl/storage/response.hpp>
-#include <mbgl/util/async_request.hpp>
-#include <mbgl/util/chrono.hpp>
-#include <mbgl/util/client_options.hpp>
+#include <mln/actor/scheduler.hpp>
+#include <mln/storage/file_source.hpp>
+#include <mln/storage/file_source_manager.hpp>
+#include <mln/storage/resource.hpp>
+#include <mln/storage/resource_options.hpp>
+#include <mln/storage/response.hpp>
+#include <mln/util/async_request.hpp>
+#include <mln/util/chrono.hpp>
+#include <mln/util/client_options.hpp>
 
 #include <cstddef>
 #include <cstdint>
@@ -25,14 +25,14 @@ namespace bridge {
 
 namespace {
 
-mbgl::Response buildResponse(const RawResponse& r) {
-    mbgl::Response response;
+mln::Response buildResponse(const RawResponse& r) {
+    mln::Response response;
     if (r.has_error) {
-        std::optional<mbgl::Timestamp> retry_after;
+        std::optional<mln::Timestamp> retry_after;
         if (r.has_retry_after) {
-            retry_after = mbgl::Timestamp(mbgl::Seconds(r.retry_after_epoch_s));
+            retry_after = mln::Timestamp(mln::Seconds(r.retry_after_epoch_s));
         }
-        response.error = std::make_unique<mbgl::Response::Error>(
+        response.error = std::make_unique<mln::Response::Error>(
             r.error_reason, std::string(r.error_message), retry_after);
     }
     response.noContent = r.no_content;
@@ -43,10 +43,10 @@ mbgl::Response buildResponse(const RawResponse& r) {
             reinterpret_cast<const char*>(r.data.data()), r.data.size());
     }
     if (r.has_modified) {
-        response.modified = mbgl::Timestamp(mbgl::Seconds(r.modified_epoch_s));
+        response.modified = mln::Timestamp(mln::Seconds(r.modified_epoch_s));
     }
     if (r.has_expires) {
-        response.expires = mbgl::Timestamp(mbgl::Seconds(r.expires_epoch_s));
+        response.expires = mln::Timestamp(mln::Seconds(r.expires_epoch_s));
     }
     if (r.has_etag) {
         response.etag = std::string(r.etag);
@@ -54,7 +54,7 @@ mbgl::Response buildResponse(const RawResponse& r) {
     return response;
 }
 
-RawResponse toRustResponse(const mbgl::Response& response) {
+RawResponse toRustResponse(const mln::Response& response) {
     RawResponse out{};
     out.error_reason = ErrorReason::Success;
     if (response.error) {
@@ -91,14 +91,14 @@ RawResponse toRustResponse(const mbgl::Response& response) {
     return out;
 }
 
-RawResourceRequest toRustResourceRequest(const mbgl::Resource& resource, bool include_prior_data) {
+RawResourceRequest toRustResourceRequest(const mln::Resource& resource, bool include_prior_data) {
     RawResourceRequest out{};
     out.url = rust::String::lossy(resource.url);
     out.kind = resource.kind;
     out.loading_methods = static_cast<std::uint8_t>(resource.loadingMethod);
-    out.is_volatile = resource.storagePolicy == mbgl::Resource::StoragePolicy::Volatile;
-    out.is_low_priority = resource.priority == mbgl::Resource::Priority::Low;
-    out.is_offline = resource.usage == mbgl::Resource::Usage::Offline;
+    out.is_volatile = resource.storagePolicy == mln::Resource::StoragePolicy::Volatile;
+    out.is_low_priority = resource.priority == mln::Resource::Priority::Low;
+    out.is_offline = resource.usage == mln::Resource::Usage::Offline;
 
     if (resource.tileData) {
         out.has_tile = true;
@@ -134,12 +134,12 @@ RawResourceRequest toRustResourceRequest(const mbgl::Resource& resource, bool in
         }
     }
     out.minimum_update_interval_ms =
-        std::chrono::duration_cast<mbgl::Milliseconds>(resource.minimumUpdateInterval).count();
+        std::chrono::duration_cast<mln::Milliseconds>(resource.minimumUpdateInterval).count();
 
     return out;
 }
 
-void completeState(const std::shared_ptr<RequestState>& state, mbgl::Response response) {
+void completeState(const std::shared_ptr<RequestState>& state, mln::Response response) {
     if (state->cancelled.load()) {
         return;
     }
@@ -163,7 +163,7 @@ void completeForwardState(const std::shared_ptr<ForwardState>& state) {
     }
 }
 
-class RustAsyncRequest final : public mbgl::AsyncRequest {
+class RustAsyncRequest final : public mln::AsyncRequest {
 public:
     RustAsyncRequest(rust::Box<RequestHandleFfi> handle, std::shared_ptr<RequestState> state)
         : handle_(std::move(handle)), state_(std::move(state)) {}
@@ -178,18 +178,18 @@ private:
     std::shared_ptr<RequestState> state_;
 };
 
-class RustFileSource final : public mbgl::FileSource {
+class RustFileSource final : public mln::FileSource {
 public:
     RustFileSource(std::shared_ptr<rust::Box<BoxedFileSource>> source,
                    bool materializeNotModified,
-                   mbgl::ResourceOptions resourceOpts,
-                   mbgl::ClientOptions clientOpts)
+                   mln::ResourceOptions resourceOpts,
+                   mln::ClientOptions clientOpts)
         : source_(std::move(source)),
           materializeNotModified_(materializeNotModified),
           resourceOpts_(std::move(resourceOpts)),
           clientOpts_(std::move(clientOpts)) {}
 
-    std::unique_ptr<mbgl::AsyncRequest> request(const mbgl::Resource& resource,
+    std::unique_ptr<mln::AsyncRequest> request(const mln::Resource& resource,
                                                 Callback cb) override {
         auto state = std::make_shared<RequestState>();
         state->cb = std::move(cb);
@@ -201,13 +201,13 @@ public:
         // Capture the scheduler's weak binding while that scheduler is known to
         // be alive. A late completion becomes a no-op after scheduler teardown.
         std::weak_ptr<RequestState> weakState = state;
-        state->dispatch = mbgl::Scheduler::GetCurrent()->bindOnce([weakState]() mutable {
+        state->dispatch = mln::Scheduler::GetCurrent()->bindOnce([weakState]() mutable {
             auto state = weakState.lock();
             if (!state || state->cancelled.load()) {
                 return;
             }
 
-            std::optional<mbgl::Response> response;
+            std::optional<mln::Response> response;
             {
                 std::scoped_lock lock(state->response_mutex);
                 response = std::move(state->response);
@@ -223,42 +223,42 @@ public:
         return std::make_unique<RustAsyncRequest>(std::move(handle), std::move(state));
     }
 
-    bool canRequest(const mbgl::Resource& resource) const override {
+    bool canRequest(const mln::Resource& resource) const override {
         auto request = toRustResourceRequest(resource, false);
         return (**source_).can_request(request);
     }
 
-    void forward(const mbgl::Resource& resource,
-                 const mbgl::Response& response,
+    void forward(const mln::Resource& resource,
+                 const mln::Response& response,
                  std::function<void()> callback) override {
         auto state = std::make_shared<ForwardState>();
         if (callback) {
-            state->cb = mbgl::Scheduler::GetCurrent()->bindOnce(std::move(callback));
+            state->cb = mln::Scheduler::GetCurrent()->bindOnce(std::move(callback));
         }
 
         auto request = toRustResourceRequest(resource, true);
         (**source_).forward(request, toRustResponse(response), std::move(state));
     }
 
-    void setResourceOptions(mbgl::ResourceOptions options) override {
+    void setResourceOptions(mln::ResourceOptions options) override {
         resourceOpts_ = std::move(options);
     }
-    mbgl::ResourceOptions getResourceOptions() override {
+    mln::ResourceOptions getResourceOptions() override {
         return resourceOpts_.clone();
     }
 
-    void setClientOptions(mbgl::ClientOptions options) override {
+    void setClientOptions(mln::ClientOptions options) override {
         clientOpts_ = std::move(options);
     }
-    mbgl::ClientOptions getClientOptions() override {
+    mln::ClientOptions getClientOptions() override {
         return clientOpts_.clone();
     }
 
 private:
     std::shared_ptr<rust::Box<BoxedFileSource>> source_;
     bool materializeNotModified_;
-    mbgl::ResourceOptions resourceOpts_;
-    mbgl::ClientOptions clientOpts_;
+    mln::ResourceOptions resourceOpts_;
+    mln::ClientOptions clientOpts_;
 };
 
 } // namespace
@@ -293,11 +293,11 @@ void register_rust_file_source(FileSourceType source_type, rust::Box<BoxedFileSo
     }
     auto shared_source = std::make_shared<rust::Box<BoxedFileSource>>(std::move(source));
     const bool materialize_not_modified = source_type == FileSourceType::Network;
-    mbgl::FileSourceManager::get()->registerFileSourceFactory(
+    mln::FileSourceManager::get()->registerFileSourceFactory(
         source_type,
-        [shared_source, materialize_not_modified](const mbgl::ResourceOptions& ro,
-                                                  const mbgl::ClientOptions& co)
-            -> std::unique_ptr<mbgl::FileSource> {
+        [shared_source, materialize_not_modified](const mln::ResourceOptions& ro,
+                                                  const mln::ClientOptions& co)
+            -> std::unique_ptr<mln::FileSource> {
             return std::make_unique<RustFileSource>(
                 shared_source, materialize_not_modified, ro.clone(), co.clone());
         });

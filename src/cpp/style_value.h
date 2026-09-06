@@ -1,10 +1,10 @@
 #pragma once
 
-#include <mbgl/style/conversion.hpp>
-#include <mbgl/style/conversion_impl.hpp>
-#include <mbgl/style/layer.hpp>
-#include <mbgl/style/source.hpp>
-#include <mbgl/util/geojson.hpp>
+#include <mln/style/conversion.hpp>
+#include <mln/style/conversion_impl.hpp>
+#include <mln/style/layer.hpp>
+#include <mln/style/source.hpp>
+#include <mln/util/geojson.hpp>
 
 #include <cmath>
 #include <cstdint>
@@ -76,21 +76,21 @@ void object_insert(StyleValue &obj, rust::Str key,
                    std::unique_ptr<StyleValue> child);
 
 // Parses a style-spec `Layer` object.
-std::unique_ptr<mbgl::style::Layer>
+std::unique_ptr<mln::style::Layer>
 layer_from_value(const StyleValue &value, rust::String &error_message);
 
 // Parses a style-spec `Source` object.
-std::unique_ptr<mbgl::style::Source>
+std::unique_ptr<mln::style::Source>
 source_from_value(rust::Str id, const StyleValue &value,
                   rust::String &error_message);
 
-std::optional<mbgl::GeoJSON>
+std::optional<mln::GeoJSON>
 style_value_to_geojson(const StyleValue &value,
-                       mbgl::style::conversion::Error &error);
+                       mln::style::conversion::Error &error);
 
 } // namespace mln::bridge
 
-namespace mbgl::style::conversion {
+namespace mln::style::conversion {
 
 // Lets MapLibre's conversion layer read from `StyleValue`.
 template <> class ConversionTraits<const mln::bridge::StyleValue *> {
@@ -201,4 +201,4 @@ public:
   }
 };
 
-} // namespace mbgl::style::conversion
+} // namespace mln::style::conversion

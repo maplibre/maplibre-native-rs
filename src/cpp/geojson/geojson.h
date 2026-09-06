@@ -1,6 +1,6 @@
 #pragma once
 
-#include <mbgl/util/geojson.hpp>
+#include <mln/util/geojson.hpp>
 #include "rust/cxx.h"
 #include <memory>
 
@@ -8,12 +8,12 @@ namespace mln::bridge::geojson {
 
 class GeoJson {
 public:
-    explicit GeoJson(mbgl::GeoJSON value);
+    explicit GeoJson(mln::GeoJSON value);
 
-    const mbgl::GeoJSON& get() const;
+    const mln::GeoJSON& get() const;
 
 private:
-    mbgl::GeoJSON value_;
+    mln::GeoJSON value_;
 };
 
 std::unique_ptr<GeoJson> parse(rust::Str json);

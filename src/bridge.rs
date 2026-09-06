@@ -95,9 +95,9 @@ impl std::fmt::Debug for geojson::GeoJson {
 #[cxx::bridge()]
 pub mod sources {
     /// MapLibre style-spec source type.
-    /// Rust mirror of `mbgl::style::SourceType`.
+    /// Rust mirror of `mln::style::SourceType`.
     #[derive(Debug)]
-    #[namespace = "mbgl::style"]
+    #[namespace = "mln::style"]
     enum SourceType {
         /// Vector tile source.
         Vector,
@@ -117,17 +117,17 @@ pub mod sources {
         CustomVector,
     }
 
-    #[namespace = "mbgl::style"]
+    #[namespace = "mln::style"]
     extern "C++" {
-        include!("mbgl/style/source.hpp");
-        include!("mbgl/style/sources/geojson_source.hpp");
-        include!("mbgl/style/types.hpp");
+        include!("mln/style/source.hpp");
+        include!("mln/style/sources/geojson_source.hpp");
+        include!("mln/style/types.hpp");
         // Opaque types
         /// Base class for all MapLibre Native style sources.
         type Source;
         /// A GeoJSON source for MapLibre rendering.
         type GeoJSONSource;
-        /// `mbgl::style::SourceType`
+        /// `mln::style::SourceType`
         type SourceType;
     }
 
@@ -201,7 +201,7 @@ impl std::fmt::Debug for sources::Source {
 /// Currently supports circle, fill, line, and symbol layers.
 pub mod layers {
     // Must have the same namespace than on the C++ side
-    #[namespace = "mbgl::style"]
+    #[namespace = "mln::style"]
     /// Symbol anchor position type.
     pub enum SymbolAnchorType {
         /// Center anchor point.
@@ -224,7 +224,7 @@ pub mod layers {
         BottomRight,
     }
 
-    #[namespace = "mbgl::style"]
+    #[namespace = "mln::style"]
     /// Line cap type.
     pub enum LineCapType {
         /// Round line cap.
@@ -235,7 +235,7 @@ pub mod layers {
         Square,
     }
 
-    #[namespace = "mbgl::style"]
+    #[namespace = "mln::style"]
     /// Line join type.
     pub enum LineJoinType {
         /// Miter line join.
@@ -250,14 +250,14 @@ pub mod layers {
         FlipBevel,
     }
 
-    #[namespace = "mbgl::style"]
+    #[namespace = "mln::style"]
     extern "C++" {
-        include!("mbgl/style/layer.hpp");
-        include!("mbgl/style/layers/circle_layer.hpp");
-        include!("mbgl/style/layers/fill_layer.hpp");
-        include!("mbgl/style/layers/line_layer.hpp");
-        include!("mbgl/style/layers/symbol_layer.hpp");
-        include!("mbgl/style/types.hpp");
+        include!("mln/style/layer.hpp");
+        include!("mln/style/layers/circle_layer.hpp");
+        include!("mln/style/layers/fill_layer.hpp");
+        include!("mln/style/layers/line_layer.hpp");
+        include!("mln/style/layers/symbol_layer.hpp");
+        include!("mln/style/types.hpp");
 
         /// Base class for all MapLibre Native style layers.
         type Layer;
@@ -279,9 +279,9 @@ pub mod layers {
         type SymbolAnchorType;
     }
 
-    #[namespace = "mbgl"]
+    #[namespace = "mln"]
     extern "C++" {
-        include!("mbgl/util/color.hpp");
+        include!("mln/util/color.hpp");
 
         /// A MapLibre Native premultiplied RGBA color.
         type Color = crate::style::Color;
@@ -381,10 +381,10 @@ pub mod layers {
 /// Rust builds a C++ `StyleValue` tree, and MapLibre Native's conversion layer
 /// reads it through `ConversionTraits<const StyleValue*>`.
 pub mod style_value {
-    #[namespace = "mbgl::style"]
+    #[namespace = "mln::style"]
     extern "C++" {
-        include!("mbgl/style/layer.hpp");
-        include!("mbgl/style/source.hpp");
+        include!("mln/style/layer.hpp");
+        include!("mln/style/source.hpp");
 
         #[rust_name = "StyleLayer"]
         type Layer = crate::bridge::layers::Layer;
@@ -509,7 +509,7 @@ impl std::fmt::Debug for layers::SymbolAnchorType {
 /// Resource and configuration options for MapLibre.
 pub mod resource_options {
 
-    #[namespace = "mbgl"]
+    #[namespace = "mln"]
     extern "C++" {
         // Opaque types
         /// Resource configuration options.
@@ -548,7 +548,7 @@ impl std::fmt::Debug for resource_options::ResourceOptions {
 #[cxx::bridge()]
 /// Tile server configuration options.
 pub mod tile_server_options {
-    #[namespace = "mbgl"]
+    #[namespace = "mln"]
     extern "C++" {
         // Opaque types
         /// Tile server configuration.
@@ -629,7 +629,7 @@ pub mod map_observer {
         Animated,
     }
 
-    #[namespace = "mbgl"]
+    #[namespace = "mln"]
     #[repr(u32)]
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     /// Map loading error types.
@@ -644,9 +644,9 @@ pub mod map_observer {
         UnknownError,
     }
 
-    #[namespace = "mbgl"]
+    #[namespace = "mln"]
     extern "C++" {
-        include!("mbgl/map/map_observer.hpp");
+        include!("mln/map/map_observer.hpp");
         type MapLoadError;
     }
 
@@ -720,7 +720,7 @@ pub mod file_source {
     #[namespace = "mln::bridge"]
     #[repr(u8)]
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-    /// Resource kinds — mirror of `mbgl::Resource::Kind`.
+    /// Resource kinds — mirror of `mln::Resource::Kind`.
     pub enum ResourceKind {
         /// Unknown / unspecified resource kind.
         Unknown = 0,
@@ -743,7 +743,7 @@ pub mod file_source {
     #[namespace = "mln::bridge"]
     #[repr(u8)]
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-    /// Error reason categories — mirror of `mbgl::Response::Error::Reason`.
+    /// Error reason categories — mirror of `mln::Response::Error::Reason`.
     pub enum ErrorReason {
         /// mbgl's "no error" sentinel; not a meaningful error category.
         Success = 1,
@@ -764,7 +764,7 @@ pub mod file_source {
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     /// MapLibre Native file source slot a Rust `FileSource` can serve.
     ///
-    /// Discriminants mirror `mbgl::FileSourceType`.
+    /// Discriminants mirror `mln::FileSourceType`.
     pub enum FileSourceType {
         /// Bundled asset source (`asset://`).
         Asset = 0,
@@ -782,7 +782,7 @@ pub mod file_source {
         ResourceLoader = 6,
     }
 
-    /// Flat FFI shape mirroring `mbgl::Response`. Optional fields use a `has_*`
+    /// Flat FFI shape mirroring `mln::Response`. Optional fields use a `has_*`
     /// flag; timestamps are Unix epoch seconds. Used both for delivering a
     /// response and for cache `forward`.
     #[derive(Debug)]
@@ -896,7 +896,7 @@ pub mod ffi {
     // CXX validates enum types against the C++ definition during compilation
 
     // The mbgl enums must be defined in the same namespace than on the C++ side
-    #[namespace = "mbgl"]
+    #[namespace = "mln"]
     #[repr(u32)]
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     /// Map rendering mode configuration.
@@ -909,7 +909,7 @@ pub mod ffi {
         Tile,
     }
 
-    #[namespace = "mbgl"]
+    #[namespace = "mln"]
     #[repr(u32)]
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     /// Debug visualization options for map rendering.
@@ -997,7 +997,7 @@ pub mod ffi {
     }
 
     /// MapLibre Native Event Severity levels
-    #[namespace = "mbgl"]
+    #[namespace = "mln"]
     #[repr(u8)]
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
     pub enum EventSeverity {
@@ -1012,7 +1012,7 @@ pub mod ffi {
     }
 
     /// MapLibre Native Event types
-    #[namespace = "mbgl"]
+    #[namespace = "mln"]
     #[repr(u8)]
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
     pub enum Event {
@@ -1052,9 +1052,9 @@ pub mod ffi {
         Timing = 16,
     }
 
-    #[namespace = "mbgl"]
+    #[namespace = "mln"]
     extern "C++" {
-        include!("mbgl/map/mode.hpp");
+        include!("mln/map/mode.hpp");
 
         type MapMode;
         type MapDebugOptions;
@@ -1068,7 +1068,7 @@ pub mod ffi {
         pub type Event;
     }
 
-    #[namespace = "mbgl"]
+    #[namespace = "mln"]
     extern "C++" {
         /// Screen coordinate type.
         type ScreenCoordinate = super::ScreenCoordinate;
@@ -1076,7 +1076,7 @@ pub mod ffi {
         type Size = super::Size;
     }
 
-    #[namespace = "mbgl::style"]
+    #[namespace = "mln::style"]
     extern "C++" {
         /// Base source opaque type.
         #[rust_name = "CxxSource"]
@@ -1100,7 +1100,7 @@ pub mod ffi {
         type GeoJson = super::geojson::GeoJson;
     }
 
-    #[namespace = "mbgl::webgpu"]
+    #[namespace = "mln::webgpu"]
     extern "C++" {
         #[cfg(feature = "wgpu")]
         type Texture2D;
@@ -1307,12 +1307,12 @@ impl std::fmt::Debug for ffi::MapRenderer {
 }
 
 unsafe impl cxx::ExternType for Size {
-    type Id = cxx::type_id!("mbgl::Size");
+    type Id = cxx::type_id!("mln::Size");
     type Kind = cxx::kind::Trivial;
 }
 
 unsafe impl cxx::ExternType for ScreenCoordinate {
-    type Id = cxx::type_id!("mbgl::ScreenCoordinate");
+    type Id = cxx::type_id!("mln::ScreenCoordinate");
     type Kind = cxx::kind::Trivial;
 }
 

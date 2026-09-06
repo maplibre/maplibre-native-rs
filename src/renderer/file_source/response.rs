@@ -1,5 +1,5 @@
 //! The response a [`FileSource`](super::FileSource) delivers, mirroring
-//! `mbgl::Response`.
+//! `mln::Response`.
 
 use std::time::SystemTime;
 
@@ -7,7 +7,7 @@ use crate::bridge::file_source::{ErrorReason, RawResponse};
 
 use super::{from_epoch, to_epoch};
 
-/// An error result for a request (mirrors `mbgl::Response::Error`).
+/// An error result for a request (mirrors `mln::Response::Error`).
 #[derive(Debug, Clone)]
 #[non_exhaustive]
 pub struct Error {
@@ -21,7 +21,7 @@ pub struct Error {
 
 /// The response a [`FileSource`](super::FileSource) delivers for a request.
 ///
-/// Mirrors `mbgl::Response`: body bytes, error state, and HTTP cache metadata.
+/// Mirrors `mln::Response`: body bytes, error state, and HTTP cache metadata.
 /// Construct with [`Response::data`], [`Response::no_content`],
 /// [`Response::not_modified`], or [`Response::error`].
 #[derive(Debug, Clone, Default)]
