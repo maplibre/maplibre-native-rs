@@ -371,6 +371,7 @@ fn build_bridge(
 
     // Compile C++ bridge sources.
     let mut cpp_files = walkdir::WalkDir::new(root.join(BRIDGE_CPP_DIR))
+        .follow_links(true)
         .into_iter()
         .filter_map(Result::ok)
         .filter(|e| e.file_type().is_file())
