@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.3](https://github.com/maplibre/maplibre-native-rs/compare/v0.9.2...v0.9.3) - 2026-09-09
+
+### Fixed
+
+- follow symlinks when collecting C++ bridge sources ([#285](https://github.com/maplibre/maplibre-native-rs/pull/285))
+
+### Other
+
+- *(deps)* bump the all-actions-version-updates group with 3 updates ([#284](https://github.com/maplibre/maplibre-native-rs/pull/284))
+
 ## [0.9.2](https://github.com/maplibre/maplibre-native-rs/compare/v0.9.1...v0.9.2) - 2026-09-06
 
 ### Other
