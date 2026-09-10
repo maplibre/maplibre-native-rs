@@ -10,6 +10,6 @@ cxx = { workspace = true }
 wgpu = { workspace = true }
 
 [build-dependencies]
-bindgen = "0.72.0"
+bindgen = "0.73.1"
 downloader.workspace = true
 sha256 = "1.6"
