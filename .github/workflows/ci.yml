@@ -283,9 +283,20 @@ jobs:
         with: { command: release }
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # A GitHub App token, so that the release PRs release-plz creates
+      # trigger CI. Events created with GITHUB_TOKEN start no workflow.
+      - if: ${{ steps.release.outputs.releases_created == 'false' }}
+        name: Generate GitHub token
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2.2.2
+        id: generate-token
+        with:
+          app-id: ${{ secrets.RELEASE_PLZ_APP_ID }}
+          private-key: ${{ secrets.RELEASE_PLZ_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
       - if: ${{ steps.release.outputs.releases_created == 'false' }}
         name: If version is the same, create a PR proposing new version and changelog for the next release
         uses: release-plz/action@b5543c19b03be9bd48852d20ca89f478b7723260 # v0.5.132
         with: { command: release-pr }
         env:
-          GITHUB_TOKEN: ${{ secrets.RELEASE_PLZ_TOKEN }}
+          GITHUB_TOKEN: ${{ steps.generate-token.outputs.token }}
