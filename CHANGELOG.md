@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.4](https://github.com/maplibre/maplibre-native-rs/compare/v0.9.3...v0.9.4) - 2026-09-14
+
+### Other
+
+- open release PRs with a GitHub App token instead of a PAT ([#289](https://github.com/maplibre/maplibre-native-rs/pull/289))
+
 ## [0.9.3](https://github.com/maplibre/maplibre-native-rs/compare/v0.9.2...v0.9.3) - 2026-09-09
 
 ### Fixed
