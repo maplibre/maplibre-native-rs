@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Other
 
 - open release PRs with a GitHub App token instead of a PAT ([#289](https://github.com/maplibre/maplibre-native-rs/pull/289))
+- serialize renderer creation and destruction with Vulkan loaders before 1.4.345 ([#295](https://github.com/maplibre/maplibre-native-rs/pull/295))
 
 ## [0.9.3](https://github.com/maplibre/maplibre-native-rs/compare/v0.9.2...v0.9.3) - 2026-09-09
 
