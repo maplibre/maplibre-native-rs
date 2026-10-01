@@ -198,23 +198,6 @@ fn tile_render_request_renders() {
     assert_eq!(image.as_image().height(), 128);
 }
 
-/// Draws an asymmetric red polygon inside tile 2/1/1 (lng -90..0, lat 0..66.5).
-fn add_red_polygon(renderer: &mut ImageRenderer<Tile>) {
-    let polygon = r#"{
-        "type": "Polygon",
-        "coordinates": [[[-80.0, 5.0], [-10.0, 5.0], [-10.0, 25.0], [-45.0, 60.0], [-80.0, 5.0]]]
-    }"#
-    .parse::<GeoJson>()
-    .expect("inline GeoJSON should parse");
-    let mut style = renderer.style();
-    let mut source = GeoJsonSource::new("poly");
-    source.set_geojson(&polygon);
-    let source_id = style.add_source(source).expect("source should be added");
-    let mut fill = FillLayer::new("poly-fill", &source_id);
-    fill.set_fill_color(Color::rgb(1.0, 0.0, 0.0));
-    style.add_layer(fill).expect("fill layer should be added");
-}
-
 fn render_tile_image(
     renderer: &mut ImageRenderer<Tile>,
     z: u8,
@@ -242,11 +225,8 @@ fn small_tile_matches_quadrant_of_parent_512_tile() {
     let mut large = tile_renderer_with_size(512, 1.0);
     for renderer in [&mut small, &mut large] {
         renderer
-            .load_style_from_path(fixture_path("test-style.json"))
+            .load_style_from_path(fixture_path("test-style-polygon.json"))
             .expect("test style path should be valid");
-        // A GeoJSON source added before the first render stays blank.
-        render_tile_image(renderer, 1, 0, 0);
-        add_red_polygon(renderer);
     }
 
     // The 256 px tile 2/1/1 covers the same area as the bottom-right quadrant

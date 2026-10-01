@@ -1,0 +1,30 @@
+{
+  "version": 8,
+  "name": "Test Style With Polygon",
+  "sources": {
+    "poly": {
+      "type": "geojson",
+      "data": {
+        "type": "Polygon",
+        "coordinates": [[[-80.0, 5.0], [-10.0, 5.0], [-10.0, 25.0], [-45.0, 60.0], [-80.0, 5.0]]]
+      }
+    }
+  },
+  "layers": [
+    {
+      "id": "background",
+      "type": "background",
+      "paint": {
+        "background-color": "#ff00f0"
+      }
+    },
+    {
+      "id": "poly-fill",
+      "type": "fill",
+      "source": "poly",
+      "paint": {
+        "fill-color": "#ff0000"
+      }
+    }
+  ]
+}
