@@ -155,6 +155,29 @@ fn style_load_request_polls_to_completion() {
 }
 
 #[test]
+fn renderers_created_and_dropped_on_many_threads() {
+    // Regression test for #294.
+    let handles: Vec<_> = (0..8)
+        .map(|_| {
+            thread::spawn(|| {
+                for _ in 0..4 {
+                    let mut renderer = tile_renderer();
+                    renderer
+                        .load_style_from_path(fixture_path("test-style.json"))
+                        .expect("test style path should be valid");
+                    let image = renderer.render_tile(0, 0, 0).expect("tile renderer should render");
+                    assert_eq!(image.as_image().width(), 128);
+                }
+            })
+        })
+        .collect();
+
+    for handle in handles {
+        handle.join().expect("render thread should not panic");
+    }
+}
+
+#[test]
 fn tile_render_request_renders() {
     let mut renderer = tile_renderer();
 
