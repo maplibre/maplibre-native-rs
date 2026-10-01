@@ -283,7 +283,7 @@ mod tests {
             assert_eq!(img_buffer.width(), 32);
             assert_eq!(img_buffer.height(), 32);
             assert_eq!(img_buffer.dimensions(), (32, 32));
-            assert!(!img_buffer.as_raw().is_empty());
+            assert_ne!(img_buffer.as_raw().as_slice(), []);
             assert_eq!(img_buffer.as_raw().len(), 32 * 32 * 4); // RGBA
         }
 
@@ -303,7 +303,7 @@ mod tests {
             let img_buffer = image.as_image();
             assert_eq!(img_buffer.width(), 64);
             assert_eq!(img_buffer.height(), 64);
-            assert!(!img_buffer.as_raw().is_empty());
+            assert_ne!(img_buffer.as_raw().as_slice(), []);
             assert_eq!(img_buffer.as_raw().len(), 64 * 64 * 4); // RGBA
         }
     }
