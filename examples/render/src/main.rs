@@ -292,6 +292,8 @@ mod tests {
                 width: NonZero::new(64).unwrap(),
                 height: NonZero::new(64).unwrap(),
                 mode: Mode::Tile,
+                // 64 px tiles start at zoom 3 (MapLibre's zoom 0 is a 512 px world).
+                z: 3,
                 ..Args::parse()
             };
             let mut renderer = args.load();
