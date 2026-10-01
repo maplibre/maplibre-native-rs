@@ -359,9 +359,6 @@ fn build_bridge(
     if matches!(backend, GraphicsApi::OpenGl(_)) {
         build.define("MLN_RENDER_BACKEND_OPENGL", Some("1"));
     }
-    if backend == GraphicsApi::Vulkan {
-        build.define("MLN_RENDER_BACKEND_VULKAN", Some("1"));
-    }
     if matches!(backend, GraphicsApi::WGPU) {
         build.flag_if_supported("-DMLN_WEBGPU_IMPL_FFI=1");
         build.flag_if_supported("-DMLN_WEBGPU_IMPL_WGPU=1");
