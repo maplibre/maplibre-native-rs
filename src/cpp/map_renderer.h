@@ -28,6 +28,8 @@
 
 #include <cstdint>
 #include <cassert>
+#include <mutex>
+#include <tuple>
 #include <memory>
 #include <optional>
 #include <vector>
@@ -161,6 +163,52 @@ private:
     std::optional<rust::Box<RenderRequestedCallback>> renderRequestedCallback;
 };
 
+#if defined(MLN_RENDER_BACKEND_VULKAN)
+#include <dlfcn.h>
+#endif
+
+// Vulkan loaders before 1.4.345 crash when renderers are created or dropped
+// on several threads at once (#294).
+// TODO: Remove once supported distributions ship a loader with
+// https://github.com/KhronosGroup/Vulkan-Loader/pull/1866
+#if defined(MLN_RENDER_BACKEND_VULKAN)
+inline bool vulkanLoaderNeedsLifecycleLock() {
+    // MapLibre also opens the loader at runtime.
+#if defined(__APPLE__)
+    void* loader = dlopen("libvulkan.1.dylib", RTLD_NOW | RTLD_LOCAL);
+#else
+    void* loader = dlopen("libvulkan.so.1", RTLD_NOW | RTLD_LOCAL);
+#endif
+    if (!loader) {
+        return true;
+    }
+    using EnumerateInstanceVersion = int32_t (*)(uint32_t*);
+    auto enumerate = reinterpret_cast<EnumerateInstanceVersion>(dlsym(loader, "vkEnumerateInstanceVersion"));
+    uint32_t version = 0;
+    const bool known = enumerate && enumerate(&version) == 0;
+    dlclose(loader);
+    if (!known) {
+        return true;
+    }
+    // As VK_API_VERSION_MAJOR/MINOR/PATCH.
+    const uint32_t major = (version >> 22) & 0x7F;
+    const uint32_t minor = (version >> 12) & 0x3FF;
+    const uint32_t patch = version & 0xFFF;
+    return std::tie(major, minor, patch) < std::make_tuple(1u, 4u, 345u);
+}
+#endif
+
+inline std::unique_lock<std::mutex> rendererLifecycleLock() {
+#if defined(MLN_RENDER_BACKEND_VULKAN)
+    static std::mutex mutex;
+    static const bool needed = vulkanLoaderNeedsLifecycleLock();
+    if (needed) {
+        return std::unique_lock(mutex);
+    }
+#endif
+    return {};
+}
+
 class MapRenderer {
 public:
     explicit MapRenderer(mln::MapMode mapMode,
@@ -168,6 +216,7 @@ public:
                          float pixelRatio,
                          const mln::ResourceOptions& resourceOptions)
         : mapObserverInstance(std::make_shared<MapObserver>()) {
+        auto lifecycle = rendererLifecycleLock();
         bindThreadRunLoop();
         // Continuous renderers are host-driven.
         bool invalidateOnUpdate = mapMode != mln::MapMode::Continuous;
@@ -181,6 +230,13 @@ public:
         mln::Log::setObserver(std::move(logObserver));
         databaseFileSource = resource_options::applyMaximumAmbientCacheSize(resourceOptions);
         map = std::make_unique<mln::Map>(*frontend, *mapObserverInstance, mapOptions, resourceOptions);
+    }
+
+    ~MapRenderer() {
+        auto lifecycle = rendererLifecycleLock();
+        map.reset();
+        databaseFileSource.reset();
+        frontend.reset();
     }
 
     std::shared_ptr<MapObserver> observer() {
