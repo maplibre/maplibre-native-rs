@@ -90,6 +90,8 @@ pub struct ImageRenderer<S> {
     // Makes this type !Send and !Sync: the underlying run loop is thread-affine.
     pub(crate) _not_send: PhantomData<*mut ()>,
     pub(crate) style_specified: bool,
+    /// Width in logical pixels, used as the tile size by [`ImageRenderer<Tile>`].
+    pub(crate) width: u32,
 }
 
 /// In-flight render request.
@@ -480,31 +482,45 @@ impl ImageRenderer<Static> {
 }
 
 impl ImageRenderer<Tile> {
-    /// Render a top-down tile of the map as a static [`Image`].
+    /// Render slippy tile `zoom/x/y` as a static [`Image`].
+    ///
+    /// See [`submit_render_tile`](Self::submit_render_tile).
     ///
     /// # Errors
-    /// If no style has been loaded.
+    /// If no style has been loaded, or if the tile cannot be rendered at the configured size.
     pub fn render_tile(&mut self, zoom: u8, x: u32, y: u32) -> Result<Image, RenderingError> {
         self.submit_render_tile(zoom, x, y)?.wait()
     }
 
     /// Submits a tile render request without blocking.
     ///
+    /// The tile is `width` logical pixels wide, as set with
+    /// [`ImageRendererBuilder::with_size`](crate::ImageRendererBuilder::with_size)
+    /// (default `512`), so a renderer built with `256` x `256` renders standard 256 px
+    /// tiles. MapLibre zoom levels are based on 512 px tiles, so a 256 px tile at `zoom`
+    /// is drawn at map zoom `zoom - 1`. Use the pixel ratio for high-DPI tiles (`@2x`).
+    ///
     /// Use this when driving one or more requests manually with
     /// [`RunLoopHandle::tick`]. Use [`render_tile`](Self::render_tile) for the
     /// blocking convenience API.
     ///
     /// # Errors
-    /// If no style has been loaded.
+    /// If no style has been loaded, or with [`RenderingError::TileZoomTooLow`] if
+    /// the whole world at `zoom` is smaller than the tile (e.g. `zoom` 0 with
+    /// tiles smaller than 512 px), as MapLibre cannot zoom out below 0.
     pub fn submit_render_tile(
         &mut self,
         zoom: u8,
         x: u32,
         y: u32,
     ) -> Result<RenderRequest<'_, Tile>, RenderingError> {
+        let map_zoom = f64::from(zoom) - (512.0 / f64::from(self.width)).log2();
+        if map_zoom < 0.0 {
+            return Err(RenderingError::TileZoomTooLow { zoom, tile_size: self.width });
+        }
         let center = tile_coords_to_latlng(f64::from(zoom), x, y);
         self.submit_with_camera(
-            &CameraUpdate::new().center(center).zoom(f64::from(zoom)).bearing(0.0).pitch(0.0),
+            &CameraUpdate::new().center(center).zoom(map_zoom).bearing(0.0).pitch(0.0),
         )
     }
 }
@@ -632,6 +648,15 @@ pub enum RenderingError {
     /// MapLibre Native returned a rendering error.
     #[error("Native rendering error: {0}")]
     Native(String),
+    /// The tile at this zoom is larger than the world at that zoom, which MapLibre
+    /// cannot render (it does not zoom out below 0).
+    #[error("Cannot render a {tile_size} px tile at zoom {zoom}")]
+    TileZoomTooLow {
+        /// Requested tile zoom.
+        zoom: u8,
+        /// Tile size in logical pixels.
+        tile_size: u32,
+    },
 }
 
 #[cfg(test)]
