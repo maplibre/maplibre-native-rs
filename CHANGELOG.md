@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.0](https://github.com/maplibre/maplibre-native-rs/compare/v0.9.4...v0.10.0) - 2026-10-02
+
+### Fixed
+
+- *(renderer)* [**breaking**] honour the configured size in tile rendering ([#296](https://github.com/maplibre/maplibre-native-rs/pull/296))
+
+### Other
+
+- skip the native build when release-plz runs semver checks ([#297](https://github.com/maplibre/maplibre-native-rs/pull/297))
+
 ## [0.9.4](https://github.com/maplibre/maplibre-native-rs/compare/v0.9.3...v0.9.4) - 2026-09-14
 
 ### Other
