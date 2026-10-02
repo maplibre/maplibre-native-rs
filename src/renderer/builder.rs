@@ -93,9 +93,11 @@ impl ImageRendererBuilder {
     }
 
     /// Builds a tile renderer
+    ///
+    /// The width is the tile size in logical pixels (see
+    /// [`ImageRenderer::<Tile>::submit_render_tile`]); use a square size.
     #[must_use]
     pub fn build_tile_renderer(self) -> ImageRenderer<Tile> {
-        // TODO: Is the width/height used for this mode?
         ImageRenderer::new(MapMode::Tile, self)
     }
 
@@ -139,6 +141,7 @@ impl<S> ImageRenderer<S> {
             instance: map,
             observer_callbacks,
             style_specified: false,
+            width: opts.width.get(),
             _marker: PhantomData,
             _not_send: PhantomData,
         }

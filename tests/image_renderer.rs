@@ -9,8 +9,10 @@ use std::time::{Duration, Instant};
 
 use maplibre_native::{
     CameraUpdate, Color, Continuous, EdgeInsets, FillLayer, GeoJson, GeoJsonSource, ImageRenderer,
-    ImageRendererBuilder, LatLng, LatLngBounds, MapLoadErrorKind, RunLoopHandle, Static, Tile,
+    ImageRendererBuilder, LatLng, LatLngBounds, MapLoadErrorKind, RenderingError, RunLoopHandle,
+    Static, Tile,
 };
+use rstest::rstest;
 
 const RENDER_TIMEOUT: Duration = Duration::from_secs(5);
 
@@ -33,11 +35,15 @@ fn static_renderer() -> ImageRenderer<Static> {
     static_renderer_with_size(128)
 }
 
-fn tile_renderer() -> ImageRenderer<Tile> {
+fn tile_renderer_with_size(size: u32, pixel_ratio: f32) -> ImageRenderer<Tile> {
     ImageRendererBuilder::new()
-        .with_size(NonZeroU32::new(128).unwrap(), NonZeroU32::new(128).unwrap())
-        .with_pixel_ratio(1.0)
+        .with_size(NonZeroU32::new(size).unwrap(), NonZeroU32::new(size).unwrap())
+        .with_pixel_ratio(pixel_ratio)
         .build_tile_renderer()
+}
+
+fn tile_renderer() -> ImageRenderer<Tile> {
+    tile_renderer_with_size(128, 1.0)
 }
 
 fn tick_until_ready(mut ready: impl FnMut() -> bool) {
@@ -165,7 +171,7 @@ fn renderers_created_and_dropped_on_many_threads() {
                     renderer
                         .load_style_from_path(fixture_path("test-style.json"))
                         .expect("test style path should be valid");
-                    let image = renderer.render_tile(0, 0, 0).expect("tile renderer should render");
+                    let image = renderer.render_tile(2, 0, 0).expect("tile renderer should render");
                     assert_eq!(image.as_image().width(), 128);
                 }
             })
@@ -185,11 +191,78 @@ fn tile_render_request_renders() {
         .load_style_from_path(fixture_path("test-style.json"))
         .expect("test style path should be valid");
 
-    let request = renderer.submit_render_tile(0, 0, 0).expect("tile render should submit");
+    // 128 px tiles start at zoom 2 (MapLibre's zoom 0 is a 512 px world).
+    let request = renderer.submit_render_tile(2, 0, 0).expect("tile render should submit");
 
     let image = request.wait().expect("tile renderer should render");
     assert_eq!(image.as_image().width(), 128);
     assert_eq!(image.as_image().height(), 128);
+}
+
+fn render_tile_image(
+    renderer: &mut ImageRenderer<Tile>,
+    z: u8,
+    x: u32,
+    y: u32,
+) -> image::RgbaImage {
+    renderer.render_tile(z, x, y).expect("tile should render").as_image().clone()
+}
+
+#[rstest]
+#[case::ratio_1(1.0, 256)]
+#[case::ratio_2(2.0, 512)]
+fn tile_renderer_honours_tile_size(#[case] pixel_ratio: f32, #[case] expected: u32) {
+    let mut renderer = tile_renderer_with_size(256, pixel_ratio);
+    renderer
+        .load_style_from_path(fixture_path("test-style.json"))
+        .expect("test style path should be valid");
+    let image = render_tile_image(&mut renderer, 1, 0, 0);
+    assert_eq!(image.dimensions(), (expected, expected));
+}
+
+#[test]
+fn small_tile_matches_quadrant_of_parent_512_tile() {
+    let mut small = tile_renderer_with_size(256, 1.0);
+    let mut large = tile_renderer_with_size(512, 1.0);
+    for renderer in [&mut small, &mut large] {
+        renderer
+            .load_style_from_path(fixture_path("test-style-polygon.json"))
+            .expect("test style path should be valid");
+    }
+
+    // The 256 px tile 2/1/1 covers the same area as the bottom-right quadrant
+    // of the 512 px tile 1/0/0.
+    let tile = render_tile_image(&mut small, 2, 1, 1);
+    let parent = render_tile_image(&mut large, 1, 0, 0);
+    assert_eq!(tile.dimensions(), (256, 256));
+    let quadrant = image::imageops::crop_imm(&parent, 256, 256, 256, 256).to_image();
+
+    let is_red = |p: &image::Rgba<u8>| p[0] > 200 && p[1] < 50 && p[2] < 50;
+    let red = tile.pixels().filter(|p| is_red(p)).count();
+    assert!(red > 5_000, "polygon should be drawn in the tile, got {red} red pixels");
+
+    // Allow antialiasing differences along the polygon edges.
+    let differing = tile
+        .pixels()
+        .zip(quadrant.pixels())
+        .filter(|(a, b)| a.0.iter().zip(b.0).any(|(a, b)| a.abs_diff(b) > 32))
+        .count();
+    assert!(differing <= 256 * 256 / 100, "{differing} pixels differ from the parent quadrant");
+}
+
+#[test]
+fn tile_zoom_below_tile_size_is_rejected() {
+    let mut renderer = tile_renderer_with_size(256, 1.0);
+    renderer
+        .load_style_from_path(fixture_path("test-style.json"))
+        .expect("test style path should be valid");
+
+    // A 256 px tile at zoom 0 would need map zoom -1.
+    assert!(matches!(
+        renderer.submit_render_tile(0, 0, 0),
+        Err(RenderingError::TileZoomTooLow { zoom: 0, tile_size: 256 })
+    ));
+    assert_eq!(render_tile_image(&mut renderer, 1, 0, 0).dimensions(), (256, 256));
 }
 
 #[test]
