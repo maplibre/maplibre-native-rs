@@ -300,3 +300,7 @@ jobs:
         with: { command: release-pr }
         env:
           GITHUB_TOKEN: ${{ steps.generate-token.outputs.token }}
+          # cargo-semver-checks builds rustdoc with all features, which turns on
+          # `glx` and so fails against MLN_PRECOMPILE. Rustdoc does not need the
+          # native core, so skip build.rs the way docs.rs does.
+          DOCS_RS: 1
