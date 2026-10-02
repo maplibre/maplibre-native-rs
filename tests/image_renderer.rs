@@ -12,6 +12,7 @@ use maplibre_native::{
     ImageRendererBuilder, LatLng, LatLngBounds, MapLoadErrorKind, RenderingError, RunLoopHandle,
     Static, Tile,
 };
+use rstest::rstest;
 
 const RENDER_TIMEOUT: Duration = Duration::from_secs(5);
 
@@ -207,16 +208,16 @@ fn render_tile_image(
     renderer.render_tile(z, x, y).expect("tile should render").as_image().clone()
 }
 
-#[test]
-fn tile_renderer_honours_tile_size() {
-    for (pixel_ratio, expected) in [(1.0, 256), (2.0, 512)] {
-        let mut renderer = tile_renderer_with_size(256, pixel_ratio);
-        renderer
-            .load_style_from_path(fixture_path("test-style.json"))
-            .expect("test style path should be valid");
-        let image = render_tile_image(&mut renderer, 1, 0, 0);
-        assert_eq!(image.dimensions(), (expected, expected), "pixel ratio {pixel_ratio}");
-    }
+#[rstest]
+#[case::ratio_1(1.0, 256)]
+#[case::ratio_2(2.0, 512)]
+fn tile_renderer_honours_tile_size(#[case] pixel_ratio: f32, #[case] expected: u32) {
+    let mut renderer = tile_renderer_with_size(256, pixel_ratio);
+    renderer
+        .load_style_from_path(fixture_path("test-style.json"))
+        .expect("test style path should be valid");
+    let image = render_tile_image(&mut renderer, 1, 0, 0);
+    assert_eq!(image.dimensions(), (expected, expected));
 }
 
 #[test]
