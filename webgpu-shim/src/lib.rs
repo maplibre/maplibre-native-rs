@@ -376,12 +376,15 @@ pub unsafe extern "C" fn wgpuBufferGetMappedRange(
     let buffer_ref = unsafe { buffer.as_ref().expect("Invalid buffer") };
     let offset_u64 = u64::try_from(offset).expect("offset does not fit in u64");
 
-    let mut view = if size == usize::MAX {
+    let view = if size == usize::MAX {
         buffer_ref.0.slice(offset_u64..).get_mapped_range_mut()
     } else {
         let size_u64 = u64::try_from(size).expect("size does not fit in u64");
         let end = offset_u64.checked_add(size_u64).expect("offset + size overflow");
         buffer_ref.0.slice(offset_u64..end).get_mapped_range_mut()
+    };
+    let Ok(mut view) = view else {
+        return std::ptr::null_mut();
     };
 
     let ptr = view.slice(..).as_raw_element_ptr().as_ptr().cast();
@@ -1125,13 +1128,15 @@ pub unsafe extern "C" fn wgpuDeviceCreateRenderPipeline(
     }
 
     // Now create vertex buffer layouts with references to the attributes
-    let vertex_buffers: Vec<wgpu::VertexBufferLayout> = all_vertex_attributes
+    let vertex_buffers: Vec<Option<wgpu::VertexBufferLayout>> = all_vertex_attributes
         .iter()
         .zip(vertex_buffer_info.iter())
-        .map(|(attrs, (stride, step_mode))| wgpu::VertexBufferLayout {
-            array_stride: *stride,
-            step_mode: *step_mode,
-            attributes: attrs,
+        .map(|(attrs, (stride, step_mode))| {
+            Some(wgpu::VertexBufferLayout {
+                array_stride: *stride,
+                step_mode: *step_mode,
+                attributes: attrs,
+            })
         })
         .collect();
 
