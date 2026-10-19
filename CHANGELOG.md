@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.1](https://github.com/maplibre/maplibre-native-rs/compare/v0.10.0...v0.10.1) - 2026-10-19
+
+### Other
+
+- *(deps)* bump the all-actions-version-updates group with 3 updates ([#301](https://github.com/maplibre/maplibre-native-rs/pull/301))
+- *(deps)* bump the all-actions-version-updates group with 2 updates ([#300](https://github.com/maplibre/maplibre-native-rs/pull/300))
+- *(deps)* bump taiki-e/install-action from 2.87.20 to 2.87.22 in the all-actions-version-updates group ([#299](https://github.com/maplibre/maplibre-native-rs/pull/299))
+
 ## [0.10.0](https://github.com/maplibre/maplibre-native-rs/compare/v0.9.4...v0.10.0) - 2026-10-02
 
 ### Fixed
