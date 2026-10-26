@@ -109,7 +109,7 @@ image = "0.25"
 insta = "1.43"
 log = "0.4"
 maplibre_native = { path = ".", version = "0.10.0" }
-rstest = "0.27.0"
+rstest = "0.28.0"
 serde_json = "1.0"
 tar = "0.4.44"
 thiserror = "2.0.16"
@@ -118,7 +118,7 @@ toml = "1.1"
 url = "2.5.7"
 walkdir = "2.5.0"
 webgpu-shim = { path = "webgpu-shim", version = "0.1" }
-wgpu = { version = "29.0.0" }
+wgpu = { version = "30.0.1" }
 
 [workspace.lints.rust]
 missing_debug_implementations = "warn"
