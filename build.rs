@@ -1,6 +1,9 @@
 //! File for defining how we download and link against `MapLibre Native`.
 //! Set `MLN_CORE_LIBRARY_PATH` and `MLN_CORE_LIBRARY_HEADERS_PATH` environment variables to use a local version of maplibre
 //!
+//! Set `MLN_SYSTEM` to use an installed `mbgl-core` instead, found with pkg-config, with its headers and the libraries it
+//! links, as MapLibre Native's install rules provide it.
+//!
 //! If you don't use the AMALGAM library define the env variable `MLN_CORE_LIBRARY_NO_AMALGAM` (value does not matter).
 //! In this case all dependent libraries get linked manually
 //!
@@ -416,6 +419,22 @@ fn bundle_precompiled() -> Info {
     Info { libs: vec![lib_name], include_dirs, ndebug: true }
 }
 
+/// An installed `mbgl-core`, found with pkg-config, with its headers and the libraries it links.
+fn system_core() -> Info {
+    let core = pkg_config::Config::new()
+        .cargo_metadata(false)
+        .env_metadata(true)
+        .probe("mbgl-core")
+        .unwrap_or_else(|e| {
+            panic!("MLN_SYSTEM is set, but `mbgl-core` was not found with pkg-config: {e}")
+        });
+    for dir in &core.link_paths {
+        println!("cargo:rustc-link-search=native={}", dir.display());
+    }
+    // An installed core is assumed to be a release build, as its pkg-config file does not say.
+    Info { libs: core.libs, include_dirs: core.include_paths, ndebug: true }
+}
+
 fn clone_repository<P: AsRef<Path>>(
     clone_dir: P,
     folder_name: &str,
@@ -748,9 +767,7 @@ fn build_mln() {
     let info = if precompiled {
         bundle_precompiled()
     } else if system_lib {
-        // Using pkg config
-        // let mut cfg = pkg_config::Config::new();
-        panic!("Not implemented")
+        system_core()
     } else {
         const MAPLIBRE_NATIVE_DIR_NAME: &str = "maplibre-native";
         let respository_dir = if local_repository.is_empty() {
