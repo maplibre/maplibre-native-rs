@@ -319,12 +319,7 @@ fn resolve_mln_core() -> (PathBuf, Vec<PathBuf>) {
 }
 
 /// Gather include directories and build the C++ bridge using `cxx_build`.
-fn build_bridge(
-    lib_name: &str,
-    include_dirs: &[PathBuf],
-    backend: GraphicsApi,
-    core_uses_ndebug: bool,
-) {
+fn build_bridge(include_dirs: &[PathBuf], backend: GraphicsApi, core_uses_ndebug: bool) {
     // println!("cargo:warning=Include_dirs: {:?}", include_dirs);
     let root = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
     let bridge_include_dirs: Vec<PathBuf> =
@@ -389,15 +384,14 @@ fn build_bridge(
     }
 
     build.compile("maplibre_rust_map_renderer_bindings");
-
-    // Link mbgl-core after the bridge - or else `cargo test` won't be able to find the symbols.
-    println!("cargo:rustc-link-lib=static={lib_name}");
 }
 
 struct Info {
-    lib_name: String,
+    /// The core, then the libraries it links that are not bundled into it.
+    libs: Vec<String>,
     include_dirs: Vec<PathBuf>,
-    cpp_root: PathBuf,
+    /// Whether the core was built with `NDEBUG`, which changes the layout of some of its public types.
+    ndebug: bool,
 }
 
 fn bundle_precompiled() -> Info {
@@ -419,7 +413,7 @@ fn bundle_precompiled() -> Info {
         .replacen("lib", "", 1)
         .replace(".a", "");
 
-    Info { lib_name, include_dirs, cpp_root }
+    Info { libs: vec![lib_name], include_dirs, ndebug: true }
 }
 
 fn clone_repository<P: AsRef<Path>>(
@@ -650,11 +644,17 @@ fn build_local(
             .collect::<Vec<PathBuf>>(),
     );
 
-    Ok(Info {
-        lib_name: format!("{TARGET_NAME}{}", if amalgam_lib { "-amalgam" } else { "" }),
-        include_dirs,
-        cpp_root: maplibre_native_dir,
-    })
+    let mut libs = vec![format!("{TARGET_NAME}{}", if amalgam_lib { "-amalgam" } else { "" })];
+    if !amalgam_lib {
+        libs.extend(source_core_libs(target_os, api).into_iter().map(str::to_owned));
+    }
+    // The core is built with the CMake build type the `cmake` crate picks from the profile.
+    let ndebug = match env::var("OPT_LEVEL").as_deref() {
+        Ok("0") => false,
+        Ok("1" | "2" | "3" | "s" | "z") => true,
+        _ => env::var("PROFILE").as_deref() != Ok("debug"),
+    };
+    Ok(Info { libs, include_dirs, ndebug })
 }
 
 /// The libraries a core built from source links, which are not bundled into it as into the amalgam.
@@ -778,35 +778,12 @@ fn build_mln() {
     };
 
     let backend = GraphicsApi::from_selected_features();
-    let source_core_uses_ndebug = match env::var("OPT_LEVEL").as_deref() {
-        Ok("0") => false,
-        Ok("1" | "2" | "3" | "s" | "z") => true,
-        _ => env::var("PROFILE").as_deref() != Ok("debug"),
-    };
-    build_bridge(
-        &info.lib_name,
-        &info.include_dirs,
-        backend,
-        precompiled || source_core_uses_ndebug,
-    );
-    let is_apple = target_os == "macos" || target_os == "ios";
-    if !amalgam_lib {
-        // The dependent libs are not bundled in the core lib, so we have to link manually
-        // Required for mlt-cpp. Cpp root link search was already added above
-        println!(
-            "cargo:rustc-link-search=native={}",
-            info.cpp_root
-                .parent()
-                .unwrap()
-                .join("vendor")
-                .join("maplibre-tile-spec")
-                .join("cpp")
-                .display()
-        );
-        for lib in source_core_libs(&target_os, backend) {
-            println!("cargo:rustc-link-lib={lib}");
-        }
+    build_bridge(&info.include_dirs, backend, info.ndebug);
+    // Link mbgl-core after the bridge - or else `cargo test` won't be able to find the symbols.
+    for lib in &info.libs {
+        println!("cargo:rustc-link-lib={lib}");
     }
+    let is_apple = target_os == "macos" || target_os == "ios";
     if !is_apple {
         println!("cargo:rustc-link-lib=uv"); // sudo dnf install libuv-devel
     }
