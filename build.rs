@@ -657,6 +657,46 @@ fn build_local(
     })
 }
 
+/// The libraries a core built from source links, which are not bundled into it as into the amalgam.
+fn source_core_libs(target_os: &str, backend: GraphicsApi) -> Vec<&'static str> {
+    let is_apple = target_os == "macos" || target_os == "ios";
+    let mut libs = vec![
+        "mbgl-harfbuzz",
+        "mbgl-freetype",
+        "mbgl-vendor-parsedate",
+        "mbgl-vendor-csscolorparser",
+        // provided with maplibre-native; `mlt-cpp` calls into FastPFor, so
+        // `fastpfor-lib` must follow it on the link line.
+        "mlt-cpp",
+        "fastpfor-lib",
+    ];
+    if is_apple {
+        // darwin builds vendored ICU (system sqlite3 is linked by `build_mln` for all darwin builds)
+        libs.push("mbgl-vendor-icu");
+    } else {
+        libs.push("mbgl-vendor-nunicode");
+        libs.push("mbgl-vendor-sqlite");
+        // libs.push("utf8proc"); // sudo dnf install utf8proc-devel
+        libs.push("icuuc"); //sudo dnf install libicu-devel
+        libs.push("icudata"); //sudo dnf install libicu-devel
+        libs.push("icui18n"); //sudo dnf install libicu-devel
+    }
+    // Vulkan translates GLSL to SPIR-V at runtime via glslang; OpenGL/Metal don't.
+    if backend == GraphicsApi::Vulkan {
+        libs.push("glslang"); //sudo dnf install libglslang-devel
+        libs.push("glslang-default-resource-limits"); //sudo dnf install libglslang-devel
+
+        // `SPIRV-Tools-opt` depends on symbols from `SPIRV-Tools`.
+        // Keep this order for static linking (notably on Linux/aarch64).
+        libs.push("SPIRV-Tools-opt"); //sudo dnf install  spirv-tools-devel // Required by glslang spirv-tools-devel
+        libs.push("SPIRV-Tools"); //sudo dnf install  spirv-tools-devel // Required by glslang spirv-tools-devel
+    }
+    libs.push("png"); // sudo dnf install libpng-devel
+    libs.push("jpeg"); // sudo dnf install libjpeg-turbo-devel
+    libs.push("webp"); // sudo dnf install libwebp-devel
+    libs
+}
+
 #[allow(clippy::too_many_lines)]
 fn build_mln() {
     println!("cargo:rerun-if-env-changed=MLN_SYSTEM");
@@ -763,38 +803,9 @@ fn build_mln() {
                 .join("cpp")
                 .display()
         );
-        println!("cargo:rustc-link-lib=mbgl-harfbuzz");
-        println!("cargo:rustc-link-lib=mbgl-freetype");
-        println!("cargo:rustc-link-lib=mbgl-vendor-parsedate");
-        println!("cargo:rustc-link-lib=mbgl-vendor-csscolorparser");
-        // provided with maplibre-native; `mlt-cpp` calls into FastPFor, so
-        // `fastpfor-lib` must follow it on the link line.
-        println!("cargo:rustc-link-lib=mlt-cpp");
-        println!("cargo:rustc-link-lib=fastpfor-lib");
-        if is_apple {
-            // darwin builds vendored ICU (system sqlite3 is linked below for all darwin builds)
-            println!("cargo:rustc-link-lib=mbgl-vendor-icu");
-        } else {
-            println!("cargo:rustc-link-lib=mbgl-vendor-nunicode");
-            println!("cargo:rustc-link-lib=mbgl-vendor-sqlite");
-            // println!("cargo:rustc-link-lib=utf8proc"); // sudo dnf install utf8proc-devel
-            println!("cargo:rustc-link-lib=icuuc"); //sudo dnf install libicu-devel
-            println!("cargo:rustc-link-lib=icudata"); //sudo dnf install libicu-devel
-            println!("cargo:rustc-link-lib=icui18n"); //sudo dnf install libicu-devel
+        for lib in source_core_libs(&target_os, backend) {
+            println!("cargo:rustc-link-lib={lib}");
         }
-        // Vulkan translates GLSL to SPIR-V at runtime via glslang; OpenGL/Metal don't.
-        if backend == GraphicsApi::Vulkan {
-            println!("cargo:rustc-link-lib=glslang"); //sudo dnf install libglslang-devel
-            println!("cargo:rustc-link-lib=glslang-default-resource-limits"); //sudo dnf install libglslang-devel
-
-            // `SPIRV-Tools-opt` depends on symbols from `SPIRV-Tools`.
-            // Keep this order for static linking (notably on Linux/aarch64).
-            println!("cargo:rustc-link-lib=SPIRV-Tools-opt"); //sudo dnf install  spirv-tools-devel // Required by glslang spirv-tools-devel
-            println!("cargo:rustc-link-lib=SPIRV-Tools"); //sudo dnf install  spirv-tools-devel // Required by glslang spirv-tools-devel
-        }
-        println!("cargo:rustc-link-lib=png"); // sudo dnf install libpng-devel
-        println!("cargo:rustc-link-lib=jpeg"); // sudo dnf install libjpeg-turbo-devel
-        println!("cargo:rustc-link-lib=webp"); // sudo dnf install libwebp-devel
     }
     if !is_apple {
         println!("cargo:rustc-link-lib=uv"); // sudo dnf install libuv-devel
